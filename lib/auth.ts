@@ -1,40 +1,30 @@
-import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypto'
-import fs from 'node:fs'
-import path from 'node:path'
+import { createHash, createHmac, timingSafeEqual } from 'node:crypto'
 import { Errors } from './core/errors'
 import { getEnv } from './env'
 import { FixedWindowLimiter } from './rate-limit'
+import { loadOrCreateSessionKey } from './session-key'
 
 export const ADMIN_COOKIE = 'shizhao_admin'
 export const SESSION_MAX_AGE_S = 30 * 24 * 3600
 const SESSION_LABEL = 'shizhao-admin-session-v1'
 
 /**
- * Server-side signing key, kept in DATA_DIR/session.key (mode 0600, created on first use).
+ * Server-side signing key, kept in DATA_DIR/session.key (see lib/session-key.ts).
  * It must not be derivable from ADMIN_TOKEN: otherwise an attacker could mint a cookie for each
  * candidate token offline and use 200/401 responses to guess the token past the failure budget.
+ * Cached per process: rotating session.key requires a restart (single instance, R3).
  */
 let cachedKey: { dir: string; key: Buffer } | undefined
 
 function sessionKey(): Buffer {
   const dir = getEnv().DATA_DIR
-  if (cachedKey?.dir === dir) return cachedKey.key
-  const file = path.join(dir, 'session.key')
-  fs.mkdirSync(dir, { recursive: true })
-  try {
-    fs.writeFileSync(file, randomBytes(32).toString('hex'), { flag: 'wx', mode: 0o600 })
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code !== 'EEXIST') throw err
-  }
-  const key = Buffer.from(fs.readFileSync(file, 'utf8').trim(), 'hex')
-  if (key.length < 32) throw new Error('session.key is corrupt')
-  cachedKey = { dir, key }
-  return key
+  if (cachedKey?.dir !== dir) cachedKey = { dir, key: loadOrCreateSessionKey(dir) }
+  return cachedKey.key
 }
 
 /**
  * Cookie value `<exp>.<hmac>`: the expiry (unix seconds) plus a fingerprint of the current admin
- * token, signed with the server-side key. Rotating ADMIN_TOKEN or session.key ends all sessions.
+ * token, signed with the server-side key. Changing ADMIN_TOKEN, or replacing session.key and restarting, ends all sessions.
  */
 export function sessionValue(expS: number): string {
   const tokenFp = createHash('sha256').update(getEnv().ADMIN_TOKEN, 'utf8').digest('hex')

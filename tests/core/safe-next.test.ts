@@ -15,6 +15,8 @@ describe('safeNext', () => {
     '/\n/evil.example',
     'https://evil.example/',
     'javascript:alert(1)',
+    'https://shizhao.invalid//evil.example/path',
+    '///evil.example',
   ])('falls back to / for %j', (raw) => {
     expect(safeNext(raw)).toBe('/')
   })
