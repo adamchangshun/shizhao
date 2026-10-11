@@ -129,6 +129,15 @@ describe('session cookie login', () => {
     expect((await login(req)).status).toBe(413)
   })
 
+  it('does not accept a cookie minted from a guessed token (no offline oracle)', async () => {
+    const { createHmac } = await import('node:crypto')
+    // The old scheme keyed the HMAC with the token; knowing the real token must still not help.
+    const expS = Math.floor(Date.now() / 1000) + 3600
+    const mac = createHmac('sha256', TOKEN).update(`shizhao-admin-session-v1.${expS}`).digest('hex')
+    const { res } = await create({ cookie: `shizhao_admin=${expS}.${mac}` })
+    expect(res.status).toBe(401)
+  })
+
   it('rejects an expired session cookie', async () => {
     const longAgo = Date.now() - (SESSION_MAX_AGE_S + 60) * 1000
     const expired = buildSessionCookie(longAgo).split(';')[0]!

@@ -2,12 +2,7 @@
 
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useState, type FormEvent } from 'react'
-
-/** Only same-site absolute paths are allowed as post-login targets (no open redirect). */
-function safeNext(raw: string | null): string {
-  if (!raw || !raw.startsWith('/') || raw.startsWith('//') || raw.startsWith('/\\')) return '/'
-  return raw
-}
+import { safeNext } from '@/lib/safe-next'
 
 export function LoginForm() {
   const router = useRouter()

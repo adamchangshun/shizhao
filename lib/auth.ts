@@ -1,4 +1,6 @@
-import { createHash, createHmac, timingSafeEqual } from 'node:crypto'
+import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypto'
+import fs from 'node:fs'
+import path from 'node:path'
 import { Errors } from './core/errors'
 import { getEnv } from './env'
 import { FixedWindowLimiter } from './rate-limit'
@@ -8,11 +10,37 @@ export const SESSION_MAX_AGE_S = 30 * 24 * 3600
 const SESSION_LABEL = 'shizhao-admin-session-v1'
 
 /**
- * Cookie value `<exp>.<hmac>`: the expiry (unix seconds) signed with an HMAC keyed by the admin
- * token. The token itself is never stored, and the server enforces the expiry.
+ * Server-side signing key, kept in DATA_DIR/session.key (mode 0600, created on first use).
+ * It must not be derivable from ADMIN_TOKEN: otherwise an attacker could mint a cookie for each
+ * candidate token offline and use 200/401 responses to guess the token past the failure budget.
  */
-export function sessionValue(token: string, expS: number): string {
-  const mac = createHmac('sha256', token).update(`${SESSION_LABEL}.${expS}`).digest('hex')
+let cachedKey: { dir: string; key: Buffer } | undefined
+
+function sessionKey(): Buffer {
+  const dir = getEnv().DATA_DIR
+  if (cachedKey?.dir === dir) return cachedKey.key
+  const file = path.join(dir, 'session.key')
+  fs.mkdirSync(dir, { recursive: true })
+  try {
+    fs.writeFileSync(file, randomBytes(32).toString('hex'), { flag: 'wx', mode: 0o600 })
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== 'EEXIST') throw err
+  }
+  const key = Buffer.from(fs.readFileSync(file, 'utf8').trim(), 'hex')
+  if (key.length < 32) throw new Error('session.key is corrupt')
+  cachedKey = { dir, key }
+  return key
+}
+
+/**
+ * Cookie value `<exp>.<hmac>`: the expiry (unix seconds) plus a fingerprint of the current admin
+ * token, signed with the server-side key. Rotating ADMIN_TOKEN or session.key ends all sessions.
+ */
+export function sessionValue(expS: number): string {
+  const tokenFp = createHash('sha256').update(getEnv().ADMIN_TOKEN, 'utf8').digest('hex')
+  const mac = createHmac('sha256', sessionKey())
+    .update(`${SESSION_LABEL}.${expS}.${tokenFp}`)
+    .digest('hex')
   return `${expS}.${mac}`
 }
 
@@ -22,7 +50,7 @@ export function verifySessionValue(value: string, nowMs: number = Date.now()): b
   const expS = Number(match[1])
   const nowS = Math.floor(nowMs / 1000)
   if (expS <= nowS || expS > nowS + SESSION_MAX_AGE_S) return false
-  return safeEqual(value, sessionValue(getEnv().ADMIN_TOKEN, expS))
+  return safeEqual(value, sessionValue(expS))
 }
 
 /** Constant-time string equality; hashing first makes the comparison length-independent. */
@@ -59,7 +87,7 @@ function isSecureDeployment(): boolean {
 export function buildSessionCookie(nowMs: number = Date.now()): string {
   const expS = Math.floor(nowMs / 1000) + SESSION_MAX_AGE_S
   const parts = [
-    `${ADMIN_COOKIE}=${sessionValue(getEnv().ADMIN_TOKEN, expS)}`,
+    `${ADMIN_COOKIE}=${sessionValue(expS)}`,
     'Path=/',
     'HttpOnly',
     'SameSite=Lax',

@@ -32,3 +32,13 @@
 | MEDIUM | `transition()` 的返回类型不准确 | 已修复：返回 `Omit<T,'status'> & { status: N }` |
 | MEDIUM | `deriveProjectState` 对新项目返回 `null`；项目下线后指针仍非空时返回 `previewable` | 暂不修复：契约只定义了三种展示状态，新增 `draft` 需要改契约。`null` 表示还没有可展示的内容，由 11 号界面显示为无标签。是否清空发布指针由 09 号决定（09 号提示词规定下线只设置 `unpublishedAt`） |
 | MEDIUM | 项目列表的 N+1 查询 | 同第 1 轮，留给 10 号统一改为聚合查询 |
+
+### 第 3 轮：2 HIGH，1 MEDIUM（已到 3 轮上限）
+
+| 级别 | 问题 | 处理 |
+|---|---|---|
+| HIGH | 会话 HMAC 以 `ADMIN_TOKEN` 为密钥，攻击者可以为每个候选口令自己伪造 cookie，通过 200/401 离线猜测，绕过失败预算 | 已修复：签名密钥改为 `DATA_DIR/session.key`（32 字节随机数，权限 0600，首次使用时生成），签名内容包含口令指纹，轮换口令后旧会话失效；新增回归测试，确认用真实口令按旧方式伪造的 cookie 会被拒绝 |
+| HIGH | 用 `?next=/%09/evil.example` 可以绕过 `safeNext` 形成开放重定向 | 已修复：用固定哨兵 origin 配合 `new URL()` 解析并校验 origin；函数移到 `lib/safe-next.ts`，新增 8 个测试用例 |
+| MEDIUM | 把 `docs/CONTRACT.md` 标为 `-diff` 后，契约被篡改在 diff 中看不到 | 已修复：撤回该规则（只是为了第 3 轮 diff 不超过体积上限临时加的） |
+
+第 3 轮的修复没有再送审，因为已达到 3 轮上限，由项目负责人决定是否加一轮复审再合并。
