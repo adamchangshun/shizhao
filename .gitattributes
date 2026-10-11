@@ -1,2 +1,3 @@
 pnpm-lock.yaml -diff linguist-generated
 lib/db/migrations/meta/*.json -diff linguist-generated
+docs/CONTRACT.md -diff
