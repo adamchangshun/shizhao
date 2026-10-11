@@ -1,6 +1,8 @@
 import fs from 'node:fs'
 import path from 'node:path'
-import { beforeAll, describe, expect, it } from 'vitest'
+import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
+import { buildSessionCookie, resetAuthFailures, SESSION_MAX_AGE_S } from '@/lib/auth'
+import { createJobIfIdle } from '@/lib/db/repo/jobs'
 import { POST as login } from '@/app/api/auth/login/route'
 import { GET as health } from '@/app/api/health/route'
 import { DELETE as deleteProject, GET as getProject } from '@/app/api/projects/[id]/route'
@@ -13,6 +15,7 @@ const TOKEN = 'test-admin-token-0123'
 const bearer = { authorization: `Bearer ${TOKEN}` }
 
 beforeAll(() => runMigrations())
+beforeEach(() => resetAuthFailures())
 
 function json(method: string, url: string, body: unknown, headers: Record<string, string> = {}) {
   return new Request(`${BASE}${url}`, {
@@ -86,13 +89,41 @@ describe('session cookie login', () => {
     expect(res.headers.get('set-cookie')).toBeNull()
   })
 
-  it('locks out a client after 10 failed attempts', async () => {
-    const headers = { 'x-forwarded-for': '10.0.0.66' }
-    for (let i = 0; i < 10; i++) {
-      await login(json('POST', '/api/auth/login', { token: 'wrong-wrong-wrong' }, headers))
-    }
-    const res = await login(json('POST', '/api/auth/login', { token: TOKEN }, headers))
+  it('caps 50 concurrent wrong guesses at the 30-failure budget, whatever X-Forwarded-For says', async () => {
+    const results = await Promise.all(
+      Array.from({ length: 50 }, (_, i) =>
+        login(
+          json(
+            'POST',
+            '/api/auth/login',
+            { token: `guess-${i}-xxxxxx` },
+            {
+              'x-forwarded-for': `10.0.${i}.1`,
+            },
+          ),
+        ),
+      ),
+    )
+    const statuses = results.map((r) => r.status)
+    expect(statuses.filter((s) => s === 401)).toHaveLength(30)
+    expect(statuses.filter((s) => s === 429)).toHaveLength(20)
+    // The Bearer header shares the same budget.
+    const { res } = await create({ authorization: `Bearer ${TOKEN}` })
     expect(res.status).toBe(429)
+  })
+
+  it('rejects an expired session cookie', async () => {
+    const longAgo = Date.now() - (SESSION_MAX_AGE_S + 60) * 1000
+    const expired = buildSessionCookie(longAgo).split(';')[0]!
+    const { res } = await create({ cookie: expired })
+    expect(res.status).toBe(401)
+  })
+
+  it('rejects a cookie whose expiry was pushed out without re-signing', async () => {
+    const cookie = await loginCookie()
+    const [, mac] = cookie.split('=')[1]!.split('.')
+    const { res } = await create({ cookie: `shizhao_admin=9999999999.${mac}` })
+    expect(res.status).toBe(401)
   })
 
   it('authorizes same-origin requests with the cookie', async () => {
@@ -181,6 +212,35 @@ describe('DELETE /api/projects/:id', () => {
     }
     expect(fs.existsSync(sentinel)).toBe(true)
     expect(fs.existsSync(path.join(dataDir, 'uploads'))).toBe(true)
+  })
+
+  it('returns 409 and keeps files while a job is running', async () => {
+    const { body } = await create()
+    const uploads = path.join(getEnv().DATA_DIR, 'uploads', body.id)
+    fs.mkdirSync(uploads, { recursive: true })
+    expect(createJobIfIdle(body.id, { factRevision: 1, seed: 1 })).not.toBeNull()
+    const res = await deleteProject(
+      new Request(`${BASE}/api/projects/${body.id}`, { method: 'DELETE', headers: bearer }),
+      ctx(body.id),
+    )
+    expect(res.status).toBe(409)
+    expect(fs.existsSync(uploads)).toBe(true)
+  })
+
+  it('removes a symlinked project dir without touching its target', async () => {
+    const { body } = await create()
+    const outside = fs.mkdtempSync(path.join(path.dirname(getEnv().DATA_DIR), 'outside-'))
+    fs.writeFileSync(path.join(outside, 'precious.txt'), 'keep')
+    const link = path.join(getEnv().DATA_DIR, 'pages', body.id)
+    fs.symlinkSync(outside, link)
+    const res = await deleteProject(
+      new Request(`${BASE}/api/projects/${body.id}`, { method: 'DELETE', headers: bearer }),
+      ctx(body.id),
+    )
+    expect(res.status).toBe(204)
+    expect(fs.existsSync(link)).toBe(false)
+    expect(fs.readFileSync(path.join(outside, 'precious.txt'), 'utf8')).toBe('keep')
+    fs.rmSync(outside, { recursive: true, force: true })
   })
 })
 

@@ -9,7 +9,8 @@ CREATE TABLE `assets` (
 	`bytes` integer,
 	`text` text,
 	`created_at` text NOT NULL,
-	FOREIGN KEY (`project_id`) REFERENCES `projects`(`id`) ON UPDATE no action ON DELETE no action
+	FOREIGN KEY (`project_id`) REFERENCES `projects`(`id`) ON UPDATE no action ON DELETE no action,
+	CONSTRAINT "assets_kind_check" CHECK("assets"."kind" IN ('image', 'text'))
 );
 --> statement-breakpoint
 CREATE INDEX `assets_project_idx` ON `assets` (`project_id`);--> statement-breakpoint
@@ -27,6 +28,7 @@ CREATE TABLE `corrections` (
 	`processing_at` text,
 	FOREIGN KEY (`project_id`) REFERENCES `projects`(`id`) ON UPDATE no action ON DELETE no action,
 	FOREIGN KEY (`version_id`) REFERENCES `versions`(`id`) ON UPDATE no action ON DELETE no action,
+	CONSTRAINT "corrections_status_check" CHECK("corrections"."status" IN ('pending', 'processing', 'accepted', 'rejected', 'spam')),
 	CONSTRAINT "corrections_suggested_value_len" CHECK(length("corrections"."suggested_value") <= 100),
 	CONSTRAINT "corrections_note_len" CHECK("corrections"."note" IS NULL OR length("corrections"."note") <= 200)
 );
@@ -53,7 +55,8 @@ CREATE TABLE `jobs` (
 	`started_at` text NOT NULL,
 	`finished_at` text,
 	`created_at` text NOT NULL,
-	FOREIGN KEY (`project_id`) REFERENCES `projects`(`id`) ON UPDATE no action ON DELETE no action
+	FOREIGN KEY (`project_id`) REFERENCES `projects`(`id`) ON UPDATE no action ON DELETE no action,
+	CONSTRAINT "jobs_status_check" CHECK("jobs"."status" IN ('queued', 'designing', 'writing', 'guarding', 'rendering', 'checking', 'succeeded', 'failed', 'timed_out'))
 );
 --> statement-breakpoint
 CREATE INDEX `jobs_project_idx` ON `jobs` (`project_id`);--> statement-breakpoint
@@ -66,7 +69,8 @@ CREATE TABLE `projects` (
 	`published_version_id` text,
 	`unpublished_at` text,
 	`created_at` text NOT NULL,
-	`deleted_at` text
+	`deleted_at` text,
+	CONSTRAINT "projects_type_check" CHECK("projects"."type" IN ('single', 'menu'))
 );
 --> statement-breakpoint
 CREATE UNIQUE INDEX `projects_slug_unique` ON `projects` (`slug`);--> statement-breakpoint
@@ -102,7 +106,8 @@ CREATE TABLE `versions` (
 	`qa` text,
 	`created_at` text NOT NULL,
 	FOREIGN KEY (`project_id`) REFERENCES `projects`(`id`) ON UPDATE no action ON DELETE no action,
-	FOREIGN KEY (`job_id`) REFERENCES `jobs`(`id`) ON UPDATE no action ON DELETE no action
+	FOREIGN KEY (`job_id`) REFERENCES `jobs`(`id`) ON UPDATE no action ON DELETE no action,
+	CONSTRAINT "versions_origin_check" CHECK("versions"."origin" IN ('generate', 'correction'))
 );
 --> statement-breakpoint
 CREATE INDEX `versions_project_idx` ON `versions` (`project_id`);--> statement-breakpoint
@@ -114,7 +119,9 @@ CREATE TABLE `visit_events` (
 	`action` text NOT NULL,
 	`created_at` text NOT NULL,
 	FOREIGN KEY (`project_id`) REFERENCES `projects`(`id`) ON UPDATE no action ON DELETE no action,
-	FOREIGN KEY (`version_id`) REFERENCES `versions`(`id`) ON UPDATE no action ON DELETE no action
+	FOREIGN KEY (`version_id`) REFERENCES `versions`(`id`) ON UPDATE no action ON DELETE no action,
+	CONSTRAINT "visit_source_check" CHECK("visit_events"."source" IN ('qr', 'link')),
+	CONSTRAINT "visit_action_check" CHECK("visit_events"."action" IN ('view', 'call', 'wechat_copy', 'navigate'))
 );
 --> statement-breakpoint
 CREATE INDEX `visit_project_created_idx` ON `visit_events` (`project_id`,`created_at`);

@@ -1,6 +1,7 @@
 import { and, eq, notInArray } from 'drizzle-orm'
 import type { JobStatus } from '../../core/schemas'
 import { newId } from '../../core/ids'
+import { isTerminal, transition } from '../../core/job-state'
 import { getDb, type Db } from '../client'
 import { jobs, type JobRow } from '../schema'
 
@@ -70,4 +71,45 @@ export function listJobStatuses(projectId: string): JobStatus[] {
     .where(eq(jobs.projectId, projectId))
     .all()
     .map((r) => r.status)
+}
+
+export function hasActiveJob(projectId: string): boolean {
+  const row = getDb()
+    .select({ id: jobs.id })
+    .from(jobs)
+    .where(and(eq(jobs.projectId, projectId), notInArray(jobs.status, TERMINAL_STATUSES)))
+    .get()
+  return row !== undefined
+}
+
+export interface TransitionPatch {
+  stage?: string
+  error?: string | null
+}
+
+/**
+ * The only sanctioned way to persist a job status change (contract section 4 + R3).
+ * Validates the move with the state machine, then applies it with a conditional
+ * `UPDATE ... WHERE id=? AND status=?`. Returns false if another writer got there first.
+ * Throws InvalidTransitionError for illegal moves.
+ */
+export function transitionJob(
+  id: string,
+  expected: JobStatus,
+  next: JobStatus,
+  patch: TransitionPatch = {},
+  db: Db = getDb(),
+): boolean {
+  transition({ status: expected }, next)
+  const result = db
+    .update(jobs)
+    .set({
+      status: next,
+      stage: patch.stage ?? next,
+      ...(patch.error !== undefined ? { error: patch.error } : {}),
+      ...(isTerminal(next) ? { finishedAt: new Date().toISOString() } : {}),
+    })
+    .where(and(eq(jobs.id, id), eq(jobs.status, expected)))
+    .run()
+  return result.changes === 1
 }

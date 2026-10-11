@@ -4,7 +4,8 @@ import { drizzle } from 'drizzle-orm/better-sqlite3'
 import { eq } from 'drizzle-orm'
 import { beforeAll, describe, expect, it } from 'vitest'
 import { getDb, runMigrations } from '@/lib/db/client'
-import { createJobIfIdle } from '@/lib/db/repo/jobs'
+import { InvalidTransitionError } from '@/lib/core/job-state'
+import { createJobIfIdle, transitionJob } from '@/lib/db/repo/jobs'
 import { insertProject } from '@/lib/db/repo/projects'
 import * as schema from '@/lib/db/schema'
 import { getEnv } from '@/lib/env'
@@ -79,5 +80,44 @@ describe('insertProject', () => {
     expect(() => insertProject({ type: 'single', title: 'C' }, () => 'aaaaaa')).toThrow(
       /unique slug after 5 attempts/,
     )
+  })
+})
+
+describe('transitionJob', () => {
+  it('advances with a conditional update and loses the race on a stale status', () => {
+    const { id } = insertProject({ type: 'single', title: '状态推进' })
+    const job = createJobIfIdle(id, { factRevision: 1, seed: 1 })!
+    expect(transitionJob(job.id, 'queued', 'designing')).toBe(true)
+    // A second writer still believing the job is queued must not win.
+    expect(transitionJob(job.id, 'queued', 'designing')).toBe(false)
+    const row = getDb().select().from(schema.jobs).where(eq(schema.jobs.id, job.id)).get()!
+    expect(row.status).toBe('designing')
+    expect(row.finishedAt).toBeNull()
+  })
+
+  it('rejects illegal moves before touching the database', () => {
+    const { id } = insertProject({ type: 'single', title: '非法转换' })
+    const job = createJobIfIdle(id, { factRevision: 1, seed: 1 })!
+    expect(() => transitionJob(job.id, 'queued', 'rendering')).toThrow(InvalidTransitionError)
+    expect(transitionJob(job.id, 'queued', 'failed', { error: '模型超时' })).toBe(true)
+    expect(() => transitionJob(job.id, 'failed', 'queued')).toThrow(InvalidTransitionError)
+    const row = getDb().select().from(schema.jobs).where(eq(schema.jobs.id, job.id)).get()!
+    expect(row.status).toBe('failed')
+    expect(row.error).toBe('模型超时')
+    expect(row.finishedAt).not.toBeNull()
+  })
+})
+
+describe('enum CHECK constraints', () => {
+  it('refuse a job status outside the contract', () => {
+    const { id } = insertProject({ type: 'single', title: '约束' })
+    const job = createJobIfIdle(id, { factRevision: 1, seed: 1 })!
+    expect(() =>
+      getDb()
+        .update(schema.jobs)
+        .set({ status: 'paused' as never })
+        .where(eq(schema.jobs.id, job.id))
+        .run(),
+    ).toThrow(/CHECK/)
   })
 })

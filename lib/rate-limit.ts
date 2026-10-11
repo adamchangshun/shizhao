@@ -1,10 +1,14 @@
-/** In-memory fixed-window counter. Valid because the deployment is a single long-lived process (R3). */
+/**
+ * In-memory fixed-window counter. Valid because the deployment is a single long-lived process
+ * (R3). Holds at most `maxKeys` live keys so attacker-chosen keys cannot grow memory unbounded.
+ */
 export class FixedWindowLimiter {
   private readonly hits = new Map<string, { count: number; resetAt: number }>()
 
   constructor(
     private readonly limit: number,
     private readonly windowMs: number,
+    private readonly maxKeys: number = 10_000,
   ) {}
 
   isBlocked(key: string, now: number = Date.now()): boolean {
@@ -14,27 +18,20 @@ export class FixedWindowLimiter {
 
   hit(key: string, now: number = Date.now()): void {
     const entry = this.hits.get(key)
-    if (entry === undefined || entry.resetAt <= now) {
-      this.prune(now)
-      this.hits.set(key, { count: 1, resetAt: now + this.windowMs })
+    if (entry !== undefined && entry.resetAt > now) {
+      this.hits.set(key, { count: entry.count + 1, resetAt: entry.resetAt })
       return
     }
-    this.hits.set(key, { count: entry.count + 1, resetAt: entry.resetAt })
+    this.hits.delete(key)
+    if (this.hits.size >= this.maxKeys) {
+      // Map iterates in insertion order: drop the oldest window.
+      const oldest = this.hits.keys().next().value
+      if (oldest !== undefined) this.hits.delete(oldest)
+    }
+    this.hits.set(key, { count: 1, resetAt: now + this.windowMs })
   }
 
   reset(key: string): void {
     this.hits.delete(key)
   }
-
-  private prune(now: number): void {
-    for (const [key, entry] of this.hits) {
-      if (entry.resetAt <= now) this.hits.delete(key)
-    }
-  }
-}
-
-/** Best-effort client key; behind a reverse proxy the first X-Forwarded-For hop is used. */
-export function clientKey(request: Request): string {
-  const forwarded = request.headers.get('x-forwarded-for')?.split(',')[0]?.trim()
-  return forwarded || request.headers.get('x-real-ip') || 'unknown'
 }

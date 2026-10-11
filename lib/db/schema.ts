@@ -9,6 +9,7 @@ import {
   sqliteTable,
   text,
   uniqueIndex,
+  type AnySQLiteColumn,
 } from 'drizzle-orm/sqlite-core'
 import type {
   CopyDraft,
@@ -44,16 +45,25 @@ export const JOB_STATUSES = [
   'timed_out',
 ] as const satisfies readonly JobStatus[]
 
-export const projects = sqliteTable('projects', {
-  id: text('id').primaryKey(),
-  slug: text('slug').notNull().unique(),
-  type: text('type', { enum: PROJECT_TYPES }).notNull(),
-  title: text('title').notNull(),
-  publishedVersionId: text('published_version_id'),
-  unpublishedAt: text('unpublished_at'),
-  createdAt: text('created_at').notNull(),
-  deletedAt: text('deleted_at'),
-})
+/** DB-level CHECK so values outside the contract enum can never be stored. */
+function oneOf(name: string, column: AnySQLiteColumn, values: readonly string[]) {
+  return check(name, sql`${column} IN (${sql.raw(values.map((v) => `'${v}'`).join(', '))})`)
+}
+
+export const projects = sqliteTable(
+  'projects',
+  {
+    id: text('id').primaryKey(),
+    slug: text('slug').notNull().unique(),
+    type: text('type', { enum: PROJECT_TYPES }).notNull(),
+    title: text('title').notNull(),
+    publishedVersionId: text('published_version_id'),
+    unpublishedAt: text('unpublished_at'),
+    createdAt: text('created_at').notNull(),
+    deletedAt: text('deleted_at'),
+  },
+  (t) => [oneOf('projects_type_check', t.type, PROJECT_TYPES)],
+)
 
 export const assets = sqliteTable(
   'assets',
@@ -72,7 +82,10 @@ export const assets = sqliteTable(
     text: text('text'),
     createdAt: text('created_at').notNull(),
   },
-  (t) => [index('assets_project_idx').on(t.projectId)],
+  (t) => [
+    index('assets_project_idx').on(t.projectId),
+    oneOf('assets_kind_check', t.kind, ASSET_KINDS),
+  ],
 )
 
 export const factSheets = sqliteTable(
@@ -107,6 +120,7 @@ export const jobs = sqliteTable(
   },
   (t) => [
     index('jobs_project_idx').on(t.projectId),
+    oneOf('jobs_status_check', t.status, JOB_STATUSES),
     // R3: at most one non-terminal job per project.
     uniqueIndex('jobs_one_active_per_project')
       .on(t.projectId)
@@ -132,7 +146,10 @@ export const versions = sqliteTable(
     qa: text('qa', { mode: 'json' }).$type<QaReport>(),
     createdAt: text('created_at').notNull(),
   },
-  (t) => [index('versions_project_idx').on(t.projectId)],
+  (t) => [
+    index('versions_project_idx').on(t.projectId),
+    oneOf('versions_origin_check', t.origin, VERSION_ORIGINS),
+  ],
 )
 
 export const usageRecords = sqliteTable(
@@ -169,7 +186,11 @@ export const visitEvents = sqliteTable(
     action: text('action', { enum: VISIT_ACTIONS }).notNull(),
     createdAt: text('created_at').notNull(),
   },
-  (t) => [index('visit_project_created_idx').on(t.projectId, t.createdAt)],
+  (t) => [
+    index('visit_project_created_idx').on(t.projectId, t.createdAt),
+    oneOf('visit_source_check', t.source, VISIT_SOURCES),
+    oneOf('visit_action_check', t.action, VISIT_ACTIONS),
+  ],
 )
 
 // Holds no customer identity of any kind (contract section 5).
@@ -194,6 +215,7 @@ export const corrections = sqliteTable(
   },
   (t) => [
     index('corrections_project_status_idx').on(t.projectId, t.status),
+    oneOf('corrections_status_check', t.status, CORRECTION_STATUSES),
     check('corrections_suggested_value_len', sql`length(${t.suggestedValue}) <= 100`),
     check('corrections_note_len', sql`${t.note} IS NULL OR length(${t.note}) <= 200`),
   ],

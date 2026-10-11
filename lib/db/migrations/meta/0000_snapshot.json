@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "2edf0bec-5c74-464b-9455-54c978e4d3ee",
+  "id": "d080b122-ef22-4333-b992-4e3365001915",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "assets": {
@@ -104,7 +104,12 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraints": {}
+      "checkConstraints": {
+        "assets_kind_check": {
+          "name": "assets_kind_check",
+          "value": "\"assets\".\"kind\" IN ('image', 'text')"
+        }
+      }
     },
     "corrections": {
       "name": "corrections",
@@ -228,6 +233,10 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "checkConstraints": {
+        "corrections_status_check": {
+          "name": "corrections_status_check",
+          "value": "\"corrections\".\"status\" IN ('pending', 'processing', 'accepted', 'rejected', 'spam')"
+        },
         "corrections_suggested_value_len": {
           "name": "corrections_suggested_value_len",
           "value": "length(\"corrections\".\"suggested_value\") <= 100"
@@ -413,7 +422,12 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraints": {}
+      "checkConstraints": {
+        "jobs_status_check": {
+          "name": "jobs_status_check",
+          "value": "\"jobs\".\"status\" IN ('queued', 'designing', 'writing', 'guarding', 'rendering', 'checking', 'succeeded', 'failed', 'timed_out')"
+        }
+      }
     },
     "projects": {
       "name": "projects",
@@ -487,7 +501,12 @@
       "foreignKeys": {},
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraints": {}
+      "checkConstraints": {
+        "projects_type_check": {
+          "name": "projects_type_check",
+          "value": "\"projects\".\"type\" IN ('single', 'menu')"
+        }
+      }
     },
     "usage_records": {
       "name": "usage_records",
@@ -745,7 +764,12 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraints": {}
+      "checkConstraints": {
+        "versions_origin_check": {
+          "name": "versions_origin_check",
+          "value": "\"versions\".\"origin\" IN ('generate', 'correction')"
+        }
+      }
     },
     "visit_events": {
       "name": "visit_events",
@@ -833,7 +857,16 @@
       },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
-      "checkConstraints": {}
+      "checkConstraints": {
+        "visit_source_check": {
+          "name": "visit_source_check",
+          "value": "\"visit_events\".\"source\" IN ('qr', 'link')"
+        },
+        "visit_action_check": {
+          "name": "visit_action_check",
+          "value": "\"visit_events\".\"action\" IN ('view', 'call', 'wechat_copy', 'navigate')"
+        }
+      }
     }
   },
   "views": {},

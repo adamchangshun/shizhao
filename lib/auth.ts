@@ -1,14 +1,28 @@
 import { createHash, createHmac, timingSafeEqual } from 'node:crypto'
 import { Errors } from './core/errors'
 import { getEnv } from './env'
+import { FixedWindowLimiter } from './rate-limit'
 
 export const ADMIN_COOKIE = 'shizhao_admin'
-const SESSION_MAX_AGE_S = 30 * 24 * 3600
+export const SESSION_MAX_AGE_S = 30 * 24 * 3600
 const SESSION_LABEL = 'shizhao-admin-session-v1'
 
-/** Cookie value: HMAC of a fixed label keyed by the admin token, so the token itself is never stored. */
-export function sessionValue(token: string): string {
-  return createHmac('sha256', token).update(SESSION_LABEL).digest('hex')
+/**
+ * Cookie value `<exp>.<hmac>`: the expiry (unix seconds) signed with an HMAC keyed by the admin
+ * token. The token itself is never stored, and the server enforces the expiry.
+ */
+export function sessionValue(token: string, expS: number): string {
+  const mac = createHmac('sha256', token).update(`${SESSION_LABEL}.${expS}`).digest('hex')
+  return `${expS}.${mac}`
+}
+
+export function verifySessionValue(value: string, nowMs: number = Date.now()): boolean {
+  const match = /^(\d{1,12})\.[0-9a-f]{64}$/.exec(value)
+  if (!match) return false
+  const expS = Number(match[1])
+  const nowS = Math.floor(nowMs / 1000)
+  if (expS <= nowS || expS > nowS + SESSION_MAX_AGE_S) return false
+  return safeEqual(value, sessionValue(getEnv().ADMIN_TOKEN, expS))
 }
 
 /** Constant-time string equality; hashing first makes the comparison length-independent. */
@@ -18,17 +32,34 @@ export function safeEqual(a: string, b: string): boolean {
   return timingSafeEqual(da, db)
 }
 
-export function verifyAdminToken(candidate: string): boolean {
-  return safeEqual(candidate, getEnv().ADMIN_TOKEN)
+// One global budget for wrong admin tokens (login form and Bearer header alike). Keyed globally
+// on purpose: client addresses are spoofable without a trusted proxy, and there is one admin.
+const AUTH_FAILURE_KEY = 'admin'
+const authFailures = new FixedWindowLimiter(30, 15 * 60 * 1000)
+
+export type TokenCheck = 'ok' | 'invalid' | 'blocked'
+
+/** Synchronous check-and-count, so concurrent requests cannot slip past the failure budget. */
+export function checkAdminToken(candidate: string): TokenCheck {
+  if (authFailures.isBlocked(AUTH_FAILURE_KEY)) return 'blocked'
+  if (safeEqual(candidate, getEnv().ADMIN_TOKEN)) return 'ok'
+  authFailures.hit(AUTH_FAILURE_KEY)
+  return 'invalid'
+}
+
+/** Test-only: clear the failure budget. */
+export function resetAuthFailures(): void {
+  authFailures.reset(AUTH_FAILURE_KEY)
 }
 
 function isSecureDeployment(): boolean {
   return getEnv().PUBLIC_BASE_URL.startsWith('https://')
 }
 
-export function buildSessionCookie(): string {
+export function buildSessionCookie(nowMs: number = Date.now()): string {
+  const expS = Math.floor(nowMs / 1000) + SESSION_MAX_AGE_S
   const parts = [
-    `${ADMIN_COOKIE}=${sessionValue(getEnv().ADMIN_TOKEN)}`,
+    `${ADMIN_COOKIE}=${sessionValue(getEnv().ADMIN_TOKEN, expS)}`,
     'Path=/',
     'HttpOnly',
     'SameSite=Lax',
@@ -83,15 +114,16 @@ function isSameOriginRequest(request: Request): boolean {
   return allowed.has(originHost)
 }
 
-/** Throws ApiError(401/403) unless the request carries the admin token or a valid session cookie. */
+/** Throws ApiError(401/403/429) unless the request carries the admin token or a valid session cookie. */
 export function requireAdmin(request: Request): void {
   const bearer = readBearer(request)
   if (bearer !== undefined) {
-    if (verifyAdminToken(bearer)) return
-    throw Errors.unauthorized()
+    const check = checkAdminToken(bearer)
+    if (check === 'ok') return
+    throw check === 'blocked' ? Errors.tooManyRequests() : Errors.unauthorized()
   }
   const cookie = readCookie(request, ADMIN_COOKIE)
-  if (cookie === undefined || !safeEqual(cookie, sessionValue(getEnv().ADMIN_TOKEN))) {
+  if (cookie === undefined || !verifySessionValue(cookie)) {
     throw Errors.unauthorized()
   }
   if (!SAFE_METHODS.has(request.method.toUpperCase()) && !isSameOriginRequest(request)) {
