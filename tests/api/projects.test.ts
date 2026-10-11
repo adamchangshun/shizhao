@@ -86,6 +86,9 @@ describe('session cookie login', () => {
       ),
     )
     expect(res.status).toBe(401)
+    expect(((await res.json()) as { error: { message: string } }).error.message).toBe(
+      '管理口令不正确',
+    )
     expect(res.headers.get('set-cookie')).toBeNull()
   })
 
