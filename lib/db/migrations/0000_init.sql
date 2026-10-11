@@ -10,7 +10,8 @@ CREATE TABLE `assets` (
 	`text` text,
 	`created_at` text NOT NULL,
 	FOREIGN KEY (`project_id`) REFERENCES `projects`(`id`) ON UPDATE no action ON DELETE no action,
-	CONSTRAINT "assets_kind_check" CHECK("assets"."kind" IN ('image', 'text'))
+	CONSTRAINT "assets_kind_check" CHECK("assets"."kind" IN ('image', 'text')),
+	CONSTRAINT "assets_kind_fields_check" CHECK(("assets"."kind" = 'image' AND "assets"."path" IS NOT NULL AND "assets"."width" IS NOT NULL AND "assets"."height" IS NOT NULL AND "assets"."sha256" IS NOT NULL AND "assets"."bytes" IS NOT NULL AND "assets"."text" IS NULL) OR ("assets"."kind" = 'text' AND "assets"."text" IS NOT NULL AND "assets"."path" IS NULL))
 );
 --> statement-breakpoint
 CREATE INDEX `assets_project_idx` ON `assets` (`project_id`);--> statement-breakpoint

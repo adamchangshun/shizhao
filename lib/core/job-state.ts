@@ -36,7 +36,10 @@ export function canTransition(from: JobStatus, to: JobStatus): boolean {
 }
 
 /** Returns a copy of `job` in state `next`; throws InvalidTransitionError on any illegal move. */
-export function transition<T extends { status: JobStatus }>(job: T, next: JobStatus): T {
+export function transition<T extends { status: JobStatus }, N extends JobStatus>(
+  job: T,
+  next: N,
+): Omit<T, 'status'> & { status: N } {
   if (!canTransition(job.status, next)) throw new InvalidTransitionError(job.status, next)
   return { ...job, status: next }
 }

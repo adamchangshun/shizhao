@@ -1,11 +1,11 @@
-import { and, eq, notInArray } from 'drizzle-orm'
+import { and, eq, isNull, notInArray } from 'drizzle-orm'
 import type { JobStatus } from '../../core/schemas'
 import { newId } from '../../core/ids'
 import { isTerminal, transition } from '../../core/job-state'
 import { getDb, type Db } from '../client'
-import { jobs, type JobRow } from '../schema'
+import { jobs, projects, TERMINAL_JOB_STATUSES, type JobRow } from '../schema'
 
-const TERMINAL_STATUSES: JobStatus[] = ['succeeded', 'failed', 'timed_out']
+const TERMINAL_STATUSES = TERMINAL_JOB_STATUSES
 
 export interface NewJobInput {
   factRevision: number
@@ -22,7 +22,7 @@ function isActiveJobConflict(err: unknown): boolean {
 }
 
 /**
- * R3: creates a queued job unless the project already has a non-terminal one.
+ * R3: creates a queued job unless the project is deleted or already has a non-terminal job.
  * The check and insert share one IMMEDIATE transaction, and the partial unique index
  * `jobs_one_active_per_project` backs it up across connections. Returns null on conflict.
  */
@@ -34,6 +34,12 @@ export function createJobIfIdle(
   try {
     return db.transaction(
       (tx) => {
+        const live = tx
+          .select({ id: projects.id })
+          .from(projects)
+          .where(and(eq(projects.id, projectId), isNull(projects.deletedAt)))
+          .get()
+        if (!live) return null
         const active = tx
           .select({ id: jobs.id })
           .from(jobs)
@@ -71,15 +77,6 @@ export function listJobStatuses(projectId: string): JobStatus[] {
     .where(eq(jobs.projectId, projectId))
     .all()
     .map((r) => r.status)
-}
-
-export function hasActiveJob(projectId: string): boolean {
-  const row = getDb()
-    .select({ id: jobs.id })
-    .from(jobs)
-    .where(and(eq(jobs.projectId, projectId), notInArray(jobs.status, TERMINAL_STATUSES)))
-    .get()
-  return row !== undefined
 }
 
 export interface TransitionPatch {

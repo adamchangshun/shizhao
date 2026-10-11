@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "d080b122-ef22-4333-b992-4e3365001915",
+  "id": "460cff9e-2f6a-4834-9fe2-0475842955a0",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "assets": {
@@ -108,6 +108,10 @@
         "assets_kind_check": {
           "name": "assets_kind_check",
           "value": "\"assets\".\"kind\" IN ('image', 'text')"
+        },
+        "assets_kind_fields_check": {
+          "name": "assets_kind_fields_check",
+          "value": "(\"assets\".\"kind\" = 'image' AND \"assets\".\"path\" IS NOT NULL AND \"assets\".\"width\" IS NOT NULL AND \"assets\".\"height\" IS NOT NULL AND \"assets\".\"sha256\" IS NOT NULL AND \"assets\".\"bytes\" IS NOT NULL AND \"assets\".\"text\" IS NULL) OR (\"assets\".\"kind\" = 'text' AND \"assets\".\"text\" IS NOT NULL AND \"assets\".\"path\" IS NULL)"
         }
       }
     },

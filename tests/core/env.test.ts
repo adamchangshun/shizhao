@@ -28,4 +28,15 @@ describe('parseEnv', () => {
     expect(env.GUARD_API_KEYS).toEqual(['k1', 'k2'])
     expect(env.LONG_IMAGE_ENABLED).toBe(false)
   })
+
+  it('refuses public http but allows https, localhost and LAN addresses', () => {
+    const at = (url: string) => () => parseEnv({ ...base, PUBLIC_BASE_URL: url })
+    expect(at('http://shop.example.com')).toThrow(/必须使用 https/)
+    expect(at('http://8.8.8.8:6688')).toThrow(/必须使用 https/)
+    expect(at('https://shop.example.com')).not.toThrow()
+    expect(at('http://localhost:6688')).not.toThrow()
+    expect(at('http://192.168.1.20:6688')).not.toThrow()
+    expect(at('http://172.20.10.2:6688')).not.toThrow()
+    expect(at('http://macbook.local:6688')).not.toThrow()
+  })
 })

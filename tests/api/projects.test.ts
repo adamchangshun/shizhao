@@ -112,6 +112,23 @@ describe('session cookie login', () => {
     expect(res.status).toBe(429)
   })
 
+  it('returns 413 for a login body over 1 KiB, even without Content-Length', async () => {
+    const big = JSON.stringify({ token: 'x'.repeat(4096) })
+    const stream = new ReadableStream({
+      start(c) {
+        c.enqueue(new TextEncoder().encode(big))
+        c.close()
+      },
+    })
+    const req = new Request(`${BASE}/api/auth/login`, {
+      method: 'POST',
+      body: stream,
+      // @ts-expect-error undici needs duplex for streamed bodies
+      duplex: 'half',
+    })
+    expect((await login(req)).status).toBe(413)
+  })
+
   it('rejects an expired session cookie', async () => {
     const longAgo = Date.now() - (SESSION_MAX_AGE_S + 60) * 1000
     const expired = buildSessionCookie(longAgo).split(';')[0]!
@@ -212,6 +229,22 @@ describe('DELETE /api/projects/:id', () => {
     }
     expect(fs.existsSync(sentinel)).toBe(true)
     expect(fs.existsSync(path.join(dataDir, 'uploads'))).toBe(true)
+  })
+
+  it('is idempotent: a repeated DELETE retries cleanup and still returns 204', async () => {
+    const { body } = await create()
+    const del = () =>
+      deleteProject(
+        new Request(`${BASE}/api/projects/${body.id}`, { method: 'DELETE', headers: bearer }),
+        ctx(body.id),
+      )
+    expect((await del()).status).toBe(204)
+    const leftover = path.join(getEnv().DATA_DIR, 'uploads', body.id)
+    fs.mkdirSync(leftover, { recursive: true })
+    expect((await del()).status).toBe(204)
+    expect(fs.existsSync(leftover)).toBe(false)
+    // No new job can start on a deleted project.
+    expect(createJobIfIdle(body.id, { factRevision: 1, seed: 9 })).toBeNull()
   })
 
   it('returns 409 and keeps files while a job is running', async () => {

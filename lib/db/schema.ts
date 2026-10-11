@@ -44,6 +44,7 @@ export const JOB_STATUSES = [
   'failed',
   'timed_out',
 ] as const satisfies readonly JobStatus[]
+export const TERMINAL_JOB_STATUSES: JobStatus[] = ['succeeded', 'failed', 'timed_out']
 
 /** DB-level CHECK so values outside the contract enum can never be stored. */
 function oneOf(name: string, column: AnySQLiteColumn, values: readonly string[]) {
@@ -85,6 +86,11 @@ export const assets = sqliteTable(
   (t) => [
     index('assets_project_idx').on(t.projectId),
     oneOf('assets_kind_check', t.kind, ASSET_KINDS),
+    // Image rows carry file metadata and no text; text rows carry text and no file.
+    check(
+      'assets_kind_fields_check',
+      sql`(${t.kind} = 'image' AND ${t.path} IS NOT NULL AND ${t.width} IS NOT NULL AND ${t.height} IS NOT NULL AND ${t.sha256} IS NOT NULL AND ${t.bytes} IS NOT NULL AND ${t.text} IS NULL) OR (${t.kind} = 'text' AND ${t.text} IS NOT NULL AND ${t.path} IS NULL)`,
+    ),
   ],
 )
 

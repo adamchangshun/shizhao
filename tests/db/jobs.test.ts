@@ -120,4 +120,26 @@ describe('enum CHECK constraints', () => {
         .run(),
     ).toThrow(/CHECK/)
   })
+
+  it('refuse an image asset without file metadata and a text asset without text', () => {
+    const { id } = insertProject({ type: 'single', title: '素材约束' })
+    const now = new Date().toISOString()
+    const insert = (row: Partial<typeof schema.assets.$inferInsert>) => () =>
+      getDb()
+        .insert(schema.assets)
+        .values({
+          id: `as${Math.random().toString(36).slice(2, 12)}`,
+          projectId: id,
+          kind: 'image',
+          createdAt: now,
+          ...row,
+        })
+        .run()
+    expect(insert({ kind: 'image' })).toThrow(/CHECK/)
+    expect(insert({ kind: 'text' })).toThrow(/CHECK/)
+    expect(insert({ kind: 'text', text: '招牌可颂' })).not.toThrow()
+    expect(
+      insert({ kind: 'image', path: 'uploads/x/a', width: 10, height: 10, sha256: 'ab', bytes: 3 }),
+    ).not.toThrow()
+  })
 })

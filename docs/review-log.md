@@ -19,3 +19,16 @@
 | MEDIUM | 项目列表有 `1 + 3N` 次查询 | 暂不修复：单个商家的项目数通常只有几十个，better-sqlite3 的同步查询是微秒级。等 10 号补充 `views7d` 时再统一改成聚合查询 |
 
 **已知取舍**：全局失败预算意味着攻击者可以让管理员在 15 分钟内无法登录（已登录的会话不受影响）。这个项目只有一位管理员，部署在单实例上，相比可以绕过的按 IP 限流，这个取舍更安全。
+
+### 第 2 轮：5 HIGH，3 MEDIUM
+
+| 级别 | 问题 | 处理 |
+|---|---|---|
+| HIGH | 失败预算用完后，正确口令也返回 429，可被用来锁定管理员 | **不采纳，属安全分歧，交项目负责人决定**。如果锁定期间正确口令仍返回 200、错误口令返回 429，攻击者就能继续无限猜测，靠响应码区分对错，限流完全失效。保留现行为：锁定只影响新登录和 Bearer 请求，已登录的会话不受影响；口令至少 12 位 |
+| HIGH | 登录接口的 `request.json()` 不限大小 | 已修复：`readJsonLimited()` 在流式读取时强制 1 KiB 上限，超出返回 413，不依赖 `Content-Length` |
+| HIGH | 删除流程有 TOCTOU 竞态，删除过程中可能创建新任务 | 已修复：`claimProjectDeletion()` 在一个 IMMEDIATE 事务里检查活动任务并标记删除；`createJobIfIdle()` 在事务内拒绝已删除的项目；重复 DELETE 会重试清理并返回 204（幂等） |
+| HIGH | 公网 http 部署时 cookie 不带 `Secure` | 已修复（折中方案）：环境校验拒绝公网 `http://`；http 只允许回环地址、RFC 1918 局域网地址和 `.local` 域名，保留真机通过局域网扫码验收的流程 |
+| HIGH | `assets` 的字段是否可空没有与 `kind` 绑定 | 已修复：增加数据库 CHECK 约束。`image` 记录必须有 path/width/height/sha256/bytes，且 text 为空；`text` 记录必须有 text，且 path 为空。`docs/CONTRACT.md` 是共享契约的原文副本，按规则不改，这条约束只记录在本文件 |
+| MEDIUM | `transition()` 的返回类型不准确 | 已修复：返回 `Omit<T,'status'> & { status: N }` |
+| MEDIUM | `deriveProjectState` 对新项目返回 `null`；项目下线后指针仍非空时返回 `previewable` | 暂不修复：契约只定义了三种展示状态，新增 `draft` 需要改契约。`null` 表示还没有可展示的内容，由 11 号界面显示为无标签。是否清空发布指针由 09 号决定（09 号提示词规定下线只设置 `unpublishedAt`） |
+| MEDIUM | 项目列表的 N+1 查询 | 同第 1 轮，留给 10 号统一改为聚合查询 |

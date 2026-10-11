@@ -1,7 +1,7 @@
-import { and, desc, eq, isNull } from 'drizzle-orm'
+import { and, desc, eq, isNull, notInArray } from 'drizzle-orm'
 import { newId, newSlug } from '../../core/ids'
 import { getDb } from '../client'
-import { projects, type ProjectRow, PROJECT_TYPES } from '../schema'
+import { jobs, projects, type ProjectRow, PROJECT_TYPES, TERMINAL_JOB_STATUSES } from '../schema'
 
 export type ProjectType = (typeof PROJECT_TYPES)[number]
 
@@ -66,12 +66,35 @@ export function listActiveProjects(): ProjectRow[] {
     .all()
 }
 
-/** Marks the project deleted; returns false if it was missing or already deleted. */
-export function softDeleteProject(id: string): boolean {
-  const result = getDb()
-    .update(projects)
-    .set({ deletedAt: new Date().toISOString() })
-    .where(and(eq(projects.id, id), isNull(projects.deletedAt)))
-    .run()
-  return result.changes === 1
+export type DeletionClaim = 'claimed' | 'busy' | 'missing'
+
+/**
+ * Atomically marks the project deleted unless a job is running. An already-deleted project is
+ * reported as claimed too, so a DELETE whose file cleanup failed can simply be retried.
+ * Job creation checks deletedAt in its own transaction, so no job can start after the claim.
+ */
+export function claimProjectDeletion(id: string): DeletionClaim {
+  return getDb().transaction(
+    (tx) => {
+      const project = tx
+        .select({ deletedAt: projects.deletedAt })
+        .from(projects)
+        .where(eq(projects.id, id))
+        .get()
+      if (!project) return 'missing'
+      if (project.deletedAt !== null) return 'claimed'
+      const active = tx
+        .select({ id: jobs.id })
+        .from(jobs)
+        .where(and(eq(jobs.projectId, id), notInArray(jobs.status, TERMINAL_JOB_STATUSES)))
+        .get()
+      if (active) return 'busy'
+      tx.update(projects)
+        .set({ deletedAt: new Date().toISOString() })
+        .where(and(eq(projects.id, id), isNull(projects.deletedAt)))
+        .run()
+      return 'claimed'
+    },
+    { behavior: 'immediate' },
+  )
 }
