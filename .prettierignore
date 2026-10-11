@@ -1,0 +1,9 @@
+node_modules
+.next
+data
+playwright-report
+test-results
+lib/db/migrations
+pnpm-lock.yaml
+docs/CONTRACT.md
+lib/core/schemas.ts
