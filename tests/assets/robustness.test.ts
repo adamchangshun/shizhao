@@ -9,7 +9,13 @@ import { listProjectAssets } from '@/lib/assets'
 import * as fx from '@/lib/assets/__fixtures__/generate'
 import { heicToJpeg } from '@/lib/assets/heic'
 import { normalizeImage } from '@/lib/assets/normalize'
-import { ensureTmpRoot, STALE_AFTER_MS } from '@/lib/assets/storage'
+import {
+  activeTempDirs,
+  ensureTmpRoot,
+  STALE_AFTER_MS,
+  sweepProjectUploads,
+  sweepTempDirs,
+} from '@/lib/assets/storage'
 import { sweepAllStaleUploads } from '@/lib/assets/sweep'
 import { runMigrations } from '@/lib/db/client'
 import { insertProject } from '@/lib/db/repo/projects'
@@ -57,12 +63,8 @@ describe('timeouts', () => {
 })
 
 describe('HEIC worker', () => {
-  it('refuses before decoding when the image heic-convert would decode is over the cap', async (t) => {
-    const heic = await fx.heicViaSips(scratch)
-    if (!heic) {
-      t.skip() // needs macOS sips to build the fixture
-      return
-    }
+  it('refuses before decoding when the image heic-convert would decode is over the cap', async () => {
+    const heic = fx.heic()
     const input = path.join(scratch, 'cap.heic')
     const output = path.join(scratch, 'cap.jpg')
     fs.writeFileSync(input, heic)
@@ -166,5 +168,37 @@ describe('temp root', () => {
     const outside = fs.mkdtempSync(path.join(scratch, 'outside-'))
     fs.symlinkSync(outside, path.join(dataDir, 'tmp'))
     await expect(ensureTmpRoot(dataDir)).rejects.toThrow('temp root is not a plain directory')
+  })
+})
+
+describe('sweep safety', () => {
+  it('never sweeps the temp dir of an upload still in progress, however old', async () => {
+    const root = await ensureTmpRoot()
+    const dir = fs.mkdtempSync(path.join(root, 'upload-'))
+    const old = new Date(Date.now() - STALE_AFTER_MS - 60_000)
+    fs.utimesSync(dir, old, old)
+    activeTempDirs.add(dir)
+    try {
+      await sweepTempDirs()
+      expect(fs.existsSync(dir)).toBe(true)
+    } finally {
+      activeTempDirs.delete(dir)
+    }
+    await sweepTempDirs()
+    expect(fs.existsSync(dir)).toBe(false)
+  })
+
+  it('refuses to sweep through a symlinked project upload dir', async () => {
+    const projectId = insertProject({ type: 'single', title: '链接测试' }).id
+    const outside = fs.mkdtempSync(path.join(scratch, 'outside-'))
+    const victim = path.join(outside, 'DDDDDDDDDDDD.display.webp')
+    fs.writeFileSync(victim, 'keep')
+    const old = new Date(Date.now() - STALE_AFTER_MS - 60_000)
+    fs.utimesSync(victim, old, old)
+    fs.mkdirSync(path.join(getEnv().DATA_DIR, 'uploads'), { recursive: true })
+    fs.symlinkSync(outside, uploadDir(projectId))
+    await expect(sweepProjectUploads(projectId, new Set())).rejects.toThrow('not a plain directory')
+    expect(fs.readFileSync(victim, 'utf8')).toBe('keep')
+    fs.unlinkSync(uploadDir(projectId))
   })
 })

@@ -1,3 +1,4 @@
+import type { Stats } from 'node:fs'
 import fs from 'node:fs/promises'
 import path from 'node:path'
 import { isValidId } from '../core/ids'
@@ -75,6 +76,9 @@ export async function removeFiles(paths: readonly string[]): Promise<void> {
   }
 }
 
+/** Temp dirs of uploads in this process; never swept, whatever their age. */
+export const activeTempDirs = new Set<string>()
+
 /** Anything younger may belong to an upload that is still running (20 images × 20s / 2 slots). */
 export const STALE_AFTER_MS = 60 * 60 * 1000
 const RENDITION_FILE = /^([A-Za-z0-9_-]{12})\.(display|thumb)\.webp$/
@@ -120,6 +124,7 @@ export async function sweepProjectUploads(
   dataDir: string = getEnv().DATA_DIR,
 ): Promise<void> {
   const [uploadDir] = projectDirs(projectId, dataDir)
+  if (!(await isPlainDirUnder(uploadDir!, dataDir))) return
   const stale: string[] = []
   for (const name of await listDir(uploadDir!)) {
     const match = RENDITION_FILE.exec(name)
@@ -138,11 +143,33 @@ export async function sweepTempDirs(
   const root = await ensureTmpRoot(dataDir)
   for (const name of await listDir(root)) {
     const dir = path.join(root, name)
-    if (!name.startsWith('upload-') || !(await isOlderThan(dir, now))) continue
+    if (!name.startsWith('upload-') || activeTempDirs.has(dir)) continue
+    if (!(await isOlderThan(dir, now))) continue
     await removeDirStrict(dir).catch((err: unknown) => {
       console.error('[assets] failed to remove stale temp dir', err)
     })
   }
+}
+
+/**
+ * True if `dir` and its parent are real directories (no symlinks) and `dir` resolves to the same
+ * place under the real DATA_DIR; false if it does not exist. Throws if it points anywhere else.
+ */
+async function isPlainDirUnder(dir: string, dataDir: string): Promise<boolean> {
+  for (const d of [path.dirname(dir), dir]) {
+    let stat: Stats
+    try {
+      stat = await fs.lstat(d)
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code === 'ENOENT') return false
+      throw err
+    }
+    if (stat.isSymbolicLink() || !stat.isDirectory())
+      throw new Error('upload dir is not a plain directory')
+  }
+  const expected = path.join(await fs.realpath(dataDir), path.relative(dataDir, dir))
+  if ((await fs.realpath(dir)) !== expected) throw new Error('upload dir escapes DATA_DIR')
+  return true
 }
 
 export async function listDir(dir: string): Promise<string[]> {

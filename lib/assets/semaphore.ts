@@ -9,6 +9,10 @@ export class Semaphore {
     return this.active
   }
 
+  get waiting(): number {
+    return this.waiters.length
+  }
+
   async run<T>(task: () => Promise<T>): Promise<T> {
     if (this.active >= this.limit) {
       await new Promise<void>((resolve) => this.waiters.push(resolve))

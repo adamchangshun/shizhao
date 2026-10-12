@@ -6,6 +6,8 @@ export const MAX_TEXT_CHARS = 2000
 export const MAX_INPUT_PIXELS = 40_000_000
 export const PROCESS_TIMEOUT_MS = 20_000
 export const PROCESS_CONCURRENCY = 2
+/** Images allowed to wait for a slot across all requests; keeps the worst-case wait far below an hour. */
+export const MAX_QUEUED_IMAGES = 40
 
 export const SIZES = {
   display: { longEdge: 1600, quality: 82 },

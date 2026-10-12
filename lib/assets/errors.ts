@@ -39,5 +39,6 @@ export const UploadErrors = {
     new ApiError(400, 'too_many_images', `每次最多上传 ${MAX_IMAGES_PER_PROJECT} 张图片`),
   textTooLong: () => new ApiError(400, 'text_too_long', `文字说明最多 ${MAX_TEXT_CHARS} 字`),
   empty: () => new ApiError(400, 'empty_upload', '请至少上传一张图片或填写文字说明'),
+  busy: () => new ApiError(503, 'busy', '正在处理其他图片，请稍后再试'),
   badForm: () => new ApiError(400, 'invalid_form', '上传表单格式不正确'),
 }

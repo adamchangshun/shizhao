@@ -7,11 +7,12 @@ import { countImages, findImageBySha, listAssetsByProject } from '../db/repo/ass
 import { findActiveProject } from '../db/repo/projects'
 import { assets, type AssetRow } from '../db/schema'
 import { UploadErrors } from './errors'
-import { MAX_IMAGES_PER_PROJECT, PROCESS_CONCURRENCY } from './limits'
+import { MAX_IMAGES_PER_PROJECT, MAX_QUEUED_IMAGES, PROCESS_CONCURRENCY } from './limits'
 import { parseUpload, type UploadedFile } from './multipart'
 import { normalizeImage, type NormalizedImage, type NormalizeOptions } from './normalize'
 import { Semaphore } from './semaphore'
 import {
+  activeTempDirs,
   assetAbsPath,
   assetRelPath,
   ensureUploadDir,
@@ -76,6 +77,7 @@ export async function uploadAssets(
   await sweepOnUpload(projectId)
   const tmpRoot = await ensureTmpRoot()
   const tmpDir = await fs.mkdtemp(path.join(tmpRoot, 'upload-'))
+  activeTempDirs.add(tmpDir) // the sweeper must not touch it, however long it waits for a slot
   try {
     const parsed = await parseUpload(request, tmpDir)
     const text = parsed.text?.trim() || undefined
@@ -86,6 +88,7 @@ export async function uploadAssets(
     await removeDirStrict(tmpDir).catch((err: unknown) => {
       console.error('[assets] failed to remove temp dir; left for the stale-upload sweep', err)
     })
+    activeTempDirs.delete(tmpDir)
   }
 }
 
@@ -147,6 +150,7 @@ async function processAll(
   files: readonly UploadedFile[],
   opts: NormalizeOptions,
 ): Promise<NormalizedImage[]> {
+  if (processingSlots.waiting + files.length > MAX_QUEUED_IMAGES) throw UploadErrors.busy()
   let failed = false
   const skipped = Symbol('skipped')
   const results = await Promise.allSettled(

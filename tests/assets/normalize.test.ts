@@ -58,16 +58,18 @@ describe('normalizeImage', () => {
     ).rejects.toMatchObject({ code: 'image_too_many_pixels' })
   }, 60_000)
 
-  it('decodes HEIC (sharp if it can, otherwise heic-convert) and strips metadata', async (t) => {
-    const heic = await fx.heicViaSips(dir)
-    if (!heic) {
-      t.skip() // fixture needs macOS sips; the Docker run covers Linux
-      return
-    }
+  it('decodes HEIC (sharp if it can, otherwise heic-convert) and strips metadata', async () => {
+    const heic = fx.heic()
+    const sharpCanDecode = await sharp(heic)
+      .toBuffer()
+      .then(
+        () => true,
+        () => false,
+      )
     const paths: HeicPath[] = []
     const out = await normalizeImage(save('photo.heic', heic), { onHeicPath: (p) => paths.push(p) })
+    expect(paths).toEqual([sharpCanDecode ? 'sharp' : 'heic-convert'])
     expect([out.width, out.height]).toEqual([300, 200])
-    expect(paths).toHaveLength(1)
     const meta = await sharp(out.display).metadata()
     expect(meta.format).toBe('webp')
     expect(meta.exif).toBeUndefined()

@@ -1,7 +1,4 @@
 // Test fixtures are generated in code (solid-colour images with synthetic EXIF/GPS); no real photos.
-import { execFileSync } from 'node:child_process'
-import fs from 'node:fs'
-import path from 'node:path'
 import sharp from 'sharp'
 
 function solid(width: number, height: number, background: string) {
@@ -68,16 +65,21 @@ export async function writeHugePng(file: string): Promise<void> {
   await solid(10_000, 10_000, '#ffffff').png({ compressionLevel: 9 }).toFile(file)
 }
 
-/** macOS only: converts a generated JPEG to HEIC with `sips`. Returns null where sips is missing. */
-export async function heicViaSips(dir: string): Promise<Buffer | null> {
-  try {
-    execFileSync('sips', ['--version'], { stdio: 'ignore' })
-  } catch {
-    return null
-  }
-  const src = path.join(dir, 'heic-src.jpg')
-  const out = path.join(dir, 'heic-out.heic')
-  await fs.promises.writeFile(src, await jpeg(300, 200, '#8040a0'))
-  execFileSync('sips', ['-s', 'format', 'heic', src, '--out', out], { stdio: 'ignore' })
-  return fs.promises.readFile(out)
+/**
+ * 300×200 solid-colour HEIC (HEVC), no EXIF. No HEVC encoder is available from code on Linux, so
+ * this synthetic image was produced once from fx.jpeg(300, 200, '#8040a0') with macOS
+ * `sips -s format heic` and embedded here; it contains no photo and no personal data.
+ */
+const SYNTHETIC_HEIC_BASE64 =
+  'AAAAJGZ0eXBoZWljAAAAAG1pZjFNaVBybWlhZk1pSEJoZWljAAABhW1ldGEAAAAAAAAAIWhkbHIAAAAAAAAAAHBpY3QAAAAA' +
+  'AAAAAAAAAAAAAAAAJGRpbmYAAAAcZHJlZgAAAAAAAAABAAAADHVybCAAAAABAAAADnBpdG0AAAAAAAEAAAAjaWluZgAAAAAA' +
+  'AQAAABVpbmZlAgAAAAABAABodmMxAAAAAOVpcHJwAAAAxGlwY28AAAATY29scm5jbHgAAgACAAaAAAAADGNsbGkAywBAAAAA' +
+  'FGlzcGUAAAAAAAABLAAAAMgAAAAJaXJvdAAAAAAQcGl4aQAAAAADCAgIAAAAcGh2Y0MBA3AAAACwAAAAAAA88AD8/fj4AAAL' +
+  'A6AAAQAXQAEMAf//A3AAAAMAsAAAAwAAAwA8cCShAAEAIkIBAQNwAAADALAAAAMAAAMAPKAJiA0dy4h7kWVTcCAgYAiiAAEA' +
+  'CUQBwGFyyERTZAAAABlpcG1hAAAAAAAAAAEAAQaBAgMFhoQAAAAeaWxvYwAAAABEAAABAAEAAAABAAABuQAAAGkAAAABbWRh' +
+  'dAAAAAAAAAB5AAAAZSgBr5y5YpKUQEaBfP/8thev9g77Lvn0+xb9npR7JMa8BqSQPm3F/OOKi/K/NN4pYCKxYiPtYp39qAUU' +
+  'Cq9eothFAAAh4ALh8IoAAAMAJWAD0sAAAAMADNgAAAMAAAMAAAMAAGVA'
+
+export function heic(): Buffer {
+  return Buffer.from(SYNTHETIC_HEIC_BASE64, 'base64')
 }
