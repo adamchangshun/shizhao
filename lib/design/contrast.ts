@@ -1,6 +1,16 @@
 import type { DesignSpec } from '../core/schemas'
 import { contrastRatio, hexToHsl, hslToHex } from './color'
 
+/** A valid palette with no readable text on both surfaces; not a malformed color. */
+export class PaletteContrastError extends RangeError {
+  readonly code = 'unreadable_palette'
+
+  constructor() {
+    super('无法仅调整文字明度使两个背景的对比度同时达到 4.5:1')
+    this.name = 'PaletteContrastError'
+  }
+}
+
 export function ensureContrast(palette: DesignSpec['palette']): {
   palette: DesignSpec['palette']
   onPrimary: string
@@ -27,5 +37,5 @@ export function ensureContrast(palette: DesignSpec['palette']): {
     const text = hslToHex({ ...original, l })
     if (readable(text)) return { palette: { ...palette, text }, onPrimary }
   }
-  throw new RangeError('无法仅调整文字明度使两个背景的对比度同时达到 4.5:1')
+  throw new PaletteContrastError()
 }

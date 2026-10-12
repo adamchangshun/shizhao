@@ -113,6 +113,20 @@ describe('readable palette repair', () => {
       /对比度/,
     )
   })
+  it('distinguishes a valid but unusable palette from malformed input with a fixed error code', () => {
+    try {
+      ensureContrast({ ...palette, bg: '#000000', surface: '#777777' })
+      expect.unreachable('Expected an unusable palette')
+    } catch (error) {
+      expect(error).toMatchObject({ code: 'unreadable_palette' })
+    }
+    try {
+      ensureContrast({ ...palette, bg: '#fff' })
+      expect.unreachable('Expected malformed input')
+    } catch (error) {
+      expect(error).not.toHaveProperty('code', 'unreadable_palette')
+    }
+  })
 })
 
 describe('font whitelist', () => {
@@ -144,6 +158,12 @@ describe('font whitelist', () => {
 })
 
 describe('adjacent design similarity', () => {
+  it('groups low-saturation primary colors without inventing a hue for gray', () => {
+    expect(isTooSimilar(spec('#808080'), spec('#d0453a'))).toBe(false)
+    expect(isTooSimilar(spec('#808080'), spec('#3a7bd0'))).toBe(false)
+    expect(isTooSimilar(spec('#7f8080'), spec('#80807f'))).toBe(true)
+    expect(isTooSimilar(spec('#7f8080'), spec('#80807f', 'card-stack'))).toBe(false)
+  })
   it('recognizes the specified red pair and rejects red versus blue', () => {
     expect(isTooSimilar(spec('#d0453a'), spec('#d8553f'))).toBe(true)
     expect(isTooSimilar(spec('#d0453a'), spec('#3a7bd0'))).toBe(false)
