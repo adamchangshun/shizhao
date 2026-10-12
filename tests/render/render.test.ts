@@ -6,7 +6,7 @@ import { INLINE_SCRIPT_SHA256, renderPage, type RenderInput } from '@/lib/render
 import { INLINE_SCRIPT } from '@/lib/render/inline-script'
 import { designFor, menuCopy, menuFacts, singleCopy, singleFacts } from './fixtures'
 
-const TEMPLATES: TemplateId[] = ['poster']
+const TEMPLATES: TemplateId[] = ['poster', 'card-stack']
 
 function input(templateId: TemplateId, facts: FactSheet, copy: CopyDraft, extra: Partial<RenderInput> = {}): RenderInput {
   return {

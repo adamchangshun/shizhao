@@ -1,0 +1,6 @@
+{
+  "id": "card-stack",
+  "nameZh": "卡片",
+  "descriptionZh": "每个商品一张卡片，纵向排列，单品和多品都适用。",
+  "supports": ["single", "menu"]
+}
