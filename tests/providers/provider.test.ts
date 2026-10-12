@@ -95,6 +95,57 @@ async function image() {
 }
 
 describe('OpenAI compatible provider HTTP boundary', () => {
+  it('redacts slash-escaped image data URLs and raw base64 in non-JSON error bodies', async () => {
+    const img = await image()
+    await writeFile(img.path, Buffer.from([255, 255, 255, 251]))
+    const log = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const server = await serve((_, res, body) => {
+      const parts = body.messages[1]!.content as Array<{ image_url?: { url: string } }>
+      const echoed = JSON.stringify({
+        image: parts[1]!.image_url!.url,
+        raw: '////+w==',
+      }).replaceAll('/', '\\/')
+      res.statusCode = 400
+      res.end(`Upstream rejected request: ${echoed}`)
+    })
+    await expect(
+      provider(server.baseUrl, 'qwen').generateJSON({ ...request, images: [img] }),
+    ).rejects.toMatchObject({ code: 'upstream_error', status: 400 })
+    const logged = (log.mock.calls[0]![1] as { status: number; body: string }).body
+    expect(logged).not.toContain('////+w==')
+    expect(logged).not.toContain('\\/\\/\\/\\/+w==')
+    expect(logged).not.toContain('data:image')
+    expect(logged).toContain('[redacted]')
+    expect(logged.length).toBeLessThanOrEqual(200)
+    expect(server.bodies).toHaveLength(1)
+  })
+  it('repairs unparseable JSON once and accumulates usage for both replies', async () => {
+    const server = await serve((_, res, __, count) =>
+      reply(res, count === 1 ? 'Here is an explanation, without JSON.' : '{"answer":"fixed"}'),
+    )
+    const result = await provider(server.baseUrl).generateJSON(request)
+    expect(result.data).toEqual({ answer: 'fixed' })
+    expect(result.usage).toMatchObject({ inputTokens: 2400, outputTokens: 600, costCny: 0.0084 })
+    expect(server.bodies).toHaveLength(2)
+    expect(server.bodies[1]!.messages.map((m) => m.role)).toEqual([
+      'system',
+      'user',
+      'assistant',
+      'user',
+    ])
+    expect(server.bodies[1]!.messages[3]!.content).toContain('请只输出符合要求的 JSON 对象')
+  })
+  it.each([
+    ['not JSON', '{"answer":123}', 'schema_mismatch'],
+    ['{"answer":123}', 'not JSON', 'bad_response'],
+  ])(
+    'shares one correction between parse and schema errors: %s then %s',
+    async (first, second, code) => {
+      const server = await serve((_, res, __, count) => reply(res, count === 1 ? first : second))
+      await expect(provider(server.baseUrl).generateJSON(request)).rejects.toMatchObject({ code })
+      expect(server.bodies).toHaveLength(2)
+    },
+  )
   it('does not downgrade when response_format is only in an echoed request', async () => {
     const server = await serve((_, res, body) => {
       res.statusCode = 400
@@ -417,12 +468,12 @@ describe('OpenAI compatible provider HTTP boundary', () => {
       expect(Usage.safeParse(result.usage).success).toBe(true)
     },
   )
-  it('rejects malformed envelopes or JSON without transport retry', async () => {
+  it('rejects unparseable JSON after exactly one correction', async () => {
     const server = await serve((_, res) => reply(res, 'no json here'))
     await expect(provider(server.baseUrl).generateJSON(request)).rejects.toMatchObject({
       code: 'bad_response',
     })
-    expect(server.bodies).toHaveLength(1)
+    expect(server.bodies).toHaveLength(2)
   })
   it('redacts reflected API keys and image base64 from bounded logs and errors', async () => {
     const key = 'test-secret-DO-NOT-PRINT'

@@ -18,11 +18,11 @@ recordUsage(db, result.usage, { projectId, jobId })
 ## 请求与错误
 
 - 默认 `temperature=0.7`、`timeoutMs=45000`；超时预算覆盖整次调用，包括读图片、读响应、退避、格式降级与结构修正。外部信号优先报 `aborted`，无重试。
-- 网络失败、HTTP 5xx 和 429 共最多重试三次，等待 1/2/4 秒 + 0–300ms 抖动。最初请求之外，格式不支持时最多追加一次降级请求，schema 不匹配时最多追加一次修正请求；这些过程共享同一个三次网络重试预算。因此总 HTTP 请求最多六次。
-- 普通 4xx 不重试；只有 400/422 明确表示不支持 `response_format` 时移除它一次。system 从第一次请求起带「只输出 JSON」。修正请求保留原消息与模型回复，增加 zod 错误路径/代码摘要。
-- 回复支持字符串或 `[{type:'text',text:...}]`；先解析完整 JSON，再提取第一个 JSON 代码块或第一个平衡对象，正确跳过字符串中的括号和转义字符。无法解析的回复报 `bad_response`；两轮 schema 校验都失败报 `schema_mismatch`。
+- 网络失败、HTTP 5xx 和 429 共最多重试三次，等待 1/2/4 秒 + 0–300ms 抖动。最初请求之外，格式不支持时最多追加一次降级请求，JSON 提取失败或 schema 不匹配时共享最多一次修正请求；这些过程共享同一个三次网络重试预算。因此总 HTTP 请求最多六次。
+- 普通 4xx 不重试；只有 400/422 明确表示不支持 `response_format` 时移除它一次。system 从第一次请求起带「只输出 JSON」。修正请求保留原消息与模型回复；提取失败时明确要求仅输出符合要求的 JSON 对象，schema 不符时增加 zod 错误路径/代码摘要。
+- 回复支持字符串或 `[{type:'text',text:...}]`；先解析完整 JSON，再提取第一个 JSON 代码块或第一个平衡对象，正确跳过字符串中的括号和转义字符。JSON 提取失败与 schema 不符共享一次修正额度；修正后仍无法解析报 `bad_response`，能够解析但仍不符合 schema 则报 `schema_mismatch`。HTTP 成功响应本身不是合法协议 envelope 时仍立即报 `bad_response`。
 - 读响应限制为 2 MiB，超出即取消响应并报 `bad_response`。不跟随重定向，以免向另一个目标转发凭据。
-- 失败日志仅输出 HTTP 状态与脱敏后的前 200 字符；先处理转义 JSON、删除配置密钥及已发送图片的 base64，再截断。错误对象不附带响应正文、请求或底层 cause。
+- 失败日志仅输出 HTTP 状态与脱敏后的前 200 字符；先处理转义 JSON 和纯文本中转义的斜杠，再删除配置密钥及已发送图片的 base64，最后截断。错误对象不附带响应正文、请求或底层 cause。
 - 对外错误代码：`timeout`、`aborted`、`rate_limited`、`bad_response`、`schema_mismatch`、`upstream_error`；提示信息为简体中文。
 
 ## 配置与 profile
