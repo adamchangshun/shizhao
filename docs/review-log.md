@@ -53,7 +53,6 @@
 | MEDIUM | hex 解码会忽略尾部的非法字符 | 已修复：内容必须严格匹配 64 位十六进制 |
 | MEDIUM | 密钥缓存在进程内，替换文件后不会生效 | 已修复（明确规定）：部署形态是单实例（R3），更换 `session.key` 后需要重启服务；注释已改为这个说法 |
 
-<<<<<<< HEAD
 ## 06 页面渲染与模板
 
 完整 diff 约 17.5 万字符，超过 `cdx-review` 的 12 万上限，因此每轮按 `lib/render/`、`templates/`、`tests/render/` 分三块审查（`--security`，gpt-5.6-sol / xhigh）。
@@ -81,7 +80,6 @@
 
 第一次运行因 Codex 模型容量不足中途失败，不计入结论；重跑后无任何问题。
 ||||||| dc42159
-=======
 ## 03 素材上传
 
 ### 第 1 轮（`cdx-review --security -m sol`，gpt-5.6-sol / xhigh）：5 HIGH，2 MEDIUM
@@ -129,4 +127,17 @@
 | MEDIUM | HEIC 像素测试在主图头部检查时就被拒绝，没有覆盖“主图没超限但 `data[0]` 超限”的情况 | 未修复：要覆盖这种情况需要一张多图 HEIC 夹具，但 Linux 上用代码生成不了 HEVC，macOS 的 `sips` 也只能生成单图。`data[0]` 的检查逻辑保留在 `processor.mjs` 的 `heicToJpeg()` 中，作为纵深防御 |
 
 审查结论：已没有 CRITICAL 和 HIGH，合并到 main。
->>>>>>> main
+
+## 02 模型适配层（Codex 实现，Claude 审查）
+
+### 第 1 轮（Claude 只读审查，报告：提示词目录 `审查报告/02-第1轮.md`）：0 HIGH，2 MEDIUM，3 LOW
+
+| 级别 | 问题 | 处理 |
+|---|---|---|
+| MEDIUM | `safeExcerpt` 遇到非 JSON 错误体、且斜杠被转义为 `\/` 时，图片 base64 片段可能进入 200 字符的日志摘录 | 待修复：交给 Codex，建议先把 `\/` 还原成 `/` 再脱敏，或直接遮盖 40 个字符以上的连续 base64 串 |
+| MEDIUM | 回复中提取不出 JSON 时直接报 `bad_response`，不进入那一次 schema 修正 | 待修复：交给 Codex，建议提取失败也走同一次修正 |
+| LOW | `extractJSON` 第一个配对成功的 `{…}` 解析失败就放弃 | 符合提示词字面要求，暂不修 |
+| LOW | system 末尾总是追加「只输出 JSON。」 | 无害，保留 |
+| LOW | 所有 `fetch` 异常都当作网络错误重试 | 有总时限兜底，暂不修 |
+
+审查结论：没有 CRITICAL 或 HIGH，合并到 main。
