@@ -70,15 +70,34 @@ describe.each(ALL_TEMPLATES)('template %s in a phone browser', templateId => {
       for (const width of [360, 430]) {
         const page = await browser.newPage({ viewport: { width, height: 800 } })
         await page.setContent(html)
+        await page.evaluate(() => document.fonts.ready)
         const result = await page.evaluate(() => {
+          // .page clips with overflow-x:hidden, so also look for content pushed past the viewport.
+          const vw = window.innerWidth
+          const clipped = [...document.querySelectorAll('.page *')]
+            .filter(el => !el.closest('[hidden]') && el.getClientRects().length > 0)
+            .filter(el => {
+              const r = el.getBoundingClientRect()
+              return r.right > vw + 0.5 || r.left < -0.5
+            })
+            .map(el => `${el.tagName.toLowerCase()}.${el.className}`)
+          const pageEl = document.querySelector('.page') as HTMLElement
           const minButton = Math.min(...[...document.querySelectorAll('.act')].map(el => Math.min(el.getBoundingClientRect().width, el.getBoundingClientRect().height)))
           const smallText = [...document.querySelectorAll('body *')]
             .filter(el => el.children.length === 0 && (el.textContent ?? '').trim() !== '' && !el.closest('.footer, .tag, [hidden]'))
             .map(el => parseFloat(getComputedStyle(el).fontSize))
-          return { overflow: document.documentElement.scrollWidth - window.innerWidth, minButton, minFont: Math.min(...smallText) }
+          return {
+            overflow: document.documentElement.scrollWidth - vw,
+            pageOverflow: pageEl.scrollWidth - pageEl.clientWidth,
+            clipped,
+            minButton,
+            minFont: Math.min(...smallText),
+          }
         })
         await page.close()
         expect(result.overflow, `${heroLayout} @${width}px`).toBeLessThanOrEqual(0)
+        expect(result.pageOverflow, `${heroLayout} @${width}px`).toBeLessThanOrEqual(0)
+        expect(result.clipped, `${heroLayout} @${width}px`).toEqual([])
         expect(result.minButton, `${heroLayout} @${width}px`).toBeGreaterThanOrEqual(44)
         expect(result.minFont, `${heroLayout} @${width}px`).toBeGreaterThanOrEqual(15)
       }

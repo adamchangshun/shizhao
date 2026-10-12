@@ -59,3 +59,21 @@ describe.each(FONT_IDS)('font %s', fontId => {
     for (const ch of '巷口咖啡美式拿铁') expect(covered(fs, headingFamily, ch.codePointAt(0)!), ch).toBe(true)
   })
 })
+
+describe('mixed heading and body fonts', () => {
+  it.each([
+    ['zcool-kuaile', 'noto-sans-sc'],
+    ['noto-serif-sc', 'lxgw-wenkai'],
+  ] as const)('subsets %s for headings and %s for body separately', async (heading, body) => {
+    const design = designFor('menu-board', { fontPair: { heading, body } })
+    const { html } = await renderPage({ factSheet: menuFacts, design, copy: menuCopy, versionId: 'v', slug: 's', trackingBase: '' })
+    const fs = faces(html)
+    expect(new Set(fs.map(f => f.family))).toEqual(new Set(['SZ Heading', 'SZ Body']))
+    // Heading-font text in menu-board: shop name, headline, item names.
+    const headingChars = '巷口咖啡巷口的第一杯美式咖啡拿铁燕麦柠檬气泡可颂肉桂卷芒果千层巧克力布朗尼'
+    for (const ch of headingChars) expect(covered(fs, 'SZ Heading', ch.codePointAt(0)!), ch).toBe(true)
+    // Body-only text must not be pulled into the heading subset.
+    for (const ch of '营业时间本页由辅助设计') expect(covered(fs, 'SZ Heading', ch.codePointAt(0)!), ch).toBe(false)
+    for (const ch of '营业时间本页由辅助设计') expect(covered(fs, 'SZ Body', ch.codePointAt(0)!), ch).toBe(true)
+  })
+})
