@@ -49,6 +49,14 @@ describe('groundDraft: prices', () => {
     expect(textOnly.items[0]!.price).toBeUndefined()
   })
 
+  it('refuses a model price with more than two decimals instead of rounding it', () => {
+    const out = groundDraft(
+      draft({ items: [{ name: '拿铁', price: { amount: 18.005, unit: '杯' } }] }),
+      ctx('拿铁'),
+    )
+    expect(out.items[0]!.price).toBeUndefined()
+  })
+
   it('drops prices it cannot normalize', () => {
     const out = groundDraft(draft({ items: [{ name: '蛋糕', price: '28-35元' }] }), ctx(''))
     expect(out.items[0]!.price).toBeUndefined()

@@ -63,8 +63,12 @@ function toPrice(raw: ModelPrice | null | undefined): Price | null {
   if (raw === null || raw === undefined) return null
   if (typeof raw === 'string') return normalizePrice(raw)
   if (typeof raw === 'number') return normalizePrice(String(raw))
+  // Exact cents only, same range as normalizePrice: never round a model's number into a price.
+  const cents = raw.amount * 100
+  if (!Number.isFinite(cents) || cents < 0 || cents >= 1e9) return null
+  if (Math.abs(cents - Math.round(cents)) > 1e-6) return null
   const parsed = Price.safeParse({
-    amount: Math.round(raw.amount * 100) / 100,
+    amount: Math.round(cents) / 100,
     currency: 'CNY',
     unit: raw.unit?.trim() || DEFAULT_UNIT,
   })
