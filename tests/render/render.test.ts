@@ -1,12 +1,13 @@
 import { createHash } from 'node:crypto'
 import { parse, type HTMLElement } from 'node-html-parser'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, expectTypeOf, it } from 'vitest'
 import type { CopyDraft, FactSheet, TemplateId } from '@/lib/core/schemas'
 import { INLINE_SCRIPT_SHA256, renderPage, type RenderInput } from '@/lib/render'
 import { INLINE_SCRIPT } from '@/lib/render/inline-script'
-import { designFor, menuCopy, menuFacts, singleCopy, singleFacts } from './fixtures'
+import type { TemplateCopy, TemplateProps } from '@/lib/render/types'
+import { TEMPLATES } from '@/templates'
+import { ALL_TEMPLATES, designFor, menuCopy, menuFacts, singleCopy, singleFacts } from './fixtures'
 
-const TEMPLATES: TemplateId[] = ['poster', 'card-stack']
 
 function input(templateId: TemplateId, facts: FactSheet, copy: CopyDraft, extra: Partial<RenderInput> = {}): RenderInput {
   return {
@@ -56,7 +57,7 @@ function stableForSnapshot(html: string): string {
   return html.replace(/base64,[A-Za-z0-9+/=]+/g, m => `base64,<${createHash('sha256').update(m).digest('hex').slice(0, 16)}>`)
 }
 
-describe.each(TEMPLATES)('template %s', templateId => {
+describe.each(ALL_TEMPLATES)('template %s', templateId => {
   const cases = [
     ['single', singleFacts, singleCopy],
     ['menu', menuFacts, menuCopy],
@@ -101,7 +102,8 @@ describe.each(TEMPLATES)('template %s', templateId => {
     expect(html).not.toContain('<b onclick')
     const root = parse(html)
     expect(root.querySelectorAll('script')).toHaveLength(1)
-    expect(root.querySelector('h1')?.text).toBe('<script>alert(1)</script>')
+    // Shown to visitors as literal text.
+    expect(root.querySelector('body')?.text).toContain('<script>alert(1)</script>')
   })
 
   it('omits the WeChat button when there is no wechat', async () => {
@@ -198,5 +200,22 @@ describe('renderPage shared behavior', () => {
     const { fontBytes } = await renderPage(input('poster', menuFacts, menuCopy))
     expect(fontBytes).toBeGreaterThan(0)
     expect(fontBytes).toBeLessThan(300 * 1024)
+  })
+})
+
+describe('template plugins', () => {
+  it('registers one plugin per template id with matching meta', () => {
+    expect(Object.keys(TEMPLATES).sort()).toEqual([...ALL_TEMPLATES].sort())
+    for (const id of ALL_TEMPLATES) {
+      expect(TEMPLATES[id].meta.id).toBe(id)
+      expect(TEMPLATES[id].meta.supports.length).toBeGreaterThan(0)
+    }
+  })
+
+  it('gives templates no fact fields through copy', () => {
+    type FactKey = 'name' | 'price' | 'spec' | 'phone' | 'wechat' | 'address' | 'hours' | 'shop' | 'items'
+    expectTypeOf<Extract<keyof TemplateCopy, FactKey>>().toEqualTypeOf<never>()
+    expectTypeOf<keyof TemplateCopy>().toEqualTypeOf<'headline' | 'subhead' | 'closing' | 'itemBlurbs'>()
+    expectTypeOf<TemplateProps['facts']>().toEqualTypeOf<FactSheet>()
   })
 })

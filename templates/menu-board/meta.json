@@ -1,0 +1,6 @@
+{
+  "id": "menu-board",
+  "nameZh": "菜单板",
+  "descriptionZh": "菜单板样式，商品名与价格用点线对齐，适合多品。",
+  "supports": ["menu"]
+}
