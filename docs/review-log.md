@@ -52,3 +52,30 @@
 | HIGH | 已存在的 key 文件不做任何校验（符号链接、权限、属主） | 已修复：用 `O_NOFOLLOW` 打开文件，再用 `fstat` 校验是否为普通文件、权限是否为 0600、属主是否为当前用户；任何一项不符合就拒绝启用会话（fail closed）。注：能植入这个文件的攻击者本来就能写 `DATA_DIR`，实际风险较低 |
 | MEDIUM | hex 解码会忽略尾部的非法字符 | 已修复：内容必须严格匹配 64 位十六进制 |
 | MEDIUM | 密钥缓存在进程内，替换文件后不会生效 | 已修复（明确规定）：部署形态是单实例（R3），更换 `session.key` 后需要重启服务；注释已改为这个说法 |
+
+## 06 页面渲染与模板
+
+完整 diff 约 17.5 万字符，超过 `cdx-review` 的 12 万上限，因此每轮按 `lib/render/`、`templates/`、`tests/render/` 分三块审查（`--security`，gpt-5.6-sol / xhigh）。
+
+### 第 1 轮：12 HIGH，1 MEDIUM
+
+| 级别 | 问题 | 处理 |
+|---|---|---|
+| HIGH | `assetUrl` 可由调用方覆盖，能生成外域 `<img>` 和 React 自动生成的外域 `<link rel="preload">`，与复制清单不一致 | 已修复：删除该参数，图片地址固定为 `media/<assetId>-<size>.webp`（R2）；demo 改为用 Chromium 生成真正的 webp 占位图 |
+| HIGH | `item.id` 为 `__proto__` 时读取 `itemBlurbs[id]` 拿到原型对象导致渲染崩溃；`foo.bar` 使 `data-fact` 路径有歧义；重复 id 共享路径（lib 与 templates 两块各报一次） | 已修复：id 必须匹配 `^[A-Za-z0-9_-]+$` 且唯一，否则抛错；模板改用 `copy.blurb(id)`，内部用 `Object.hasOwn` 只读自有属性 |
+| HIGH | 价格 `white-space:nowrap`，最长金额加 8 字单位在 360px 下会被 `.page` 裁切 | 已修复：金额与单位之间允许换行，菜单行允许折行；新增真实浏览器溢出测试 |
+| HIGH ×7 | 测试缺口：无 360px 浏览器测试；`data-fact` 只做单向校验；XSS 只覆盖部分字段；缺字段只测微信；图片引用与清单未核对；字体测试只看总字节；运行时 copy 多余字段 | 已全部补测试：Playwright 在 360/430px 测三模板 × 三数据集 × 三种首屏布局；反向校验每个 `data-fact` 路径；所有事实字段注入 payload；最小 FactSheet；图片引用集合 = 清单；每种字体验证内联 woff2 与 unicode-range 覆盖；多余字段不会进页面。另加 eslint `react/no-danger` |
+| MEDIUM | 渲染器的文案 schema 比 `CopyDraft` 宽松 | 部分采纳：验收第 4 条要求 25 字的 `<script>alert(1)</script>` 标题能渲染（超过 `CopyDraft` 20 字上限），所以不能直接套用；改为每个字段最多 200 字，限制 HTML 体积和字体子集化开销。长度规则仍由 07 号负责 |
+
+### 第 2 轮：`lib/render`、`templates` APPROVE；测试块 2 HIGH，2 MEDIUM
+
+| 级别 | 问题 | 处理 |
+|---|---|---|
+| HIGH | 溢出测试只看根节点，`.page` 的 `overflow-x:hidden` 会掩盖被裁切的元素 | 已修复：同时断言 `.page` 无内部溢出，且每个可见元素都在视口内 |
+| HIGH | 默认 `pnpm test` 会启动 Chromium，新环境没有浏览器 | 已修复：新增 `pretest`（`playwright install --only-shell chromium`，已安装时不做任何事）。接入 CI 由 A3 完成 |
+| MEDIUM | 测量前未等待 `document.fonts.ready` | 已修复 |
+| MEDIUM | 字体测试只覆盖标题与正文相同字体 | 已修复：新增两组混合字体，分别验证标题与正文子集的覆盖范围，并验证正文专用的字不会混进标题子集 |
+
+### 第 3 轮（只复审测试块，其余两块自第 2 轮以来未改动）：APPROVE
+
+第一次运行因 Codex 模型容量不足中途失败，不计入结论；重跑后无任何问题。
