@@ -75,9 +75,27 @@ export async function normalizeImage(
     controller.abort()
     // Hold the caller's concurrency slot until the decoder has really stopped: after the abort,
     // the HEIC worker is terminated and any sharp pipeline ends at its own (remaining-time) timeout.
-    await work.catch(() => undefined)
+    // Header parsing (file-type, sharp metadata) has no cancel hook, so the wait is capped: a parser
+    // that never returns can hold a slot for at most timeout + SETTLE_GRACE_MS.
+    await settleWithin(work, SETTLE_GRACE_MS)
   }
 }
+
+const SETTLE_GRACE_MS = 5_000
+
+async function settleWithin(work: Promise<unknown>, ms: number): Promise<void> {
+  let timer: NodeJS.Timeout | undefined
+  const grace = new Promise<void>((resolve) => {
+    timer = setTimeout(resolve, ms)
+  })
+  try {
+    await Promise.race([work.then(noop, noop), grace])
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+function noop(): void {}
 
 /** Seconds left before the deadline, for sharp's own pipeline timeout (minimum 1). */
 function secondsLeft(deadline: number): number {

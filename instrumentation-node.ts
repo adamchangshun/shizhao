@@ -1,4 +1,5 @@
-// Fail fast on bad configuration, then make sure DATA_DIR exists.
+// Fail fast on bad configuration, make sure DATA_DIR exists, then start the upload sweeper.
+import { startUploadSweeper } from './lib/assets/sweep'
 import { ensureDataDirs } from './lib/db/client'
 import { EnvError, getEnv } from './lib/env'
 
@@ -12,3 +13,4 @@ try {
   throw err
 }
 ensureDataDirs()
+startUploadSweeper()

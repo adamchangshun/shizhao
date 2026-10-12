@@ -9,7 +9,8 @@ import { listProjectAssets } from '@/lib/assets'
 import * as fx from '@/lib/assets/__fixtures__/generate'
 import { heicToJpeg } from '@/lib/assets/heic'
 import { normalizeImage } from '@/lib/assets/normalize'
-import { STALE_AFTER_MS } from '@/lib/assets/storage'
+import { ensureTmpRoot, STALE_AFTER_MS } from '@/lib/assets/storage'
+import { sweepAllStaleUploads } from '@/lib/assets/sweep'
 import { runMigrations } from '@/lib/db/client'
 import { insertProject } from '@/lib/db/repo/projects'
 import { getEnv } from '@/lib/env'
@@ -24,9 +25,10 @@ afterAll(() => fs.rmSync(scratch, { recursive: true, force: true }))
 
 const ctx = (id: string) => ({ params: Promise.resolve({ id }) })
 
-async function upload(projectId: string, data: Buffer, name = 'a.jpg') {
+async function upload(projectId: string, data: Buffer | null, name = 'a.jpg', text?: string) {
   const form = new FormData()
-  form.append('images', new File([new Uint8Array(data)], name))
+  if (data) form.append('images', new File([new Uint8Array(data)], name))
+  if (text !== undefined) form.append('text', text)
   const encoded = new Response(form)
   const res = await postAssets(
     new Request(`${BASE}/api/projects/${projectId}/assets`, {
@@ -124,5 +126,45 @@ describe('stale-upload sweep', () => {
     expect(fs.existsSync(orphanNew)).toBe(true) // may belong to an upload still in flight
     expect(fs.existsSync(staleTmp)).toBe(false)
     expect(fs.existsSync(path.join(dir, `${keptId}.display.webp`))).toBe(true)
+  })
+})
+
+describe('limits are inclusive', () => {
+  it('accepts an image of exactly 15MB and 2000 four-byte characters of text', async () => {
+    const projectId = insertProject({ type: 'single', title: '边界测试' }).id
+    const jpeg = await fx.jpeg(64, 64, '#224466')
+    // Bytes after the JPEG end-of-image marker are ignored by decoders.
+    const exact = Buffer.concat([jpeg, Buffer.alloc(15 * 1024 * 1024 - jpeg.length)])
+    expect(exact.length).toBe(15 * 1024 * 1024)
+    const img = await upload(projectId, exact, 'exact.jpg')
+    expect(img.res.status).toBe(201)
+    const txt = await upload(projectId, null, 'x', '😀'.repeat(2000))
+    expect(txt.res.status).toBe(201)
+    expect(listProjectAssets(projectId).find((a) => a.kind === 'text')!.text).toBe(
+      '😀'.repeat(2000),
+    )
+  }, 30_000)
+})
+
+describe('sweepAllStaleUploads (server start and hourly)', () => {
+  it('cleans every project without needing a new upload', async () => {
+    const projectId = insertProject({ type: 'single', title: '启动清扫' }).id
+    const dir = uploadDir(projectId)
+    fs.mkdirSync(dir, { recursive: true })
+    const orphan = path.join(dir, 'CCCCCCCCCCCC.thumb.webp')
+    fs.writeFileSync(orphan, 'x')
+    const old = new Date(Date.now() - STALE_AFTER_MS - 60_000)
+    fs.utimesSync(orphan, old, old)
+    await sweepAllStaleUploads()
+    expect(fs.existsSync(orphan)).toBe(false)
+  })
+})
+
+describe('temp root', () => {
+  it('refuses a DATA_DIR/tmp that is a symlink', async () => {
+    const dataDir = fs.mkdtempSync(path.join(scratch, 'data-'))
+    const outside = fs.mkdtempSync(path.join(scratch, 'outside-'))
+    fs.symlinkSync(outside, path.join(dataDir, 'tmp'))
+    await expect(ensureTmpRoot(dataDir)).rejects.toThrow('temp root is not a plain directory')
   })
 })

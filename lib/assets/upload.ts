@@ -6,7 +6,6 @@ import { getDb } from '../db/client'
 import { countImages, findImageBySha, listAssetsByProject } from '../db/repo/assets'
 import { findActiveProject } from '../db/repo/projects'
 import { assets, type AssetRow } from '../db/schema'
-import { getEnv } from '../env'
 import { UploadErrors } from './errors'
 import { MAX_IMAGES_PER_PROJECT, PROCESS_CONCURRENCY } from './limits'
 import { parseUpload, type UploadedFile } from './multipart'
@@ -16,8 +15,11 @@ import {
   assetAbsPath,
   assetRelPath,
   ensureUploadDir,
+  ensureTmpRoot,
+  removeDirStrict,
   removeFiles,
-  sweepStaleUploads,
+  sweepProjectUploads,
+  sweepTempDirs,
 } from './storage'
 
 export interface UploadedAsset {
@@ -46,6 +48,17 @@ export function toUploadedAsset(row: AssetRow): UploadedAsset {
   }
 }
 
+/** Opportunistic sweep of this project's leftovers; the hourly sweeper covers the rest. */
+async function sweepOnUpload(projectId: string): Promise<void> {
+  try {
+    const known = new Set(listAssetsByProject(projectId).map((a) => a.id))
+    await sweepProjectUploads(projectId, known)
+    await sweepTempDirs()
+  } catch (err) {
+    console.error('[assets] stale-upload sweep failed', err)
+  }
+}
+
 /** How many times a write plan is rebuilt when a concurrent delete invalidates it. */
 const PLAN_ATTEMPTS = 3
 
@@ -60,12 +73,8 @@ export async function uploadAssets(
   request: Request,
   opts: NormalizeOptions = {},
 ): Promise<UploadedAsset[]> {
-  const known = new Set(listAssetsByProject(projectId).map((a) => a.id))
-  await sweepStaleUploads(projectId, known).catch((err: unknown) => {
-    console.error('[assets] stale-upload sweep failed', err)
-  })
-  const tmpRoot = path.join(getEnv().DATA_DIR, 'tmp')
-  await fs.mkdir(tmpRoot, { recursive: true, mode: 0o700 })
+  await sweepOnUpload(projectId)
+  const tmpRoot = await ensureTmpRoot()
   const tmpDir = await fs.mkdtemp(path.join(tmpRoot, 'upload-'))
   try {
     const parsed = await parseUpload(request, tmpDir)
@@ -74,7 +83,7 @@ export async function uploadAssets(
     const images = await processAll(parsed.files, opts)
     return await storeImages(projectId, images, text)
   } finally {
-    await fs.rm(tmpDir, { recursive: true, force: true }).catch((err: unknown) => {
+    await removeDirStrict(tmpDir).catch((err: unknown) => {
       console.error('[assets] failed to remove temp dir; left for the stale-upload sweep', err)
     })
   }

@@ -41,10 +41,11 @@ export async function parseUpload(request: Request, tmpDir: string): Promise<Par
     parser = busboy({
       headers: { 'content-type': contentType },
       limits: {
-        fileSize: MAX_IMAGE_BYTES,
+        // busboy reports 'limit' on reaching fileSize/fieldSize, so +1 keeps the maximum itself legal.
+        fileSize: MAX_IMAGE_BYTES + 1,
         files: MAX_IMAGES_PER_PROJECT,
         fields: 4,
-        fieldSize: MAX_TEXT_CHARS * 4, // UTF-8 bytes; the character count is checked below
+        fieldSize: MAX_TEXT_CHARS * 4 + 1, // UTF-8 bytes; the character count is checked below
         fieldNameSize: 64,
         parts: MAX_IMAGES_PER_PROJECT + 4,
       },

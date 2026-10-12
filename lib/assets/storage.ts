@@ -65,7 +65,7 @@ export async function removeFilesStrict(paths: readonly string[]): Promise<void>
 
 /**
  * Cleanup on an error path, where the original error must win. Files that still cannot be removed
- * are logged and later collected by sweepStaleUploads().
+ * are logged and later collected by the stale-upload sweep (lib/assets/sweep.ts).
  */
 export async function removeFiles(paths: readonly string[]): Promise<void> {
   try {
@@ -80,18 +80,46 @@ export const STALE_AFTER_MS = 60 * 60 * 1000
 const RENDITION_FILE = /^([A-Za-z0-9_-]{12})\.(display|thumb)\.webp$/
 
 /**
- * Recovers from cleanup failures: removes rendition files in DATA_DIR/uploads/<projectId>/ that no
- * asset row references, and abandoned DATA_DIR/tmp/upload-* directories. Only entries older than
- * STALE_AFTER_MS are touched, so files of an in-flight upload are never swept.
+ * DATA_DIR/tmp, created if missing. Refuses a symlink or anything that does not resolve to a
+ * direct child of the real DATA_DIR, so uploads can never be staged (or swept) elsewhere.
  */
-export async function sweepStaleUploads(
+export async function ensureTmpRoot(dataDir: string = getEnv().DATA_DIR): Promise<string> {
+  const root = path.join(dataDir, 'tmp')
+  await fs.mkdir(root, { recursive: true, mode: 0o700 })
+  const stat = await fs.lstat(root)
+  if (stat.isSymbolicLink() || !stat.isDirectory())
+    throw new Error('temp root is not a plain directory')
+  if ((await fs.realpath(root)) !== path.join(await fs.realpath(dataDir), 'tmp')) {
+    throw new Error('temp root escapes DATA_DIR')
+  }
+  return root
+}
+
+/** Removes a directory tree, retrying up to 3 times; throws if it remains. */
+export async function removeDirStrict(dir: string): Promise<void> {
+  for (let attempt = 1; ; attempt++) {
+    try {
+      await fs.rm(dir, { recursive: true, force: true })
+      return
+    } catch (err) {
+      if (attempt >= REMOVE_ATTEMPTS) throw err
+      await new Promise((r) => setTimeout(r, 50 * attempt))
+    }
+  }
+}
+
+/**
+ * Recovers from cleanup failures: removes rendition files in DATA_DIR/uploads/<projectId>/ that no
+ * asset row references. Only files older than STALE_AFTER_MS are touched, so files of an
+ * in-flight upload are never swept.
+ */
+export async function sweepProjectUploads(
   projectId: string,
   knownAssetIds: ReadonlySet<string>,
   now: number = Date.now(),
   dataDir: string = getEnv().DATA_DIR,
 ): Promise<void> {
   const [uploadDir] = projectDirs(projectId, dataDir)
-  const tmpRoot = path.join(dataDir, 'tmp')
   const stale: string[] = []
   for (const name of await listDir(uploadDir!)) {
     const match = RENDITION_FILE.exec(name)
@@ -100,16 +128,24 @@ export async function sweepStaleUploads(
     if (await isOlderThan(file, now)) stale.push(file)
   }
   await removeFiles(stale)
-  for (const name of await listDir(tmpRoot)) {
-    const dir = path.join(tmpRoot, name)
+}
+
+/** Removes abandoned DATA_DIR/tmp/upload-* directories older than STALE_AFTER_MS. */
+export async function sweepTempDirs(
+  now: number = Date.now(),
+  dataDir: string = getEnv().DATA_DIR,
+): Promise<void> {
+  const root = await ensureTmpRoot(dataDir)
+  for (const name of await listDir(root)) {
+    const dir = path.join(root, name)
     if (!name.startsWith('upload-') || !(await isOlderThan(dir, now))) continue
-    await fs.rm(dir, { recursive: true, force: true }).catch((err: unknown) => {
+    await removeDirStrict(dir).catch((err: unknown) => {
       console.error('[assets] failed to remove stale temp dir', err)
     })
   }
 }
 
-async function listDir(dir: string): Promise<string[]> {
+export async function listDir(dir: string): Promise<string[]> {
   try {
     return await fs.readdir(dir)
   } catch (err) {
