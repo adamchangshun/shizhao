@@ -42,12 +42,24 @@ export function getConfirmedFactSheet(projectId: string): FactSheet {
   return row.json
 }
 
-/** Confirms the latest revision; confirming an already confirmed revision is a no-op. */
-export function confirmFacts(projectId: string): FactSheet {
+/** POST /facts/confirm body: the revision the merchant reviewed. */
+export const ConfirmRequest = z.object({ revision: z.number().int().positive() })
+
+/**
+ * Confirms the revision the merchant reviewed, which must still be the latest (409
+ * `facts_changed` otherwise). Confirming an already confirmed revision is a no-op.
+ */
+export function confirmFacts(projectId: string, input: unknown): FactSheet {
   requireProject(projectId)
-  const row = confirmLatestFactSheet(projectId)
-  if (!row) throw new ApiError(409, 'no_facts', '还没有商品信息，请先识别素材')
-  return row.json
+  const { revision } = ConfirmRequest.parse(input)
+  const outcome = confirmLatestFactSheet(projectId, revision)
+  if (outcome.status === 'missing') {
+    throw new ApiError(409, 'no_facts', '还没有商品信息，请先识别素材')
+  }
+  if (outcome.status === 'stale') {
+    throw new ApiError(409, 'facts_changed', '商品信息已有更新，请查看最新内容后再确认')
+  }
+  return outcome.row.json
 }
 
 /**

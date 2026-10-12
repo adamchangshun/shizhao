@@ -70,6 +70,14 @@ async function put(id: string, body: unknown) {
   return { res, body: (await res.json()) as { factSheet: FactSheet; error?: { code: string } } }
 }
 
+function confirmRequest(id: string, revision: number): Request {
+  return new Request(`${BASE}/api/projects/${id}/facts/confirm`, {
+    method: 'POST',
+    headers: { ...bearer, 'content-type': 'application/json' },
+    body: JSON.stringify({ revision }),
+  })
+}
+
 function editable(sheet: FactSheet) {
   const copy: Partial<FactSheet> = structuredClone(sheet)
   delete copy.projectId
@@ -164,10 +172,7 @@ describe('PUT /facts, POST /facts/confirm, getConfirmedFactSheet', () => {
     })
     expect(findFactSheet(id, 1)?.json.items[0]!.price?.amount).toBe(18)
 
-    const confirmed = await postConfirm(
-      new Request(`${BASE}/api/projects/${id}/facts/confirm`, { method: 'POST', headers: bearer }),
-      ctx(id),
-    )
+    const confirmed = await postConfirm(confirmRequest(id, 2), ctx(id))
     expect(confirmed.status).toBe(200)
     const sheet = getConfirmedFactSheet(id)
     expect(sheet.revision).toBe(2)
@@ -175,10 +180,7 @@ describe('PUT /facts, POST /facts/confirm, getConfirmedFactSheet', () => {
     expect(sheet.confirmedAt).not.toBeNull()
 
     // Confirming again succeeds and keeps the first confirmation time.
-    const again = await postConfirm(
-      new Request(`${BASE}/api/projects/${id}/facts/confirm`, { method: 'POST', headers: bearer }),
-      ctx(id),
-    )
+    const again = await postConfirm(confirmRequest(id, 2), ctx(id))
     expect(((await again.json()) as { factSheet: FactSheet }).factSheet.confirmedAt).toBe(
       sheet.confirmedAt,
     )
@@ -191,6 +193,27 @@ describe('PUT /facts, POST /facts/confirm, getConfirmedFactSheet', () => {
       ctx(id),
     )
     expect(await latest.json()).toMatchObject({ confirmed: false, factSheet: { revision: 3 } })
+  })
+
+  it('refuses to confirm a revision that is no longer the latest', async () => {
+    const id = await newProjectWith('拿铁 18 元')
+    const reviewed = (await extract(id)).body.factSheet // merchant looks at revision 1…
+    await extractFacts(id, { provider: mock }) // …while revision 2 appears
+    const res = await postConfirm(confirmRequest(id, reviewed.revision), ctx(id))
+    expect(res.status).toBe(409)
+    expect(((await res.json()) as { error: { code: string } }).error.code).toBe('facts_changed')
+    expect(() => getConfirmedFactSheet(id)).toThrow(
+      expect.objectContaining({ code: 'facts_not_confirmed' }),
+    )
+    const missingBody = await postConfirm(
+      new Request(`${BASE}/api/projects/${id}/facts/confirm`, {
+        method: 'POST',
+        headers: { ...bearer, 'content-type': 'application/json' },
+        body: '{}',
+      }),
+      ctx(id),
+    )
+    expect(missingBody.status).toBe(400)
   })
 
   it('ignores sources sent by the client and marks new items as merchant_edit', async () => {

@@ -1,6 +1,7 @@
 export { extractFacts, providerFailure, type ExtractResult, type ExtractOptions } from './extract'
 export {
   confirmFacts,
+  ConfirmRequest,
   factsNotConfirmed,
   FactSheetEdit,
   getConfirmedFactSheet,

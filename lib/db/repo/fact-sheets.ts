@@ -65,14 +65,21 @@ export function appendFactSheet(
   )
 }
 
+export type ConfirmOutcome =
+  | { status: 'confirmed'; row: FactSheetRow }
+  | { status: 'stale'; latestRevision: number }
+  | { status: 'missing' }
+
 /**
- * Confirms the latest revision. Already confirmed: returned unchanged. The conditional update
+ * Confirms `revision` only if it is still the latest, so a merchant can never confirm a revision
+ * they have not seen. Already confirmed: returned unchanged. The conditional update
  * (confirmed_at IS NULL) keeps the first confirmation time under concurrent requests.
  */
 export function confirmLatestFactSheet(
   projectId: string,
+  revision: number,
   now: string = new Date().toISOString(),
-): FactSheetRow | undefined {
+): ConfirmOutcome {
   return getDb().transaction(
     (tx) => {
       const latest = tx
@@ -82,7 +89,9 @@ export function confirmLatestFactSheet(
         .orderBy(desc(factSheets.revision))
         .limit(1)
         .get()
-      if (!latest || latest.confirmedAt !== null) return latest
+      if (!latest) return { status: 'missing' }
+      if (latest.revision !== revision) return { status: 'stale', latestRevision: latest.revision }
+      if (latest.confirmedAt !== null) return { status: 'confirmed', row: latest }
       const json: FactSheet = { ...latest.json, confirmedAt: now }
       tx.update(factSheets)
         .set({ confirmedAt: now, json })
@@ -94,7 +103,7 @@ export function confirmLatestFactSheet(
           ),
         )
         .run()
-      return { ...latest, confirmedAt: now, json }
+      return { status: 'confirmed', row: { ...latest, confirmedAt: now, json } }
     },
     { behavior: 'immediate' },
   )

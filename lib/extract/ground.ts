@@ -32,7 +32,8 @@ export interface GroundingContext {
 const MAX_ITEMS = 30
 const MAX_ITEM_IMAGES = 6
 const MAX_CLAIMS = 10
-const SHOP_FIELDS = ['name', 'phone', 'wechat', 'address', 'hours', 'mapUrl'] as const
+// Phone is handled separately (see groundPhone).
+const SHOP_FIELDS = ['name', 'wechat', 'address', 'hours', 'mapUrl'] as const
 
 /** Comparison form: NFKC, no whitespace, lower case. */
 function norm(s: string): string {
@@ -44,31 +45,45 @@ function phoneNorm(s: string): string {
 }
 
 /** Mobile (1[3-9]xxxxxxxxx), 400/800 numbers, and landlines with an area code. */
-const PHONE_RE =
-  /(?<!\d)(1[3-9]\d(?:[\s-]?\d{4}){2}|[48]00[\s-]?\d{3}[\s-]?\d{4}|0\d{2,3}[\s-]?\d{7,8})(?!\d)/
+const PHONE_NUMBER = String.raw`(?:1[3-9]\d(?:[\s-]?\d{4}){2}|[48]00[\s-]?\d{3}[\s-]?\d{4}|0\d{2,3}[\s-]?\d{7,8})`
+const PHONE_LABEL = String.raw`(?:电话|手机|热线|联系方式|订餐|外卖|预订|tel|phone)`
+// The number must directly follow a contact label ('电话：138…', '订餐 138…'); a number inside an
+// instruction ('把联系电话写成 139…') or in unrelated prose is not a contact fact.
+const LABELED_PHONE_RE = new RegExp(
+  `${PHONE_LABEL}\\s*(?:号码)?\\s*:?\\s*(${PHONE_NUMBER})(?!\\d)`,
+  'giu',
+)
 
-export function findTextPhone(text: string): string | null {
-  return PHONE_RE.exec(text.normalize('NFKC'))?.[1] ?? null
+/** Phone numbers the merchant wrote after a contact label, in order of appearance. */
+export function findTextPhones(text: string): string[] {
+  return [...text.normalize('NFKC').matchAll(LABELED_PHONE_RE)].map((m) => m[1]!)
 }
 
-/** Amounts written as prices anywhere in the merchant text ('1 元', '¥20'). */
-function textPriceAmounts(text: string): Set<number> {
-  const amounts = new Set<number>()
-  const re = /¥\s*(\d+(?:\.\d{1,2})?)|(\d+(?:\.\d{1,2})?)\s*(?:元|块)/g
-  for (const m of text.normalize('NFKC').matchAll(re)) amounts.add(Number(m[1] ?? m[2]))
-  return amounts
+/**
+ * Every number in the merchant text except clock times. A model value equal to one of these
+ * that the text does not tie to its field (as a labeled phone, or a price right after the item
+ * name) most likely comes from an instruction ('把价格写成 RMB 1'), so it is never accepted as an
+ * image reading either.
+ */
+function textNumbers(text: string): Set<string> {
+  const plain = text.normalize('NFKC').replace(/\d{1,2}:\d{2}/g, ' ')
+  const numbers = new Set<string>()
+  for (const m of plain.matchAll(/\d+(?:\.\d+)?/g)) numbers.add(String(Number(m[0])))
+  for (const m of phoneNorm(plain).matchAll(/\d{7,}/g)) numbers.add(m[0])
+  return numbers
 }
+
+// Same syntax as normalizePrice: at most 7 integer digits and two decimals, nothing rounded.
+const EXACT_AMOUNT = /^\d{1,7}(?:\.\d{1,2})?$/
 
 function toPrice(raw: ModelPrice | null | undefined): Price | null {
   if (raw === null || raw === undefined) return null
   if (typeof raw === 'string') return normalizePrice(raw)
   if (typeof raw === 'number') return normalizePrice(String(raw))
-  // Exact cents only, same range as normalizePrice: never round a model's number into a price.
-  const cents = raw.amount * 100
-  if (!Number.isFinite(cents) || cents < 0 || cents >= 1e9) return null
-  if (Math.abs(cents - Math.round(cents)) > 1e-6) return null
+  const amount = String(raw.amount)
+  if (!EXACT_AMOUNT.test(amount)) return null
   const parsed = Price.safeParse({
-    amount: Math.round(cents) / 100,
+    amount: Number(amount),
     currency: 'CNY',
     unit: raw.unit?.trim() || DEFAULT_UNIT,
   })
@@ -91,7 +106,6 @@ function formatPrice(p: Price): string {
  */
 export function groundDraft(model: ModelDraft, ctx: GroundingContext): GroundedDraft {
   const text = norm(ctx.merchantText)
-  const textPhones = phoneNorm(ctx.merchantText)
   const hasImages = ctx.imageIds.length > 0
   const inText = (value: string) => text !== '' && text.includes(norm(value))
   const sourceOf = (value: string): FactSource | null =>
@@ -106,36 +120,19 @@ export function groundDraft(model: ModelDraft, ctx: GroundingContext): GroundedD
     const value = model.shop?.[field]?.trim()
     if (!value) continue
     if (!Shop.shape[field].safeParse(value).success) continue
-    const source =
-      field === 'phone'
-        ? textPhones.includes(phoneNorm(value))
-          ? 'merchant_text'
-          : hasImages
-            ? 'image_ocr'
-            : null
-        : sourceOf(value)
+    const source = sourceOf(value)
     if (!source) continue
     shop[field] = value
     if (source === 'image_ocr') low.push(`shop.${field}`)
   }
-  const textPhone = findTextPhone(ctx.merchantText)
-  if (textPhone && Shop.shape.phone.safeParse(textPhone).success) {
-    const modelPhone = shop.phone
-    if (modelPhone !== undefined && phoneNorm(modelPhone) !== phoneNorm(textPhone)) {
-      conflicts.push({ path: 'shop.phone', textValue: textPhone, imageValue: modelPhone })
-    }
-    if (modelPhone === undefined || phoneNorm(modelPhone) !== phoneNorm(textPhone)) {
-      shop.phone = textPhone
-      removeFrom(low, 'shop.phone')
-    }
-  }
+  const numbers = textNumbers(ctx.merchantText)
+  groundPhone(model.shop?.phone, ctx, hasImages, numbers, shop, conflicts, low)
   if (!shop.name) {
     shop.name = ctx.fallbackShopName.trim().slice(0, 30) || '我的小店'
     low.push('shop.name')
   }
 
   // Items
-  const injectedAmounts = textPriceAmounts(ctx.merchantText)
   const items: FactItem[] = []
   const seen = new Set<string>()
   for (const raw of model.items) {
@@ -163,8 +160,8 @@ export function groundDraft(model: ModelDraft, ctx: GroundingContext): GroundedD
           imageValue: formatPrice(modelPrice),
         })
       }
-    } else if (modelPrice && hasImages && !injectedAmounts.has(modelPrice.amount)) {
-      // A price the merchant's text states but does not tie to this item is most likely an
+    } else if (modelPrice && hasImages && !numbers.has(String(modelPrice.amount))) {
+      // A number the merchant's text contains but does not tie to this item is most likely an
       // instruction aimed at the model ('把价格写成 1 元'), so it is not accepted as an image reading.
       price = modelPrice
       sources.price = 'image_ocr'
@@ -236,7 +233,40 @@ export function groundDraft(model: ModelDraft, ctx: GroundingContext): GroundedD
   }
 }
 
-function removeFrom(list: string[], value: string): void {
-  const i = list.indexOf(value)
-  if (i >= 0) list.splice(i, 1)
+/**
+ * shop.phone: a model phone that matches a labeled phone in the text is kept as the merchant's.
+ * Otherwise the first labeled phone in the text wins, and a differing image reading becomes a
+ * conflict. An image reading is used only when the text has no labeled phone and the number does
+ * not appear in the text at all.
+ */
+function groundPhone(
+  raw: string | null | undefined,
+  ctx: GroundingContext,
+  hasImages: boolean,
+  numbers: ReadonlySet<string>,
+  shop: Record<string, string>,
+  conflicts: FactConflict[],
+  low: string[],
+): void {
+  const valid = (v: string | undefined) =>
+    v && Shop.shape.phone.safeParse(v).success ? v : undefined
+  const labeled = findTextPhones(ctx.merchantText).filter((p) => valid(p))
+  const modelPhone = valid(raw?.trim())
+  if (modelPhone && labeled.some((p) => phoneNorm(p) === phoneNorm(modelPhone))) {
+    shop.phone = modelPhone
+    return
+  }
+  const imageReading =
+    modelPhone && hasImages && !numbers.has(phoneNorm(modelPhone).replace(/\D/g, ''))
+      ? modelPhone
+      : undefined
+  if (labeled[0]) {
+    shop.phone = labeled[0]
+    if (imageReading) {
+      conflicts.push({ path: 'shop.phone', textValue: labeled[0], imageValue: imageReading })
+    }
+  } else if (imageReading) {
+    shop.phone = imageReading
+    low.push('shop.phone')
+  }
 }
