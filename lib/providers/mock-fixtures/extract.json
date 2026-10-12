@@ -1,0 +1,28 @@
+{
+  "projectId": "mock-project",
+  "revision": 1,
+  "shop": {
+    "name": "午后小店"
+  },
+  "items": [
+    {
+      "id": "mock-latte",
+      "name": "拿铁",
+      "price": {
+        "amount": 20,
+        "currency": "CNY",
+        "unit": "杯"
+      },
+      "description": "热拿铁",
+      "tags": [],
+      "imageAssetIds": [],
+      "sources": {
+        "name": "merchant_text",
+        "price": "image_ocr",
+        "description": "merchant_text"
+      }
+    }
+  ],
+  "extraClaims": [],
+  "confirmedAt": null
+}

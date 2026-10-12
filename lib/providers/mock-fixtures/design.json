@@ -1,0 +1,116 @@
+[
+  {
+    "templateId": "poster",
+    "palette": {
+      "bg": "#FFFBEB",
+      "surface": "#FFFFFF",
+      "primary": "#B45309",
+      "accent": "#F59E0B",
+      "text": "#451A03"
+    },
+    "fontPair": {
+      "heading": "noto-serif-sc",
+      "body": "noto-sans-sc"
+    },
+    "decoration": "paper",
+    "heroLayout": "stacked",
+    "motion": "none",
+    "moodKeywords": ["暖意"],
+    "seed": 0
+  },
+  {
+    "templateId": "card-stack",
+    "palette": {
+      "bg": "#ECFDF5",
+      "surface": "#FFFFFF",
+      "primary": "#047857",
+      "accent": "#F59E0B",
+      "text": "#064E3B"
+    },
+    "fontPair": {
+      "heading": "noto-sans-sc",
+      "body": "noto-sans-sc"
+    },
+    "decoration": "line-art",
+    "heroLayout": "split",
+    "motion": "none",
+    "moodKeywords": ["清新"],
+    "seed": 1
+  },
+  {
+    "templateId": "menu-board",
+    "palette": {
+      "bg": "#FFF1F2",
+      "surface": "#FFFFFF",
+      "primary": "#BE123C",
+      "accent": "#F59E0B",
+      "text": "#4C0519"
+    },
+    "fontPair": {
+      "heading": "zcool-xiaowei",
+      "body": "noto-sans-sc"
+    },
+    "decoration": "confetti",
+    "heroLayout": "full-bleed",
+    "motion": "none",
+    "moodKeywords": ["活泼"],
+    "seed": 2
+  },
+  {
+    "templateId": "poster",
+    "palette": {
+      "bg": "#EEF2FF",
+      "surface": "#FFFFFF",
+      "primary": "#4338CA",
+      "accent": "#F59E0B",
+      "text": "#1E1B4B"
+    },
+    "fontPair": {
+      "heading": "lxgw-wenkai",
+      "body": "noto-sans-sc"
+    },
+    "decoration": "grain",
+    "heroLayout": "split",
+    "motion": "none",
+    "moodKeywords": ["雅致"],
+    "seed": 3
+  },
+  {
+    "templateId": "card-stack",
+    "palette": {
+      "bg": "#ECFEFF",
+      "surface": "#FFFFFF",
+      "primary": "#0E7490",
+      "accent": "#F59E0B",
+      "text": "#164E63"
+    },
+    "fontPair": {
+      "heading": "noto-sans-sc",
+      "body": "noto-sans-sc"
+    },
+    "decoration": "none",
+    "heroLayout": "stacked",
+    "motion": "none",
+    "moodKeywords": ["轻盈"],
+    "seed": 4
+  },
+  {
+    "templateId": "menu-board",
+    "palette": {
+      "bg": "#FDF4FF",
+      "surface": "#FFFFFF",
+      "primary": "#A21CAF",
+      "accent": "#F59E0B",
+      "text": "#4A044E"
+    },
+    "fontPair": {
+      "heading": "zcool-kuaile",
+      "body": "noto-sans-sc"
+    },
+    "decoration": "paper",
+    "heroLayout": "stacked",
+    "motion": "none",
+    "moodKeywords": ["欢快"],
+    "seed": 5
+  }
+]
