@@ -21,7 +21,7 @@ const config = [
   {
     // The page renderer emits standalone static HTML, not Next.js pages.
     files: ['lib/render/**', 'templates/**'],
-    rules: { '@next/next/no-img-element': 'off', '@next/next/no-head-element': 'off' },
+    rules: { '@next/next/no-img-element': 'off', '@next/next/no-head-element': 'off', 'react/no-danger': 'error' },
   },
 ]
 

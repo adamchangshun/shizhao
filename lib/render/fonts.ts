@@ -73,7 +73,7 @@ interface Slice {
 
 const sliceCache = new Map<string, Slice[]>()
 const bufferCache = new Map<string, Buffer>()
-const subsetCache = new Map<string, string>()
+const subsetCache = new Map<string, { b64: string; bytes: number }>()
 
 function packageDir(pkg: string): string {
   // Resolved from the project root on purpose: bundlers cannot rewrite this path, and
@@ -136,16 +136,16 @@ function toUnicodeRange(cps: readonly number[]): string {
   return parts.join(',')
 }
 
-async function subsetSlice(file: string, cps: readonly number[]): Promise<string> {
+async function subsetSlice(file: string, cps: readonly number[]): Promise<{ b64: string; bytes: number }> {
   const text = String.fromCodePoint(...cps)
   const key = `${file}\u0000${text}`
   const cached = subsetCache.get(key)
   if (cached) return cached
   const out = await subsetFont(readBuffer(file), text, { targetFormat: 'woff2' })
-  const b64 = Buffer.from(out).toString('base64')
+  const result = { b64: Buffer.from(out).toString('base64'), bytes: out.length }
   if (subsetCache.size > 500) subsetCache.clear()
-  subsetCache.set(key, b64)
-  return b64
+  subsetCache.set(key, result)
+  return result
 }
 
 export interface FontFaceResult {
@@ -166,8 +166,8 @@ export async function buildFontFaces(id: FontId, role: FontRole, text: string): 
     const hit = cps.filter(cp => remaining.has(cp) && inRanges(cp, slice.ranges))
     if (hit.length === 0) continue
     for (const cp of hit) remaining.delete(cp)
-    const b64 = await subsetSlice(slice.file, hit)
-    bytes += Math.floor((b64.length * 3) / 4)
+    const { b64, bytes: size } = await subsetSlice(slice.file, hit)
+    bytes += size
     rules.push(
       `@font-face{font-family:"${FONT_FAMILY[role]}";font-style:normal;font-weight:${source.weight};` +
         `font-display:swap;src:url(data:font/woff2;base64,${b64}) format("woff2");` +

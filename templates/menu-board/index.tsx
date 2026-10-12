@@ -46,7 +46,7 @@ export default function MenuBoard(props: TemplateProps): ReactElement {
         <div className="deco-rule" aria-hidden="true" />
         <ul className="m-list">
           {facts.items.map(item => (
-            <Row key={item.id} item={item} blurb={copy.itemBlurbs[item.id]} />
+            <Row key={item.id} item={item} blurb={copy.blurb(item.id)} />
           ))}
         </ul>
         {facts.extraClaims.length > 0 && (

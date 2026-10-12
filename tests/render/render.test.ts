@@ -70,11 +70,55 @@ describe.each(ALL_TEMPLATES)('template %s', templateId => {
 
   it.each(cases)('prints every fact with exact text in data-fact elements (%s)', async (_name, facts, copy) => {
     const root = await dom(input(templateId, facts, copy))
-    for (const [path, value] of expectedFacts(facts)) {
+    const expected = new Map(expectedFacts(facts))
+    for (const [path, value] of expected) {
       const nodes = root.querySelectorAll(`[data-fact="${path}"]`)
       expect(nodes.length, path).toBeGreaterThan(0)
       for (const node of nodes) expect(node.text, path).toBe(value)
     }
+    // And the reverse: no data-fact element claims a path the FactSheet does not have.
+    for (const node of root.querySelectorAll('[data-fact]')) {
+      const path = node.getAttribute('data-fact') ?? ''
+      expect(expected.has(path), `unexpected data-fact ${path}`).toBe(true)
+    }
+  })
+
+  it.each(cases)('references exactly the images listed for copying (%s)', async (_name, facts, copy) => {
+    const { html, media } = await renderPage(input(templateId, facts, copy))
+    const root = parse(html)
+    const listed = new Set(media.map(m => `media/${m.file}`))
+    const referenced = new Set([
+      ...root.querySelectorAll('img').map(img => img.getAttribute('src') ?? ''),
+      ...root.querySelectorAll('link').map(link => link.getAttribute('href') ?? ''),
+    ])
+    const og = root.querySelector('meta[property="og:image"]')?.getAttribute('content')
+    if (og) referenced.add(og.replace('https://shizhao.example/p/k7m2xq/', ''))
+    expect(referenced).toEqual(listed)
+    for (const src of referenced) expect(src).toMatch(/^media\/[A-Za-z0-9_-]+-(display|thumb)\.webp$/)
+  })
+
+  it('renders a minimal FactSheet without empty buttons or placeholder facts', async () => {
+    const minimal: FactSheet = {
+      projectId: 'proj_min',
+      revision: 1,
+      shop: { name: '小摊' },
+      items: [{ id: 'only0001', name: '煎饼', tags: [], imageAssetIds: [], sources: {} }],
+      extraClaims: [],
+      confirmedAt: null,
+    }
+    const { html, media } = await renderPage(input(templateId, minimal, { headline: '早餐', subhead: '', itemBlurbs: {}, closing: '' }))
+    const root = parse(html)
+    expect(media).toEqual([])
+    expect(root.querySelector('.actions')).toBeNull()
+    expect(root.querySelectorAll('img')).toHaveLength(0)
+    expect(root.querySelector('meta[property="og:image"]')).toBeNull()
+    expect(root.querySelectorAll('[data-fact]').map(n => [n.getAttribute('data-fact'), n.text])).toEqual(
+      expect.arrayContaining([
+        ['shop.name', '小摊'],
+        ['items.only0001.name', '煎饼'],
+      ]),
+    )
+    for (const node of root.querySelectorAll('[data-fact]')) expect(node.text.trim()).not.toBe('')
   })
 
   it('renders identical output for identical input', async () => {
@@ -91,9 +135,21 @@ describe.each(ALL_TEMPLATES)('template %s', templateId => {
       itemBlurbs: { ab12cd34: '</style><script>alert(3)</script>' },
       closing: "'><svg onload=alert(4)>",
     }
+    const x = '"><b onclick=x>'
     const hostileFacts: FactSheet = {
       ...singleFacts,
-      shop: { ...singleFacts.shop, name: '<b onclick=alert(5)>店</b>' },
+      shop: { ...singleFacts.shop, name: `<b onclick=alert(5)>店</b>`, phone: x, wechat: x, address: x, hours: x },
+      items: [
+        {
+          ...singleFacts.items[0]!,
+          name: x,
+          spec: x,
+          description: x,
+          tags: ['<b onclick'],
+          price: { amount: 1, currency: 'CNY', unit: '<b onc' },
+        },
+      ],
+      extraClaims: [x],
     }
     const { html } = await renderPage(input(templateId, hostileFacts, hostileCopy))
     expect(html).not.toContain('<script>alert')
@@ -215,7 +271,36 @@ describe('template plugins', () => {
   it('gives templates no fact fields through copy', () => {
     type FactKey = 'name' | 'price' | 'spec' | 'phone' | 'wechat' | 'address' | 'hours' | 'shop' | 'items'
     expectTypeOf<Extract<keyof TemplateCopy, FactKey>>().toEqualTypeOf<never>()
-    expectTypeOf<keyof TemplateCopy>().toEqualTypeOf<'headline' | 'subhead' | 'closing' | 'itemBlurbs'>()
+    expectTypeOf<keyof TemplateCopy>().toEqualTypeOf<'headline' | 'subhead' | 'closing' | 'blurb'>()
     expectTypeOf<TemplateProps['facts']>().toEqualTypeOf<FactSheet>()
+  })
+})
+
+describe('renderPage input hardening', () => {
+  it.each(['foo.bar', '../x', 'a b', ''])('rejects unsafe item id %j', async id => {
+    const facts = { ...singleFacts, items: [{ ...singleFacts.items[0]!, id }] }
+    await expect(renderPage(input('card-stack', facts, { ...singleCopy, itemBlurbs: {} }))).rejects.toThrow()
+  })
+
+  it.each(ALL_TEMPLATES.flatMap(t => ['__proto__', 'constructor', 'toString'].map(id => [t, id] as const)))(
+    '%s renders id %j without reading Object.prototype',
+    async (templateId, id) => {
+      const facts = { ...singleFacts, items: [{ ...singleFacts.items[0]!, id }] }
+      const root = await dom(input(templateId, facts, { ...singleCopy, itemBlurbs: {} }))
+      expect(root.querySelector(`[data-fact="items.${id}.name"]`)?.text).toBe('草莓奶油蛋糕')
+      expect(root.querySelector('body')?.text).not.toContain('切开那一刻')
+    },
+  )
+
+  it('rejects duplicate item ids', async () => {
+    const facts = { ...menuFacts, items: [menuFacts.items[0]!, menuFacts.items[0]!] }
+    await expect(renderPage(input('menu-board', facts, menuCopy))).rejects.toThrow('invalid item id')
+  })
+
+  it('drops fact-like fields smuggled into the copy object', async () => {
+    const copy = { ...singleCopy, price: '¥1', phone: '400-000-0000' } as CopyDraft
+    const { html } = await renderPage(input('poster', singleFacts, copy))
+    expect(html).not.toContain('¥1<')
+    expect(html).not.toContain('400-000-0000')
   })
 })

@@ -39,8 +39,8 @@ img{display:block;max-width:100%;height:auto}
 h1,h2,h3,p{margin:0}
 .page{max-width:480px;margin:0 auto;overflow-x:hidden;min-height:100vh}
 .fh{font-family:var(--font-h);font-weight:var(--fw-h);line-height:1.25}
-.price{white-space:nowrap}
-.price-unit{font-size:.8em;opacity:.75}
+.price{display:inline-flex;flex-wrap:wrap;align-items:baseline;max-width:100%}.price>span{white-space:nowrap}
+.price-unit{font-size:max(15px,.8em);opacity:.75}
 .price-unit::before{content:"/"}
 .tags{display:flex;flex-wrap:wrap;gap:6px;padding:0;margin:8px 0 0;list-style:none}
 .tag{font-size:13px;line-height:1.4;padding:2px 8px;border-radius:999px;background:color-mix(in srgb,var(--accent) 18%,transparent)}
@@ -143,8 +143,8 @@ img{display:block;max-width:100%;height:auto}
 h1,h2,h3,p{margin:0}
 .page{max-width:480px;margin:0 auto;overflow-x:hidden;min-height:100vh}
 .fh{font-family:var(--font-h);font-weight:var(--fw-h);line-height:1.25}
-.price{white-space:nowrap}
-.price-unit{font-size:.8em;opacity:.75}
+.price{display:inline-flex;flex-wrap:wrap;align-items:baseline;max-width:100%}.price>span{white-space:nowrap}
+.price-unit{font-size:max(15px,.8em);opacity:.75}
 .price-unit::before{content:"/"}
 .tags{display:flex;flex-wrap:wrap;gap:6px;padding:0;margin:8px 0 0;list-style:none}
 .tag{font-size:13px;line-height:1.4;padding:2px 8px;border-radius:999px;background:color-mix(in srgb,var(--accent) 18%,transparent)}
@@ -250,8 +250,8 @@ img{display:block;max-width:100%;height:auto}
 h1,h2,h3,p{margin:0}
 .page{max-width:480px;margin:0 auto;overflow-x:hidden;min-height:100vh}
 .fh{font-family:var(--font-h);font-weight:var(--fw-h);line-height:1.25}
-.price{white-space:nowrap}
-.price-unit{font-size:.8em;opacity:.75}
+.price{display:inline-flex;flex-wrap:wrap;align-items:baseline;max-width:100%}.price>span{white-space:nowrap}
+.price-unit{font-size:max(15px,.8em);opacity:.75}
 .price-unit::before{content:"/"}
 .tags{display:flex;flex-wrap:wrap;gap:6px;padding:0;margin:8px 0 0;list-style:none}
 .tag{font-size:13px;line-height:1.4;padding:2px 8px;border-radius:999px;background:color-mix(in srgb,var(--accent) 18%,transparent)}
@@ -287,10 +287,10 @@ border:2px solid color-mix(in srgb,var(--primary) 55%,transparent);box-shadow:in
 .menu-board .m-subhead{margin-top:4px;font-size:15px;opacity:.8}
 .menu-board .deco-rule{margin:16px 0 0}
 .menu-board .m-list{list-style:none;margin:18px 0 0;padding:0;display:grid;gap:14px}
-.menu-board .m-line{display:flex;align-items:baseline;gap:8px}
+.menu-board .m-line{display:flex;flex-wrap:wrap;align-items:baseline;gap:0 8px}
 .menu-board .m-name{flex:0 1 auto;min-width:0;font-size:18px}
 .menu-board .m-leader{flex:1 1 24px;min-width:24px;border-bottom:2px dotted color-mix(in srgb,var(--text) 45%,transparent);transform:translateY(-4px)}
-.menu-board .m-price{flex:0 0 auto;font-size:18px;font-weight:700;color:var(--primary)}
+.menu-board .m-price{flex:0 1 auto;margin-left:auto;font-size:18px;font-weight:700;color:var(--primary)}
 .menu-board .m-detail{margin-top:2px;font-size:15px;opacity:.85}
 .menu-board .m-spec{opacity:.8}
 .menu-board .m-blurb{margin-top:4px;color:var(--accent)}
@@ -356,8 +356,8 @@ img{display:block;max-width:100%;height:auto}
 h1,h2,h3,p{margin:0}
 .page{max-width:480px;margin:0 auto;overflow-x:hidden;min-height:100vh}
 .fh{font-family:var(--font-h);font-weight:var(--fw-h);line-height:1.25}
-.price{white-space:nowrap}
-.price-unit{font-size:.8em;opacity:.75}
+.price{display:inline-flex;flex-wrap:wrap;align-items:baseline;max-width:100%}.price>span{white-space:nowrap}
+.price-unit{font-size:max(15px,.8em);opacity:.75}
 .price-unit::before{content:"/"}
 .tags{display:flex;flex-wrap:wrap;gap:6px;padding:0;margin:8px 0 0;list-style:none}
 .tag{font-size:13px;line-height:1.4;padding:2px 8px;border-radius:999px;background:color-mix(in srgb,var(--accent) 18%,transparent)}
@@ -393,10 +393,10 @@ border:2px solid color-mix(in srgb,var(--primary) 55%,transparent);box-shadow:in
 .menu-board .m-subhead{margin-top:4px;font-size:15px;opacity:.8}
 .menu-board .deco-rule{margin:16px 0 0}
 .menu-board .m-list{list-style:none;margin:18px 0 0;padding:0;display:grid;gap:14px}
-.menu-board .m-line{display:flex;align-items:baseline;gap:8px}
+.menu-board .m-line{display:flex;flex-wrap:wrap;align-items:baseline;gap:0 8px}
 .menu-board .m-name{flex:0 1 auto;min-width:0;font-size:18px}
 .menu-board .m-leader{flex:1 1 24px;min-width:24px;border-bottom:2px dotted color-mix(in srgb,var(--text) 45%,transparent);transform:translateY(-4px)}
-.menu-board .m-price{flex:0 0 auto;font-size:18px;font-weight:700;color:var(--primary)}
+.menu-board .m-price{flex:0 1 auto;margin-left:auto;font-size:18px;font-weight:700;color:var(--primary)}
 .menu-board .m-detail{margin-top:2px;font-size:15px;opacity:.85}
 .menu-board .m-spec{opacity:.8}
 .menu-board .m-blurb{margin-top:4px;color:var(--accent)}
@@ -466,8 +466,8 @@ img{display:block;max-width:100%;height:auto}
 h1,h2,h3,p{margin:0}
 .page{max-width:480px;margin:0 auto;overflow-x:hidden;min-height:100vh}
 .fh{font-family:var(--font-h);font-weight:var(--fw-h);line-height:1.25}
-.price{white-space:nowrap}
-.price-unit{font-size:.8em;opacity:.75}
+.price{display:inline-flex;flex-wrap:wrap;align-items:baseline;max-width:100%}.price>span{white-space:nowrap}
+.price-unit{font-size:max(15px,.8em);opacity:.75}
 .price-unit::before{content:"/"}
 .tags{display:flex;flex-wrap:wrap;gap:6px;padding:0;margin:8px 0 0;list-style:none}
 .tag{font-size:13px;line-height:1.4;padding:2px 8px;border-radius:999px;background:color-mix(in srgb,var(--accent) 18%,transparent)}
@@ -523,7 +523,7 @@ box-shadow:0 10px 30px -18px color-mix(in srgb,var(--text) 45%,transparent)}
 .poster .p-more-item{display:flex;gap:12px;padding:12px;border-radius:14px;background:var(--surface)}
 .poster .p-more-img{flex:0 0 88px;width:88px;height:88px;object-fit:cover;border-radius:10px}
 .poster .p-more-body{min-width:0;flex:1}
-.poster .p-more-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.poster .p-more-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:8px}
 .poster .p-more-name{font-size:17px}
 .poster .p-more-price{font-weight:700;color:var(--primary)}
 </style></head><body data-track="/api/track" data-slug="k7m2xq" data-version="ver_0001"><div class="page t-poster deco-confetti"><main class="poster hero-full-bleed"><header class="p-hero"><img src="media/img_menu01-display.webp" alt="美式咖啡" width="750" height="938" class="p-hero-img" fetchPriority="high" decoding="async"/><div class="p-hero-text"><p class="p-shop" data-fact="shop.name">巷口咖啡</p><h1 class="fh p-headline rise">巷口的第一杯</h1><p class="p-subhead rise">早上好，从一杯热咖啡开始</p></div></header><div class="deco-rule" aria-hidden="true"></div><section class="p-feature rise" aria-label="主推商品"><h2 class="fh p-feature-name" data-fact="items.m1aa0001.name">美式咖啡</h2><span class="price p-feature-price"><span data-fact="items.m1aa0001.price">¥18</span><span class="price-unit" data-fact="items.m1aa0001.price.unit">杯</span></span><p class="p-spec" data-fact="items.m1aa0001.spec">大杯 473ml</p><p class="p-blurb">清爽不苦，配什么都好。</p></section><section class="p-claims" aria-label="店家承诺"><ul class="claims"><li class="claim" data-fact="extraClaims.0">自家烘焙豆子</li><li class="claim" data-fact="extraClaims.1">可外带</li></ul></section><section class="p-more" aria-label="更多商品"><h2 class="fh p-more-title">店里还有</h2><ul class="p-more-list"><li class="p-more-item"><img src="media/img_menu02-thumb.webp" alt="拿铁" width="240" height="240" class="p-more-img" loading="lazy" decoding="async"/><div class="p-more-body"><div class="p-more-head"><h3 class="fh p-more-name" data-fact="items.m1aa0002.name">拿铁</h3><span class="price p-more-price"><span data-fact="items.m1aa0002.price">¥22.50</span><span class="price-unit" data-fact="items.m1aa0002.price.unit">杯</span></span></div><p class="p-desc" data-fact="items.m1aa0002.description">意式浓缩加热牛奶。</p></div></li><li class="p-more-item"><img src="media/img_menu03-thumb.webp" alt="燕麦拿铁" width="240" height="240" class="p-more-img" loading="lazy" decoding="async"/><div class="p-more-body"><div class="p-more-head"><h3 class="fh p-more-name" data-fact="items.m1aa0003.name">燕麦拿铁</h3><span class="price p-more-price"><span data-fact="items.m1aa0003.price">¥25</span><span class="price-unit" data-fact="items.m1aa0003.price.unit">杯</span></span></div></div></li><li class="p-more-item"><div class="p-more-body"><div class="p-more-head"><h3 class="fh p-more-name" data-fact="items.m1aa0004.name">柠檬气泡美式</h3><span class="price p-more-price"><span data-fact="items.m1aa0004.price">¥26</span><span class="price-unit" data-fact="items.m1aa0004.price.unit">杯</span></span></div><ul class="tags"><li class="tag" data-fact="items.m1aa0004.tags.0">夏季限定</li></ul></div></li><li class="p-more-item"><div class="p-more-body"><div class="p-more-head"><h3 class="fh p-more-name" data-fact="items.m1aa0005.name">可颂</h3><span class="price p-more-price"><span data-fact="items.m1aa0005.price">¥12.50</span><span class="price-unit" data-fact="items.m1aa0005.price.unit">个</span></span></div></div></li><li class="p-more-item"><div class="p-more-body"><div class="p-more-head"><h3 class="fh p-more-name" data-fact="items.m1aa0006.name">肉桂卷</h3><span class="price p-more-price"><span data-fact="items.m1aa0006.price">¥16</span><span class="price-unit" data-fact="items.m1aa0006.price.unit">个</span></span></div></div></li><li class="p-more-item"><div class="p-more-body"><div class="p-more-head"><h3 class="fh p-more-name" data-fact="items.m1aa0007.name">芒果千层</h3><span class="price p-more-price"><span data-fact="items.m1aa0007.price">¥32</span><span class="price-unit" data-fact="items.m1aa0007.price.unit">份</span></span></div><p class="p-blurb">层层叠叠的芒果香。</p></div></li><li class="p-more-item"><div class="p-more-body"><div class="p-more-head"><h3 class="fh p-more-name" data-fact="items.m1aa0008.name">巧克力布朗尼</h3><span class="price p-more-price"><span data-fact="items.m1aa0008.price">¥18.80</span><span class="price-unit" data-fact="items.m1aa0008.price.unit">块</span></span></div></div></li></ul></section><p class="closing">路过的话，进来坐坐。</p></main><section class="shop-info" aria-label="店铺信息"><dl><div><dt>营业时间</dt><dd data-fact="shop.hours">周一至周日 7:30-19:00</dd></div><div><dt>地址</dt><dd data-fact="shop.address">杭州市西湖区文三路 12 号</dd></div><div><dt>电话</dt><dd data-fact="shop.phone">13800001234</dd></div><div><dt>微信</dt><dd data-fact="shop.wechat">xiangkou-coffee</dd></div></dl></section><footer class="footer"><p>本页由 AI 辅助设计，商品信息由商家提供</p><p>由 实招 Shizhao 生成</p></footer></div><nav class="actions" aria-label="联系商家"><a class="act" href="tel:13800001234" data-act="call">一键拨号</a><button class="act" type="button" data-act="wechat_copy" data-copy="xiangkou-coffee">复制微信号</button><a class="act" href="https://surl.amap.com/abc123" data-act="navigate" rel="noopener noreferrer">地图导航</a></nav><p id="sz-toast" class="toast" role="status" aria-live="polite" hidden=""><span>已复制</span><span hidden="">请长按微信号手动复制</span></p><script>(function(){
@@ -583,8 +583,8 @@ img{display:block;max-width:100%;height:auto}
 h1,h2,h3,p{margin:0}
 .page{max-width:480px;margin:0 auto;overflow-x:hidden;min-height:100vh}
 .fh{font-family:var(--font-h);font-weight:var(--fw-h);line-height:1.25}
-.price{white-space:nowrap}
-.price-unit{font-size:.8em;opacity:.75}
+.price{display:inline-flex;flex-wrap:wrap;align-items:baseline;max-width:100%}.price>span{white-space:nowrap}
+.price-unit{font-size:max(15px,.8em);opacity:.75}
 .price-unit::before{content:"/"}
 .tags{display:flex;flex-wrap:wrap;gap:6px;padding:0;margin:8px 0 0;list-style:none}
 .tag{font-size:13px;line-height:1.4;padding:2px 8px;border-radius:999px;background:color-mix(in srgb,var(--accent) 18%,transparent)}
@@ -640,7 +640,7 @@ box-shadow:0 10px 30px -18px color-mix(in srgb,var(--text) 45%,transparent)}
 .poster .p-more-item{display:flex;gap:12px;padding:12px;border-radius:14px;background:var(--surface)}
 .poster .p-more-img{flex:0 0 88px;width:88px;height:88px;object-fit:cover;border-radius:10px}
 .poster .p-more-body{min-width:0;flex:1}
-.poster .p-more-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.poster .p-more-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:8px}
 .poster .p-more-name{font-size:17px}
 .poster .p-more-price{font-weight:700;color:var(--primary)}
 </style></head><body data-track="/api/track" data-slug="k7m2xq" data-version="ver_0001"><div class="page t-poster deco-confetti"><main class="poster hero-full-bleed"><header class="p-hero"><img src="media/img_cake01-display.webp" alt="草莓奶油蛋糕" width="750" height="938" class="p-hero-img" fetchPriority="high" decoding="async"/><div class="p-hero-text"><p class="p-shop" data-fact="shop.name">甜心烘焙坊</p><h1 class="fh p-headline rise">一口就是春天</h1><p class="p-subhead rise">当季草莓，配上轻盈奶油</p></div></header><div class="deco-rule" aria-hidden="true"></div><section class="p-feature rise" aria-label="主推商品"><h2 class="fh p-feature-name" data-fact="items.ab12cd34.name">草莓奶油蛋糕</h2><span class="price p-feature-price"><span data-fact="items.ab12cd34.price">¥128</span><span class="price-unit" data-fact="items.ab12cd34.price.unit">6 寸</span></span><p class="p-spec" data-fact="items.ab12cd34.spec">约 450g</p><p class="p-desc" data-fact="items.ab12cd34.description">当季草莓配动物奶油，每日现做。</p><ul class="tags"><li class="tag" data-fact="items.ab12cd34.tags.0">招牌</li><li class="tag" data-fact="items.ab12cd34.tags.1">需预订</li></ul><p class="p-blurb">切开那一刻，满满都是果香。</p></section><section class="p-claims" aria-label="店家承诺"><ul class="claims"><li class="claim" data-fact="extraClaims.0">当天现烤</li></ul></section><p class="closing">欢迎到店，我们等你来尝。</p></main><section class="shop-info" aria-label="店铺信息"><dl><div><dt>营业时间</dt><dd data-fact="shop.hours">每天 8:00-21:00</dd></div><div><dt>地址</dt><dd data-fact="shop.address">上海市徐汇区漕溪北路 88 号</dd></div><div><dt>电话</dt><dd data-fact="shop.phone">021-6488 1234</dd></div><div><dt>微信</dt><dd data-fact="shop.wechat">tianxin_bake</dd></div></dl></section><footer class="footer"><p>本页由 AI 辅助设计，商品信息由商家提供</p><p>由 实招 Shizhao 生成</p></footer></div><nav class="actions" aria-label="联系商家"><a class="act" href="tel:021-64881234" data-act="call">一键拨号</a><button class="act" type="button" data-act="wechat_copy" data-copy="tianxin_bake">复制微信号</button><a class="act" href="https://uri.amap.com/search?keyword=%E7%94%9C%E5%BF%83%E7%83%98%E7%84%99%E5%9D%8A%20%E4%B8%8A%E6%B5%B7%E5%B8%82%E5%BE%90%E6%B1%87%E5%8C%BA%E6%BC%95%E6%BA%AA%E5%8C%97%E8%B7%AF%2088%20%E5%8F%B7&amp;src=shizhao&amp;callnative=1" data-act="navigate" rel="noopener noreferrer">地图导航</a></nav><p id="sz-toast" class="toast" role="status" aria-live="polite" hidden=""><span>已复制</span><span hidden="">请长按微信号手动复制</span></p><script>(function(){

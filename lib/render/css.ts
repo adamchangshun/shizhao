@@ -74,8 +74,8 @@ img{display:block;max-width:100%;height:auto}
 h1,h2,h3,p{margin:0}
 .page{max-width:480px;margin:0 auto;overflow-x:hidden;min-height:100vh}
 .fh{font-family:var(--font-h);font-weight:var(--fw-h);line-height:1.25}
-.price{white-space:nowrap}
-.price-unit{font-size:.8em;opacity:.75}
+.price{display:inline-flex;flex-wrap:wrap;align-items:baseline;max-width:100%}.price>span{white-space:nowrap}
+.price-unit{font-size:max(15px,.8em);opacity:.75}
 .price-unit::before{content:"/"}
 .tags{display:flex;flex-wrap:wrap;gap:6px;padding:0;margin:8px 0 0;list-style:none}
 .tag{font-size:13px;line-height:1.4;padding:2px 8px;border-radius:999px;background:color-mix(in srgb,var(--accent) 18%,transparent)}

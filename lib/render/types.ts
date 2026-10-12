@@ -12,7 +12,8 @@ export interface TemplateCopy {
   readonly headline: CopyDraft['headline']
   readonly subhead: CopyDraft['subhead']
   readonly closing: CopyDraft['closing']
-  readonly itemBlurbs: Readonly<Record<string, string>>
+  /** Blurb for an item id; own keys only, so ids like `constructor` cannot hit prototype members. */
+  readonly blurb: (itemId: string) => string | undefined
 }
 
 export interface TemplateImage {

@@ -11,10 +11,10 @@ border:2px solid color-mix(in srgb,var(--primary) 55%,transparent);box-shadow:in
 .menu-board .m-subhead{margin-top:4px;font-size:15px;opacity:.8}
 .menu-board .deco-rule{margin:16px 0 0}
 .menu-board .m-list{list-style:none;margin:18px 0 0;padding:0;display:grid;gap:14px}
-.menu-board .m-line{display:flex;align-items:baseline;gap:8px}
+.menu-board .m-line{display:flex;flex-wrap:wrap;align-items:baseline;gap:0 8px}
 .menu-board .m-name{flex:0 1 auto;min-width:0;font-size:18px}
 .menu-board .m-leader{flex:1 1 24px;min-width:24px;border-bottom:2px dotted color-mix(in srgb,var(--text) 45%,transparent);transform:translateY(-4px)}
-.menu-board .m-price{flex:0 0 auto;font-size:18px;font-weight:700;color:var(--primary)}
+.menu-board .m-price{flex:0 1 auto;margin-left:auto;font-size:18px;font-weight:700;color:var(--primary)}
 .menu-board .m-detail{margin-top:2px;font-size:15px;opacity:.85}
 .menu-board .m-spec{opacity:.8}
 .menu-board .m-blurb{margin-top:4px;color:var(--accent)}

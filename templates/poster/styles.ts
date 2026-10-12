@@ -31,7 +31,7 @@ box-shadow:0 10px 30px -18px color-mix(in srgb,var(--text) 45%,transparent)}
 .poster .p-more-item{display:flex;gap:12px;padding:12px;border-radius:14px;background:var(--surface)}
 .poster .p-more-img{flex:0 0 88px;width:88px;height:88px;object-fit:cover;border-radius:10px}
 .poster .p-more-body{min-width:0;flex:1}
-.poster .p-more-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.poster .p-more-head{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:8px}
 .poster .p-more-name{font-size:17px}
 .poster .p-more-price{font-weight:700;color:var(--primary)}
 `

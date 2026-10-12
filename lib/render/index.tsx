@@ -31,8 +31,6 @@ export interface RenderInput {
   slug: string
   /** Tracking endpoint (e.g. `/api/track`). Empty string disables tracking (previews). */
   trackingBase: string
-  /** Image source for an asset. Defaults to the version-relative `media/<assetId>-<size>.webp` (contract R2). */
-  assetUrl?: (assetId: string, size: ImageSize) => string
   /** Absolute public URL of the page (`<PUBLIC_BASE_URL>/p/<slug>/`); makes og:image absolute for WeChat sharing. */
   pageUrl?: string
 }
@@ -59,7 +57,8 @@ export function mediaFileName(assetId: string, size: ImageSize): string {
   return `${assetId}-${size}.webp`
 }
 
-const defaultAssetUrl = (assetId: string, size: ImageSize): string => `media/${mediaFileName(assetId, size)}`
+/** Version-relative image path (contract R2). Not overridable: pages never reference other origins. */
+const assetUrl = (assetId: string, size: ImageSize): string => `media/${mediaFileName(assetId, size)}`
 
 const ENTITIES: Record<string, string> = { '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&#x27;': "'", '&#39;': "'" }
 
@@ -90,12 +89,24 @@ function assertSafeRawCss(css: string): string {
 
 // Copy is display text only; length and wording rules belong to the copy/guard stage (07).
 // The renderer just needs strings — escaping, not validation, is what keeps them inert.
+// Upper bounds still cap HTML size and font-subsetting work.
 const RenderCopy = z.object({
-  headline: z.string(),
-  subhead: z.string(),
-  itemBlurbs: z.record(z.string(), z.string()),
-  closing: z.string(),
+  headline: z.string().max(200),
+  subhead: z.string().max(200),
+  itemBlurbs: z.record(z.string(), z.string().max(200)),
+  closing: z.string().max(200),
 })
+
+const ITEM_ID = /^[A-Za-z0-9_-]+$/
+
+/** Item ids become `data-fact` path segments: they must be unambiguous and unique. */
+function assertItemIds(facts: FactSheet): void {
+  const seen = new Set<string>()
+  for (const item of facts.items) {
+    if (!ITEM_ID.test(item.id) || seen.has(item.id)) throw new Error('invalid item id')
+    seen.add(item.id)
+  }
+}
 
 function byFile(a: MediaRef, b: MediaRef): number {
   return a.file < b.file ? -1 : a.file > b.file ? 1 : 0
@@ -107,9 +118,9 @@ export async function renderPage(input: RenderInput): Promise<RenderResult> {
   const facts = FactSheetSchema.parse({ ...input.factSheet, shop: { ...input.factSheet.shop, mapUrl: undefined } })
   const mapUrl = rawMapUrl == null ? undefined : typeof rawMapUrl === 'string' ? rawMapUrl : 'invalid'
   const nav = navigationHref(facts.shop, mapUrl)
+  assertItemIds(facts)
   const design = DesignSpecSchema.parse(input.design)
   const draft = RenderCopy.parse(input.copy)
-  const assetUrl = input.assetUrl ?? defaultAssetUrl
   const template = getTemplate(design.templateId)
 
   const media = new Map<string, MediaRef>()
@@ -130,7 +141,7 @@ export async function renderPage(input: RenderInput): Promise<RenderResult> {
     headline: draft.headline,
     subhead: draft.subhead,
     closing: draft.closing,
-    itemBlurbs: draft.itemBlurbs,
+    blurb: itemId => (Object.hasOwn(draft.itemBlurbs, itemId) ? draft.itemBlurbs[itemId] : undefined),
   }
   const { Component } = template
 

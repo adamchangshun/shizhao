@@ -21,7 +21,7 @@ function MoreItem({ item, props }: { item: FactItem; props: TemplateProps }): Re
         <ItemText item={item} field="spec" as="p" className="p-spec" />
         <ItemText item={item} field="description" as="p" className="p-desc" />
         <ItemTags item={item} />
-        <Blurb text={props.copy.itemBlurbs[item.id]} />
+        <Blurb text={props.copy.blurb(item.id)} />
       </div>
     </li>
   )
@@ -49,7 +49,7 @@ export default function Poster(props: TemplateProps): ReactElement {
         <ItemText item={feature} field="spec" as="p" className="p-spec" />
         <ItemText item={feature} field="description" as="p" className="p-desc" />
         <ItemTags item={feature} />
-        <Blurb text={copy.itemBlurbs[feature.id]} />
+        <Blurb text={copy.blurb(feature.id)} />
       </section>
       {facts.extraClaims.length > 0 && (
         <section className="p-claims" aria-label="店家承诺">

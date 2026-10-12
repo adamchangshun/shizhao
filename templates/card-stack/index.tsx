@@ -6,7 +6,7 @@ import type { TemplateProps } from '@/lib/render/types'
 
 function Card({ item, index, props, heroId }: { item: FactItem; index: number; props: TemplateProps; heroId: string | undefined }): ReactElement {
   const assetId = item.imageAssetIds[0]
-  const blurb = props.copy.itemBlurbs[item.id]
+  const blurb = props.copy.blurb(item.id)
   return (
     <li className={`c-card rise${assetId ? '' : ' c-card-plain'}`}>
       {assetId && (

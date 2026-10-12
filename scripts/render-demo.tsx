@@ -1,6 +1,6 @@
 // pnpm render:demo [--screenshot]
 // Renders every template with the fixed single-item and 8-item menu fixtures into
-// data/demo/<template>-<dataset>/index.html. Images are generated SVG placeholders.
+// data/demo/<template>-<dataset>/index.html. Placeholder images are WebP drawn in Chromium.
 // With --screenshot, takes 375×812 Playwright screenshots and checks for horizontal
 // overflow at 360/375/430px.
 import fs from 'node:fs'
@@ -16,23 +16,44 @@ const DATASETS: Array<[string, FactSheet, CopyDraft]> = [
   ['menu', menuFacts, menuCopy],
 ]
 
-function placeholderSvg(seed: string): string {
+type Browser = Awaited<ReturnType<(typeof import('@playwright/test'))['chromium']['launch']>>
+
+/** Draws a gradient placeholder in Chromium and returns it as WebP bytes. */
+async function placeholderWebp(browser: Browser, seed: string, size: number): Promise<Buffer> {
   let h = 0
   for (const ch of seed) h = (h * 31 + (ch.codePointAt(0) ?? 0)) >>> 0
-  const hue = h % 360
-  const a = `hsl(${hue} 70% 72%)`
-  const b = `hsl(${(hue + 40) % 360} 65% 52%)`
-  const c = `hsl(${(hue + 180) % 360} 60% 92%)`
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 800" width="800" height="800">
-<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="${a}"/><stop offset="1" stop-color="${b}"/></linearGradient></defs>
-<rect width="800" height="800" fill="url(#g)"/>
-<circle cx="400" cy="430" r="230" fill="${c}" opacity=".9"/>
-<circle cx="400" cy="430" r="150" fill="${b}" opacity=".55"/>
-<circle cx="${300 + (h % 200)}" cy="${200 + (h % 120)}" r="40" fill="${c}" opacity=".7"/>
-</svg>`
+  const page = await browser.newPage()
+  try {
+    const dataUrl = await page.evaluate(
+      ([hue, px]) => {
+        const c = document.createElement('canvas')
+        c.width = px
+        c.height = px
+        const g = c.getContext('2d') as CanvasRenderingContext2D
+        const grad = g.createLinearGradient(0, 0, px, px)
+        grad.addColorStop(0, `hsl(${hue} 70% 72%)`)
+        grad.addColorStop(1, `hsl(${(hue + 40) % 360} 65% 52%)`)
+        g.fillStyle = grad
+        g.fillRect(0, 0, px, px)
+        g.fillStyle = `hsl(${(hue + 180) % 360} 60% 92%)`
+        g.beginPath()
+        g.arc(px / 2, px * 0.54, px * 0.29, 0, Math.PI * 2)
+        g.fill()
+        g.fillStyle = `hsl(${(hue + 40) % 360} 65% 52% / .55)`
+        g.beginPath()
+        g.arc(px / 2, px * 0.54, px * 0.19, 0, Math.PI * 2)
+        g.fill()
+        return c.toDataURL('image/webp', 0.8)
+      },
+      [h % 360, size] as const,
+    )
+    return Buffer.from(dataUrl.slice(dataUrl.indexOf(',') + 1), 'base64')
+  } finally {
+    await page.close()
+  }
 }
 
-async function render(templateId: TemplateId, name: string, facts: FactSheet, copy: CopyDraft): Promise<string> {
+async function render(browser: Browser, templateId: TemplateId, name: string, facts: FactSheet, copy: CopyDraft): Promise<string> {
   const dir = path.join(OUT, `${templateId}-${name}`)
   fs.rmSync(dir, { recursive: true, force: true })
   fs.mkdirSync(path.join(dir, 'media'), { recursive: true })
@@ -43,10 +64,9 @@ async function render(templateId: TemplateId, name: string, facts: FactSheet, co
     versionId: 'demo',
     slug: 'demo00',
     trackingBase: '',
-    assetUrl: (assetId, size) => `media/${assetId}-${size}.svg`,
   })
   for (const m of result.media) {
-    fs.writeFileSync(path.join(dir, 'media', `${m.assetId}-${m.size}.svg`), placeholderSvg(m.assetId))
+    fs.writeFileSync(path.join(dir, 'media', m.file), await placeholderWebp(browser, m.assetId, m.size === 'display' ? 800 : 240))
   }
   const file = path.join(dir, 'index.html')
   fs.writeFileSync(file, result.html)
@@ -56,40 +76,40 @@ async function render(templateId: TemplateId, name: string, facts: FactSheet, co
   return file
 }
 
-async function screenshot(files: string[]): Promise<void> {
-  const { chromium } = await import('@playwright/test')
-  const browser = await chromium.launch()
-  try {
-    for (const file of files) {
-      for (const width of [360, 375, 430]) {
-        const page = await browser.newPage({ viewport: { width, height: 812 }, deviceScaleFactor: 2 })
-        await page.emulateMedia({ reducedMotion: 'reduce' })
-        await page.goto(`file://${file}`)
-        await page.evaluate(() => document.fonts.ready)
-        const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)
-        if (overflow > 0) console.log(`  OVERFLOW ${overflow}px at ${width}px: ${file}`)
-        if (width === 375) {
-          const shot = file.replace(/index\.html$/, 'screenshot-375x812.png')
-          await page.screenshot({ path: shot })
-          await page.screenshot({ path: shot.replace('.png', '-full.png'), fullPage: true })
-          console.log(`  screenshot: ${shot}`)
-        }
-        await page.close()
+async function screenshot(browser: Browser, files: string[]): Promise<void> {
+  for (const file of files) {
+    for (const width of [360, 375, 430]) {
+      const page = await browser.newPage({ viewport: { width, height: 812 }, deviceScaleFactor: 2 })
+      await page.emulateMedia({ reducedMotion: 'reduce' })
+      await page.goto(`file://${file}`)
+      await page.evaluate(() => document.fonts.ready)
+      const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)
+      if (overflow > 0) console.log(`  OVERFLOW ${overflow}px at ${width}px: ${file}`)
+      if (width === 375) {
+        const shot = file.replace(/index\.html$/, 'screenshot-375x812.png')
+        await page.screenshot({ path: shot })
+        await page.screenshot({ path: shot.replace('.png', '-full.png'), fullPage: true })
+        console.log(`  screenshot: ${shot}`)
       }
+      await page.close()
     }
-  } finally {
-    await browser.close()
   }
 }
 
 async function main(): Promise<void> {
-  const files: string[] = []
-  for (const templateId of Object.keys(TEMPLATES) as TemplateId[]) {
-    for (const [name, facts, copy] of DATASETS) {
-      files.push(await render(templateId, name, facts, copy))
+  const { chromium } = await import('@playwright/test')
+  const browser = await chromium.launch()
+  try {
+    const files: string[] = []
+    for (const templateId of Object.keys(TEMPLATES) as TemplateId[]) {
+      for (const [name, facts, copy] of DATASETS) {
+        files.push(await render(browser, templateId, name, facts, copy))
+      }
     }
+    if (process.argv.includes('--screenshot')) await screenshot(browser, files)
+  } finally {
+    await browser.close()
   }
-  if (process.argv.includes('--screenshot')) await screenshot(files)
 }
 
 main().catch((error: unknown) => {
