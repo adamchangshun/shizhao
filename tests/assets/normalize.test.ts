@@ -6,7 +6,6 @@ import { afterAll, describe, expect, it } from 'vitest'
 import * as fx from '@/lib/assets/__fixtures__/generate'
 import { normalizeImage, type HeicPath } from '@/lib/assets/normalize'
 import { Semaphore } from '@/lib/assets/semaphore'
-import { sniffImageFormat } from '@/lib/assets/sniff'
 
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'shizhao-normalize-'))
 afterAll(() => fs.rmSync(dir, { recursive: true, force: true }))
@@ -17,28 +16,35 @@ function save(name: string, data: Buffer) {
   return { name, tmpPath, bytes: data.length }
 }
 
-describe('sniffImageFormat', () => {
-  it('accepts JPEG, PNG and WebP by magic bytes and refuses the rest', async () => {
+describe('format allow-list (magic bytes, in the processor child)', () => {
+  it('accepts JPEG, PNG and WebP whatever the name, and refuses SVG, HTML, GIF, PDF and AVIF', async () => {
     const webp = await sharp({ create: { width: 4, height: 4, channels: 3, background: '#000' } })
       .webp()
       .toBuffer()
     const avif = await sharp({ create: { width: 4, height: 4, channels: 3, background: '#000' } })
       .avif()
       .toBuffer()
-    const cases: Array<[string, Buffer, string | null]> = [
-      ['a.bin', await fx.jpeg(4, 4, '#000'), 'jpeg'],
-      ['b.jpg', await fx.png(4, 4), 'png'],
-      ['c.png', webp, 'webp'],
-      ['d.jpg', fx.SVG_TEXT, null],
-      ['e.jpg', fx.HTML_TEXT, null],
-      ['f.jpg', await fx.gif(), null],
-      ['g.jpg', fx.PDF_HEAD, null],
-      ['h.heic', avif, null],
+    const accepted: Array<[string, Buffer]> = [
+      ['a.bin', await fx.jpeg(4, 4, '#000')],
+      ['b.jpg', await fx.png(4, 4)],
+      ['c.png', webp],
     ]
-    for (const [name, data, expected] of cases) {
-      expect(await sniffImageFormat(save(name, data).tmpPath)).toBe(expected)
+    for (const [name, data] of accepted) {
+      await expect(normalizeImage(save(name, data))).resolves.toMatchObject({ width: 4, height: 4 })
     }
-  })
+    const refused: Array<[string, Buffer]> = [
+      ['d.jpg', fx.SVG_TEXT],
+      ['e.jpg', fx.HTML_TEXT],
+      ['f.jpg', await fx.gif()],
+      ['g.jpg', fx.PDF_HEAD],
+      ['h.heic', avif],
+    ]
+    for (const [name, data] of refused) {
+      await expect(normalizeImage(save(name, data))).rejects.toMatchObject({
+        code: 'unsupported_format',
+      })
+    }
+  }, 30_000)
 })
 
 describe('normalizeImage', () => {

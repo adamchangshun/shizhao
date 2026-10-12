@@ -1,5 +1,6 @@
 // Child-process probe for the decompression-bomb test: uploads one file through uploadAssets()
-// in a fresh process and reports the response plus the process's peak RSS.
+// in a fresh process and reports the response plus peak RSS of this process and of the image
+// processor child, and their sum (a conservative upper bound for the request).
 // Usage: node --import tsx lib/assets/__fixtures__/memory-probe.ts <file>  (env: DATA_DIR, ADMIN_TOKEN, PUBLIC_BASE_URL)
 import fs from 'node:fs'
 import path from 'node:path'
@@ -16,15 +17,21 @@ async function main(): Promise<void> {
   const form = new FormData()
   form.append('images', new File([fs.readFileSync(file)], path.basename(file)))
   const request = new Request('http://localhost/upload', { method: 'POST', body: form })
+  let childPeakMb = 0
   let outcome: { ok: true } | { ok: false; status: number; code: string; message: string }
   try {
-    await uploadAssets(project.id, request)
+    await uploadAssets(project.id, request, {
+      onChildPeakRss: (mb) => (childPeakMb = Math.max(childPeakMb, mb)),
+    })
     outcome = { ok: true }
   } catch (err) {
     if (!(err instanceof ApiError)) throw err
     outcome = { ok: false, status: err.status, code: err.code, message: err.message }
   }
-  process.stdout.write(JSON.stringify({ ...outcome, maxRssMb: peakRssMb() }))
+  const parentMb = peakRssMb()
+  process.stdout.write(
+    JSON.stringify({ ...outcome, parentMb, childPeakMb, maxRssMb: parentMb + childPeakMb }),
+  )
 }
 
 /**

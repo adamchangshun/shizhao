@@ -1,13 +1,11 @@
 import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
-import sharp from 'sharp'
 import { afterAll, beforeAll, describe, expect, it } from 'vitest'
 import { DELETE as deleteAssetRoute } from '@/app/api/assets/[id]/route'
 import { POST as postAssets } from '@/app/api/projects/[id]/assets/route'
 import { listProjectAssets } from '@/lib/assets'
 import * as fx from '@/lib/assets/__fixtures__/generate'
-import { heicToJpeg } from '@/lib/assets/heic'
 import { normalizeImage } from '@/lib/assets/normalize'
 import {
   activeTempDirs,
@@ -51,32 +49,55 @@ function uploadDir(projectId: string): string {
   return path.join(getEnv().DATA_DIR, 'uploads', projectId)
 }
 
+function isAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0)
+    return true
+  } catch {
+    return false
+  }
+}
+
 describe('timeouts', () => {
-  it('leaves no sharp work running once a timed-out image is rejected', async () => {
+  it('kills the processor and rejects only after it has exited', async () => {
     const file = path.join(scratch, 'big.png')
     fs.writeFileSync(file, await fx.png(6000, 6000))
+    let pid = 0
     await expect(
-      normalizeImage({ name: 'big.png', tmpPath: file, bytes: 0 }, { timeoutMs: 30 }),
+      normalizeImage(
+        { name: 'big.png', tmpPath: file, bytes: 0 },
+        { timeoutMs: 50, onChild: (p) => (pid = p) },
+      ),
     ).rejects.toMatchObject({ code: 'image_timeout' })
-    expect(sharp.counters()).toEqual({ queue: 0, process: 0 })
+    expect(pid).toBeGreaterThan(0)
+    expect(isAlive(pid)).toBe(false)
   }, 30_000)
 })
 
-describe('HEIC worker', () => {
-  it('refuses before decoding when the image heic-convert would decode is over the cap', async () => {
-    const heic = fx.heic()
-    const input = path.join(scratch, 'cap.heic')
-    const output = path.join(scratch, 'cap.jpg')
-    fs.writeFileSync(input, heic)
-    // The 300×200 fixture is 60000 pixels: a cap of 59999 must refuse it without writing output.
-    expect(await heicToJpeg(input, output, 59_999, new AbortController().signal)).toBe(
-      'too_many_pixels',
-    )
-    expect(fs.existsSync(output)).toBe(false)
-    expect(await heicToJpeg(input, output, 60_000, new AbortController().signal)).toBe('converted')
-    expect((await sharp(output).metadata()).format).toBe('jpeg')
+describe('pixel cap', () => {
+  it('refuses a HEIC over the cap without converting it', async () => {
+    let peak = 0
+    await expect(
+      normalizeImage(
+        { name: 'cap.heic', tmpPath: saveTo('cap.heic', fx.heic()), bytes: 0 },
+        { maxPixels: 59_999, onChildPeakRss: (mb) => (peak = mb) }, // fixture is 300×200 = 60000
+      ),
+    ).rejects.toMatchObject({ code: 'image_too_many_pixels' })
+    expect(peak).toBeGreaterThan(0)
+    await expect(
+      normalizeImage(
+        { name: 'ok.heic', tmpPath: saveTo('ok.heic', fx.heic()), bytes: 0 },
+        { maxPixels: 60_000 },
+      ),
+    ).resolves.toMatchObject({ width: 300, height: 200 })
   }, 30_000)
 })
+
+function saveTo(name: string, data: Buffer): string {
+  const file = path.join(scratch, name)
+  fs.writeFileSync(file, data)
+  return file
+}
 
 describe('DELETE /api/assets/:id when the files cannot be removed', () => {
   it.skipIf(isRoot)('reports the failure, keeps the row, and succeeds on retry', async () => {
