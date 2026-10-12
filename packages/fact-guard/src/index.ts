@@ -1,2 +1,18 @@
-// Placeholder. The rule layer is implemented by prompt 07 (M7 fact guard).
-export const FACT_GUARD_VERSION = '0.0.0'
+export { checkSentence } from './check.js'
+export { splitSentences, guardDocument, guardText, computeDocumentRefs } from './document.js'
+export { parseCnNumber, extractNumbers } from './cn-number.js'
+export type { ParsedNumber } from './cn-number.js'
+export { normalizeText } from './normalize.js'
+export { defaultRules, rulePacks, mergeRules } from './rules/index.js'
+export type {
+  FactCorpus,
+  Rule,
+  RuleSet,
+  RuleHit,
+  Reason,
+  Judge,
+  Rewriter,
+  GuardOptions,
+  CopyRefs,
+  DocumentResult,
+} from './types.js'

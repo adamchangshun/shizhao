@@ -7,3 +7,6 @@ lib/db/migrations
 pnpm-lock.yaml
 docs/CONTRACT.md
 lib/core/schemas.ts
+# Rule contribution files use JSON-form YAML 1.2; keep their lossless JSON syntax.
+rules/packs/base.zh.yaml
+rules/packs/food.zh.yaml
