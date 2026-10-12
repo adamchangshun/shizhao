@@ -56,6 +56,9 @@ function safeExcerpt(body: string, secrets: string[]): string {
   } catch {
     /* Plain error text. */
   }
+  // Plain-text error pages may embed slash-escaped JSON without being JSON.
+  // Normalize those escapes before matching exact secrets and image data URLs.
+  safe = safe.replace(/\\+\//g, '/')
   for (const secret of secrets) if (secret) safe = safe.split(secret).join('[redacted]')
   safe = safe
     .replace(/data:image\/[^\s"'<>]+/gi, '[image redacted]')
@@ -259,9 +262,17 @@ export class OpenAICompatibleProvider implements LLMProvider {
           : estimate(messages.map(textOf).join(''))
         outputTokens += reported.success ? reported.data.completion_tokens : estimate(text)
         estimated ||= !reported.success
-        const parsed = req.schema.safeParse(extractJSON(text))
+        let json: unknown
+        let extractionError: ProviderError | undefined
+        try {
+          json = extractJSON(text)
+        } catch (error) {
+          if (!(error instanceof ProviderError) || error.code !== 'bad_response') throw error
+          extractionError = error
+        }
+        const parsed = extractionError ? undefined : req.schema.safeParse(json)
         control.check()
-        if (parsed.success) {
+        if (parsed?.success) {
           const cost =
             (inputTokens / 1000) * (this.options.inputPricePer1K ?? 0) +
             (outputTokens / 1000) * (this.options.outputPricePer1K ?? 0)
@@ -278,17 +289,17 @@ export class OpenAICompatibleProvider implements LLMProvider {
             },
           }
         }
-        if (repaired) throw new ProviderError('schema_mismatch')
+        if (repaired) throw extractionError ?? new ProviderError('schema_mismatch')
         repaired = true
         // Custom Zod messages may reflect input. Send issue path/code, never values.
-        const summary = parsed.error.issues
-          .slice(0, 12)
-          .map((i) => `${i.path.join('.') || '(root)'}: ${i.code}`)
-          .join('; ')
-        messages.push(
-          { role: 'assistant', content: text },
-          { role: 'user', content: `请修正 JSON，使其符合要求。校验错误：${summary}` },
-        )
+        const correction =
+          parsed && !parsed.success
+            ? `请修正 JSON，使其符合要求。校验错误：${parsed.error.issues
+                .slice(0, 12)
+                .map((i) => `${i.path.join('.') || '(root)'}: ${i.code}`)
+                .join('; ')}`
+            : '请只输出符合要求的 JSON 对象，不要包含解释或 Markdown。'
+        messages.push({ role: 'assistant', content: text }, { role: 'user', content: correction })
       }
     } catch (error) {
       control.check()
