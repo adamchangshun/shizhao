@@ -59,17 +59,58 @@ export function findTextPhones(text: string): string[] {
   return [...text.normalize('NFKC').matchAll(LABELED_PHONE_RE)].map((m) => m[1]!)
 }
 
+const CN_DIGITS: Record<string, number> = {
+  零: 0,
+  〇: 0,
+  一: 1,
+  二: 2,
+  两: 2,
+  三: 3,
+  四: 4,
+  五: 5,
+  六: 6,
+  七: 7,
+  八: 8,
+  九: 9,
+}
+const CN_UNITS: Record<string, number> = { 十: 10, 百: 100, 千: 1000 }
+
+/** Integer value of a Chinese numeral such as 一千、三十八、两万五千. */
+export function parseChineseNumber(s: string): number {
+  let total = 0
+  let section = 0
+  let digit = 0
+  for (const ch of s) {
+    if (ch in CN_DIGITS) digit = CN_DIGITS[ch]!
+    else if (ch in CN_UNITS) {
+      section += (digit || 1) * CN_UNITS[ch]!
+      digit = 0
+    } else if (ch === '万') {
+      total += (section + digit) * 10_000
+      section = 0
+      digit = 0
+    }
+  }
+  return total + section + digit
+}
+
 /**
- * Every number in the merchant text except clock times. A model value equal to one of these
- * that the text does not tie to its field (as a labeled phone, or a price right after the item
- * name) most likely comes from an instruction ('把价格写成 RMB 1'), so it is never accepted as an
- * image reading either.
+ * Every number in the merchant text except clock times, in Arabic (with or without thousands
+ * separators) or Chinese numerals. A model value equal to one of these that the text does not tie
+ * to its field (as a labeled phone, or a price right after the item name) most likely comes from
+ * an instruction ('把价格写成 RMB 1', '写成一千元'), so it is never accepted as an image reading.
  */
 function textNumbers(text: string): Set<string> {
-  const plain = text.normalize('NFKC').replace(/\d{1,2}:\d{2}/g, ' ')
+  const plain = text
+    .normalize('NFKC')
+    .replace(/\d{1,2}:\d{2}/g, ' ')
+    .replace(/(\d),(?=\d{3}(?!\d))/g, '$1')
   const numbers = new Set<string>()
   for (const m of plain.matchAll(/\d+(?:\.\d+)?/g)) numbers.add(String(Number(m[0])))
   for (const m of phoneNorm(plain).matchAll(/\d{7,}/g)) numbers.add(m[0])
+  for (const m of plain.matchAll(/[零〇一二两三四五六七八九十百千万]+/g)) {
+    numbers.add(String(parseChineseNumber(m[0])))
+  }
   return numbers
 }
 

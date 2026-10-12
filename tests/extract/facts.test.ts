@@ -83,7 +83,10 @@ function editable(sheet: FactSheet) {
   delete copy.projectId
   delete copy.revision
   delete copy.confirmedAt
-  return copy as Omit<FactSheet, 'projectId' | 'revision' | 'confirmedAt'>
+  return {
+    ...(copy as Omit<FactSheet, 'projectId' | 'revision' | 'confirmedAt'>),
+    baseRevision: sheet.revision,
+  }
 }
 
 describe('POST /api/projects/:id/extract (MockProvider)', () => {
@@ -186,7 +189,7 @@ describe('PUT /facts, POST /facts/confirm, getConfirmedFactSheet', () => {
     )
 
     // A later unconfirmed edit is never returned as confirmed.
-    await put(id, editable(sheet))
+    expect((await put(id, editable(sheet))).res.status).toBe(200)
     expect(getConfirmedFactSheet(id).revision).toBe(2)
     const latest = await getFacts(
       new Request(`${BASE}/api/projects/${id}/facts`, { headers: bearer }),
@@ -251,12 +254,17 @@ describe('PUT /facts, POST /facts/confirm, getConfirmedFactSheet', () => {
     }
   })
 
-  it('gives every concurrent save its own revision number', async () => {
+  it('lets only one of several saves based on the same revision through', async () => {
     const id = await newProjectWith('拿铁 18 元')
     const base = editable((await extract(id)).body.factSheet)
     const results = await Promise.all(Array.from({ length: 5 }, () => put(id, base)))
-    const revisions = results.map((r) => r.body.factSheet.revision).sort()
-    expect(revisions).toEqual([2, 3, 4, 5, 6])
+    const statuses = results.map((r) => r.res.status).sort()
+    expect(statuses).toEqual([200, 409, 409, 409, 409])
+    expect(results.find((r) => r.res.status === 200)!.body.factSheet.revision).toBe(2)
+    expect(results.find((r) => r.res.status === 409)!.body.error!.code).toBe('facts_changed')
+    // A save based on the new latest revision goes through.
+    const latest = findFactSheet(id, 2)!.json
+    expect((await put(id, editable(latest))).body.factSheet.revision).toBe(3)
   })
 
   it('GET returns null before any extraction', async () => {

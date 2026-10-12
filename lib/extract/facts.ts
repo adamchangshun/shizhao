@@ -12,8 +12,15 @@ import {
 } from '../db/repo/fact-sheets'
 import { findActiveProject } from '../db/repo/projects'
 
-/** PUT body: a complete FactSheet without the server-owned projectId, revision and confirmedAt. */
-export const FactSheetEdit = FactSheet.omit({ projectId: true, revision: true, confirmedAt: true })
+/**
+ * PUT body: a complete FactSheet without the server-owned projectId, revision and confirmedAt,
+ * plus `baseRevision`: the revision the merchant edited (0 when there was none yet).
+ */
+export const FactSheetEdit = FactSheet.omit({
+  projectId: true,
+  revision: true,
+  confirmedAt: true,
+}).extend({ baseRevision: z.number().int().nonnegative() })
 export type FactSheetEdit = z.infer<typeof FactSheetEdit>
 
 const SOURCED_FIELDS = ['name', 'price', 'spec', 'description'] as const
@@ -63,7 +70,8 @@ export function confirmFacts(projectId: string, input: unknown): FactSheet {
 }
 
 /**
- * Stores the merchant's edited sheet as a new revision. Sources are recomputed by comparing each
+ * Stores the merchant's edited sheet as a new revision, only if `baseRevision` is still the
+ * latest (409 `facts_changed` otherwise). Sources are recomputed by comparing each
  * field with the revision it replaces: changed or new fields become `merchant_edit`, unchanged
  * fields keep their previous source. Sources sent by the client are ignored.
  */
@@ -82,6 +90,11 @@ export function saveMerchantEdit(projectId: string, input: unknown): FactSheet {
   }
 
   const row = appendFactSheet(projectId, (previous, revision) => {
+    // Inside the transaction: a save based on an older revision would silently discard the
+    // newer one and recompute sources against the wrong revision.
+    if ((previous?.revision ?? 0) !== edit.baseRevision) {
+      throw new ApiError(409, 'facts_changed', '商品信息已有更新，请查看最新内容后再修改')
+    }
     const prevItems = new Map((previous?.json.items ?? []).map((i) => [i.id, i]))
     const items = edit.items.map((item) => withEditSources(item, prevItems.get(item.id)))
     return FactSheet.parse({
