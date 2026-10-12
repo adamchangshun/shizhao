@@ -85,6 +85,10 @@ export const assets = sqliteTable(
   },
   (t) => [
     index('assets_project_idx').on(t.projectId),
+    // Module 03: one stored copy per processed image within a project.
+    uniqueIndex('assets_project_sha256_unique')
+      .on(t.projectId, t.sha256)
+      .where(sql`sha256 IS NOT NULL`),
     oneOf('assets_kind_check', t.kind, ASSET_KINDS),
     // Image rows carry file metadata and no text; text rows carry text and no file.
     check(
