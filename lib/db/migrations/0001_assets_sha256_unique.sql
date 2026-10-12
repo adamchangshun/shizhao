@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX `assets_project_sha256_unique` ON `assets` (`project_id`,`sha256`) WHERE sha256 IS NOT NULL;
