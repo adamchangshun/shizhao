@@ -25,6 +25,8 @@ export interface NormalizeOptions {
   onHeicPath?: (path: HeicPath) => void
   /** Pixel cap; defaults to MAX_INPUT_PIXELS (tests lower it). */
   maxPixels?: number
+  /** Processor script; defaults to lib/assets/processor.mjs (tests substitute misbehaving ones). */
+  processorPath?: string
   /** Called with the processor child's pid once it is started (tests). */
   onChild?: (pid: number) => void
   /** Called with the processor child's peak resident memory, in MB (tests, memory probe). */
@@ -90,7 +92,7 @@ export async function normalizeImage(
 function runProcessor(job: object, name: string, opts: NormalizeOptions): Promise<Reply> {
   const timeoutMs = opts.timeoutMs ?? PROCESS_TIMEOUT_MS
   return new Promise((resolve, reject) => {
-    const child = fork(PROCESSOR, [], {
+    const child = fork(opts.processorPath ?? PROCESSOR, [], {
       execArgv: [], // do not inherit test-runner or dev-server loaders
       serialization: 'json',
       stdio: ['ignore', 'ignore', 'pipe', 'ipc'],

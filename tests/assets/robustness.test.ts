@@ -74,6 +74,41 @@ describe('timeouts', () => {
   }, 30_000)
 })
 
+describe('processor failures', () => {
+  const input = () => saveTo('any.png', Buffer.from('x'))
+
+  it('rejects as corrupt when the processor exits without replying', async () => {
+    const script = saveTo('exits.mjs', Buffer.from('process.exit(3)\n'))
+    let pid = 0
+    await expect(
+      normalizeImage(
+        { name: 'a.png', tmpPath: input(), bytes: 1 },
+        { processorPath: script, onChild: (p) => (pid = p) },
+      ),
+    ).rejects.toMatchObject({ code: 'image_corrupt' })
+    expect(isAlive(pid)).toBe(false)
+  })
+
+  it('rejects as corrupt when the processor crashes', async () => {
+    const script = saveTo('throws.mjs', Buffer.from("throw new Error('boom')\n"))
+    await expect(
+      normalizeImage({ name: 'a.png', tmpPath: input(), bytes: 1 }, { processorPath: script }),
+    ).rejects.toMatchObject({ code: 'image_corrupt' })
+  })
+
+  it('kills a processor that never replies and frees the slot', async () => {
+    const script = saveTo('hangs.mjs', Buffer.from('setInterval(() => {}, 1000)\n'))
+    let pid = 0
+    await expect(
+      normalizeImage(
+        { name: 'a.png', tmpPath: input(), bytes: 1 },
+        { processorPath: script, timeoutMs: 300, onChild: (p) => (pid = p) },
+      ),
+    ).rejects.toMatchObject({ code: 'image_timeout' })
+    expect(isAlive(pid)).toBe(false)
+  })
+})
+
 describe('pixel cap', () => {
   it('refuses a HEIC over the cap without converting it', async () => {
     let peak = 0

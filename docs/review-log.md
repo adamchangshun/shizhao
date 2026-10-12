@@ -89,3 +89,14 @@
 | MEDIUM | Linux 上没有 `sips`，HEIC 测试被跳过，`node:24-slim` 没有覆盖 HEIC 回退路径 | 已修复：Linux 上无法用代码编码 HEVC，所以把一张合成的 300×200 纯色 HEIC（由 `fx.jpeg` 生成后经 `sips` 转换，不是照片，不含个人信息）以 base64 内嵌进夹具；容器内 HEIC 回退、像素上限和元数据清除测试均已实际运行 |
 
 **HEIC 实际路径**：sharp 0.35.5 的预编译版本（libheif 1.23.5）能读出 HEIC 文件头的尺寸，但没有内置 HEVC 解码器。在 macOS 和 `node:24-slim`（Debian 12，aarch64）上都会回退到 heic-convert（在图片处理子进程中运行）。容器实测：4032×3024 的 HEIC 用时约 380ms。10000×10000 PNG 的内存探测：父进程峰值 112MB，子进程峰值 72MB。
+
+项目负责人选择方案 B，并加一轮复审，只审子进程改造。
+
+### 第 4 轮（`--base 4711559`，只审子进程改造）：0 HIGH，2 MEDIUM
+
+| 级别 | 问题 | 处理 |
+|---|---|---|
+| MEDIUM | 测试只覆盖了超时杀进程，没有覆盖启动失败、不回复就退出、IPC 失败 | 已修复：`NormalizeOptions.processorPath` 可以换成故意出错的处理脚本，新增三个测试：不回复直接退出、启动即崩溃、永不回复（超时后被杀）。断言 Promise 会结算、子进程已退出 |
+| MEDIUM | HEIC 像素测试在主图头部检查时就被拒绝，没有覆盖“主图没超限但 `data[0]` 超限”的情况 | 未修复：要覆盖这种情况需要一张多图 HEIC 夹具，但 Linux 上用代码生成不了 HEVC，macOS 的 `sips` 也只能生成单图。`data[0]` 的检查逻辑保留在 `processor.mjs` 的 `heicToJpeg()` 中，作为纵深防御 |
+
+审查结论：已没有 CRITICAL 和 HIGH，合并到 main。
