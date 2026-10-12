@@ -1,7 +1,7 @@
 import { deleteAssetRow, findActiveAsset, listAssetsByProject } from '../db/repo/assets'
 import type { AssetRow } from '../db/schema'
 import type { AssetSize } from './limits'
-import { assetAbsPath, removeFiles } from './storage'
+import { assetAbsPath, removeFilesStrict } from './storage'
 
 export { uploadAssets, toUploadedAsset, thumbUrl, type UploadedAsset } from './upload'
 export { assetAbsPath } from './storage'
@@ -19,15 +19,18 @@ export function findAssetFile(assetId: string, size: AssetSize): string | undefi
   return assetAbsPath(asset.projectId, asset.id, size)
 }
 
-/** Deletes the row first, then its files; false if no such asset (or its project is deleted). */
+/**
+ * Deletes the files first and only then the row, so a failed file removal surfaces as an error
+ * and the DELETE can be retried; false if no such asset (or its project is deleted).
+ */
 export async function deleteAsset(assetId: string): Promise<boolean> {
   const asset = findActiveAsset(assetId)
-  if (!asset || !deleteAssetRow(asset.id)) return false
+  if (!asset) return false
   if (asset.kind === 'image') {
-    await removeFiles([
+    await removeFilesStrict([
       assetAbsPath(asset.projectId, asset.id, 'display'),
       assetAbsPath(asset.projectId, asset.id, 'thumb'),
     ])
   }
-  return true
+  return deleteAssetRow(asset.id)
 }

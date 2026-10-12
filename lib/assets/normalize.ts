@@ -37,6 +37,10 @@ const SHARP_FORMAT: Record<ImageFormat, string> = {
   heif: 'heif',
 }
 
+// Prebuilt sharp has no HEVC decoder; only this failure switches HEIC input to heic-convert.
+const MISSING_DECODER = /not been built in|decoder plugin|no decoding plugin|unsupported codec/i
+const SHARP_TIMEOUT = /\btimeout\b/i
+
 /**
  * Validates one uploaded file by magic bytes and header dimensions, then renders the display and
  * thumb WebP renditions: auto-oriented, all metadata dropped (sharp writes none by default, and
@@ -48,6 +52,7 @@ export async function normalizeImage(
   opts: NormalizeOptions = {},
 ): Promise<NormalizedImage> {
   const timeoutMs = opts.timeoutMs ?? PROCESS_TIMEOUT_MS
+  const deadline = Date.now() + timeoutMs
   const controller = new AbortController()
   let timer: NodeJS.Timeout | undefined
   const timeout = new Promise<never>((_, reject) => {
@@ -56,24 +61,38 @@ export async function normalizeImage(
       reject(UploadErrors.timeout(file.name))
     }, timeoutMs)
   })
+  const work = render(file, deadline, controller.signal, opts)
   try {
-    return await Promise.race([render(file, timeoutMs, controller.signal, opts), timeout])
+    return await Promise.race([work, timeout])
   } catch (err) {
     if (err instanceof ApiError) throw err
+    if (err instanceof Error && SHARP_TIMEOUT.test(err.message))
+      throw UploadErrors.timeout(file.name)
     console.warn('[assets] image processing failed', err)
     throw UploadErrors.corrupt(file.name)
   } finally {
     clearTimeout(timer)
     controller.abort()
+    // Hold the caller's concurrency slot until the decoder has really stopped: after the abort,
+    // the HEIC worker is terminated and any sharp pipeline ends at its own (remaining-time) timeout.
+    await work.catch(() => undefined)
   }
+}
+
+/** Seconds left before the deadline, for sharp's own pipeline timeout (minimum 1). */
+function secondsLeft(deadline: number): number {
+  return Math.max(1, Math.ceil((deadline - Date.now()) / 1000))
 }
 
 async function render(
   file: UploadedFile,
-  timeoutMs: number,
+  deadline: number,
   signal: AbortSignal,
   opts: NormalizeOptions,
 ): Promise<NormalizedImage> {
+  const checkpoint = () => {
+    if (signal.aborted) throw UploadErrors.timeout(file.name)
+  }
   const format = await sniffImageFormat(file.tmpPath)
   if (!format) throw UploadErrors.unsupportedFormat(file.name)
 
@@ -83,29 +102,32 @@ async function render(
   if (meta.format !== SHARP_FORMAT[format]) throw UploadErrors.unsupportedFormat(file.name)
   if (!meta.width || !meta.height) throw UploadErrors.corrupt(file.name)
   if (meta.width * meta.height > MAX_INPUT_PIXELS) throw UploadErrors.tooManyPixels(file.name)
+  checkpoint()
 
-  const seconds = Math.max(1, Math.ceil(timeoutMs / 1000))
-  let source = file.tmpPath
   let display: { data: Buffer; info: OutputInfo }
   try {
-    display = await renderDisplay(source, seconds)
+    display = await renderDisplay(file.tmpPath, secondsLeft(deadline))
     if (format === 'heif') opts.onHeicPath?.('sharp')
   } catch (err) {
-    if (format !== 'heif' || signal.aborted) throw err
-    // Prebuilt sharp ships without an HEVC decoder: convert to JPEG first, then retry.
-    source = `${file.tmpPath}.jpg`
-    await heicToJpeg(file.tmpPath, source, signal)
+    if (format !== 'heif' || !(err instanceof Error) || !MISSING_DECODER.test(err.message))
+      throw err
+    checkpoint()
+    const source = `${file.tmpPath}.jpg`
+    // The worker re-checks the pixel count of the image it will decode before allocating it.
+    const outcome = await heicToJpeg(file.tmpPath, source, MAX_INPUT_PIXELS, signal)
+    if (outcome === 'too_many_pixels') throw UploadErrors.tooManyPixels(file.name)
+    checkpoint()
     const converted = await sharp(source, HEADER_ONLY).metadata()
     if (!converted.width || !converted.height) throw UploadErrors.corrupt(file.name)
     if (converted.width * converted.height > MAX_INPUT_PIXELS)
       throw UploadErrors.tooManyPixels(file.name)
-    display = await renderDisplay(source, seconds)
+    display = await renderDisplay(source, secondsLeft(deadline))
     opts.onHeicPath?.('heic-convert')
   }
-  if (signal.aborted) throw UploadErrors.timeout(file.name)
+  checkpoint()
 
   const thumb = await sharp(display.data)
-    .timeout({ seconds })
+    .timeout({ seconds: secondsLeft(deadline) })
     .resize({
       width: SIZES.thumb.longEdge,
       height: SIZES.thumb.longEdge,

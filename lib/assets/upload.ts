@@ -3,7 +3,7 @@ import path from 'node:path'
 import { Errors } from '../core/errors'
 import { newId } from '../core/ids'
 import { getDb } from '../db/client'
-import { countImages, findImageBySha } from '../db/repo/assets'
+import { countImages, findImageBySha, listAssetsByProject } from '../db/repo/assets'
 import { findActiveProject } from '../db/repo/projects'
 import { assets, type AssetRow } from '../db/schema'
 import { getEnv } from '../env'
@@ -12,7 +12,13 @@ import { MAX_IMAGES_PER_PROJECT, PROCESS_CONCURRENCY } from './limits'
 import { parseUpload, type UploadedFile } from './multipart'
 import { normalizeImage, type NormalizedImage, type NormalizeOptions } from './normalize'
 import { Semaphore } from './semaphore'
-import { assetAbsPath, assetRelPath, ensureUploadDir, removeFiles } from './storage'
+import {
+  assetAbsPath,
+  assetRelPath,
+  ensureUploadDir,
+  removeFiles,
+  sweepStaleUploads,
+} from './storage'
 
 export interface UploadedAsset {
   id: string
@@ -40,6 +46,11 @@ export function toUploadedAsset(row: AssetRow): UploadedAsset {
   }
 }
 
+/** How many times a write plan is rebuilt when a concurrent delete invalidates it. */
+const PLAN_ATTEMPTS = 3
+
+class StalePlanError extends Error {}
+
 /**
  * Handles one multipart upload for an existing project. All-or-nothing: if any image fails, no
  * row is written and every file this request created is removed. Temp files are always removed.
@@ -49,44 +60,76 @@ export async function uploadAssets(
   request: Request,
   opts: NormalizeOptions = {},
 ): Promise<UploadedAsset[]> {
+  const known = new Set(listAssetsByProject(projectId).map((a) => a.id))
+  await sweepStaleUploads(projectId, known).catch((err: unknown) => {
+    console.error('[assets] stale-upload sweep failed', err)
+  })
   const tmpRoot = path.join(getEnv().DATA_DIR, 'tmp')
   await fs.mkdir(tmpRoot, { recursive: true, mode: 0o700 })
   const tmpDir = await fs.mkdtemp(path.join(tmpRoot, 'upload-'))
-  const written: string[] = []
   try {
     const parsed = await parseUpload(request, tmpDir)
     const text = parsed.text?.trim() || undefined
     if (parsed.files.length === 0 && text === undefined) throw UploadErrors.empty()
-
     const images = await processAll(parsed.files, opts)
-    const plan = planWrites(projectId, images)
-    if (countImages(projectId) + plan.fresh.length > MAX_IMAGES_PER_PROJECT) {
-      throw UploadErrors.tooManyImages(countImages(projectId))
-    }
+    return await storeImages(projectId, images, text)
+  } finally {
+    await fs.rm(tmpDir, { recursive: true, force: true }).catch((err: unknown) => {
+      console.error('[assets] failed to remove temp dir; left for the stale-upload sweep', err)
+    })
+  }
+}
 
-    if (plan.fresh.length > 0) await ensureUploadDir(projectId)
-    for (const item of plan.fresh) {
-      for (const size of ['display', 'thumb'] as const) {
-        const abs = assetAbsPath(projectId, item.id, size)
-        written.push(abs)
-        await fs.writeFile(abs, item.image[size], { flag: 'wx', mode: 0o600 })
+/** Writes the new renditions and records everything in one transaction, re-planning if stale. */
+async function storeImages(
+  projectId: string,
+  images: readonly NormalizedImage[],
+  text: string | undefined,
+): Promise<UploadedAsset[]> {
+  for (let attempt = 1; ; attempt++) {
+    const plan = planWrites(projectId, images)
+    const current = countImages(projectId)
+    if (current + plan.fresh.length > MAX_IMAGES_PER_PROJECT) {
+      throw UploadErrors.tooManyImages(current)
+    }
+    const written: string[] = []
+    try {
+      await writeRenditions(projectId, plan.fresh, written)
+      const { rows, raced } = commit(projectId, plan, text)
+      // Another request stored the same image first: keep its copy, drop ours.
+      await removeFiles(
+        raced.flatMap((id) => [
+          assetAbsPath(projectId, id, 'display'),
+          assetAbsPath(projectId, id, 'thumb'),
+        ]),
+      )
+      return rows
+    } catch (err) {
+      await removeFiles(written)
+      if (!(err instanceof StalePlanError)) throw err
+      if (attempt >= PLAN_ATTEMPTS) throw Errors.conflict('素材正在被其他操作修改，请稍后重试')
+    }
+  }
+}
+
+/** Records a path only once this request has created the file, so cleanup never hits others' files. */
+async function writeRenditions(
+  projectId: string,
+  fresh: readonly FreshImage[],
+  written: string[],
+): Promise<void> {
+  if (fresh.length > 0) await ensureUploadDir(projectId)
+  for (const item of fresh) {
+    for (const size of ['display', 'thumb'] as const) {
+      const abs = assetAbsPath(projectId, item.id, size)
+      const handle = await fs.open(abs, 'wx', 0o600)
+      written.push(abs)
+      try {
+        await handle.writeFile(item.image[size])
+      } finally {
+        await handle.close()
       }
     }
-
-    const { rows, raced } = commit(projectId, plan, text)
-    // Another request stored the same image first: keep its copy, drop ours.
-    await removeFiles(
-      raced.flatMap((id) => [
-        assetAbsPath(projectId, id, 'display'),
-        assetAbsPath(projectId, id, 'thumb'),
-      ]),
-    )
-    return rows
-  } catch (err) {
-    await removeFiles(written)
-    throw err
-  } finally {
-    await fs.rm(tmpDir, { recursive: true, force: true })
   }
 }
 
@@ -152,7 +195,13 @@ function commit(
     (tx) => {
       if (!findActiveProject(projectId)) throw Errors.notFound('项目')
       const now = new Date().toISOString()
-      const bySha = new Map(plan.existing)
+      // Re-read the duplicates found outside the transaction: one may have been deleted since.
+      const bySha = new Map<string, AssetRow>()
+      for (const sha256 of plan.existing.keys()) {
+        const row = findImageBySha(projectId, sha256, tx)
+        if (!row) throw new StalePlanError()
+        bySha.set(sha256, row)
+      }
       const raced: string[] = []
       const toInsert: FreshImage[] = []
       for (const item of plan.fresh) {
