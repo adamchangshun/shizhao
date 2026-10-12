@@ -17,15 +17,22 @@
     "test": "vitest run",
     "test:e2e": "playwright test",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "node --env-file-if-exists=.env.local --import tsx lib/db/migrate-cli.ts"
+    "db:migrate": "node --env-file-if-exists=.env.local --import tsx lib/db/migrate-cli.ts",
+    "render:demo": "tsx --tsconfig tsconfig.scripts.json scripts/render-demo.tsx"
   },
   "dependencies": {
+    "@fontsource/noto-sans-sc": "^5.3.1",
+    "@fontsource/noto-serif-sc": "^5.3.1",
+    "@fontsource/zcool-kuaile": "^5.3.0",
+    "@fontsource/zcool-xiaowei": "^5.3.0",
     "better-sqlite3": "^13.0.3",
     "drizzle-orm": "^0.45.4",
+    "lxgw-wenkai-webfont": "^1.7.0",
     "nanoid": "^6.0.2",
     "next": "^15.5.27",
     "react": "^19.3.0",
     "react-dom": "^19.3.0",
+    "subset-font": "^2.9.0",
     "zod": "^3.25.76"
   },
   "devDependencies": {
@@ -38,6 +45,7 @@
     "drizzle-kit": "^0.31.11",
     "eslint": "^9.39.4",
     "eslint-config-next": "^15.5.27",
+    "node-html-parser": "^9.0.4",
     "prettier": "^3.9.10",
     "tsx": "^4.23.15",
     "typescript": "~5.9.3",

@@ -18,6 +18,11 @@ const config = [
     ],
   },
   ...compat.extends('next/core-web-vitals', 'next/typescript'),
+  {
+    // The page renderer emits standalone static HTML, not Next.js pages.
+    files: ['lib/render/**', 'templates/**'],
+    rules: { '@next/next/no-img-element': 'off', '@next/next/no-head-element': 'off' },
+  },
 ]
 
 export default config

@@ -1,0 +1,6 @@
+{
+  "id": "poster",
+  "nameZh": "海报",
+  "descriptionZh": "大图首屏配大标题，适合主推一件商品。",
+  "supports": ["single"]
+}

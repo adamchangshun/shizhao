@@ -1,0 +1,240 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`template poster > matches snapshot (menu) 1`] = `
+"<!DOCTYPE html><html lang="zh-CN"><head><meta charSet="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/><link rel="preload" as="image" href="media/img_menu01-display.webp" fetchPriority="high"/><title>巷口咖啡</title><meta name="description" content="早上好，从一杯热咖啡开始"/><meta property="og:type" content="website"/><meta property="og:title" content="巷口咖啡"/><meta property="og:description" content="早上好，从一杯热咖啡开始"/><meta property="og:image" content="https://shizhao.example/p/k7m2xq/media/img_menu01-display.webp"/><meta property="og:url" content="https://shizhao.example/p/k7m2xq/"/><meta name="theme-color" content="#d64545"/><style>@font-face{font-family:"SZ Heading";font-style:normal;font-weight:400;font-display:swap;src:url(data:font/woff2;base64,<9e651a1eccf9ea5a>) format("woff2");unicode-range:U+67e0,U+6aac,U+9882}
+@font-face{font-family:"SZ Heading";font-style:normal;font-weight:400;font-display:swap;src:url(data:font/woff2;base64,<73d06f9a056a16b0>) format("woff2");unicode-range:U+5df7}
+@font-face{font-family:"SZ Heading";font-style:normal;font-weight:400;font-display:swap;src:url(data:font/woff2;base64,<828634bf4c6bb5ef>) format("woff2");unicode-range:U+5561,U+6842,U+71d5,U+8292}
+@font-face{font-family:"SZ Heading";font-style:normal;font-weight:400;font-display:swap;src:url(data:font/woff2;base64,<b8a4043791179a1f>) format("woff2");unicode-range:U+5496}
+@font-face{font-family:"SZ Heading";font-style:normal;font-weight:400;font-display:swap;src:url(data:font/woff2;base64,<84dd623770d12c36>) format("woff2");unicode-range:U+6717,U+6ce1,U+9ea6}
+@font-face{font-family:"SZ Heading";font-style:normal;font-weight:400;font-display:swap;src:url(data:font/woff2;base64,<bcd4e5daf49592ce>) format("woff2");unicode-range:U+5377,U+676f}
+@font-face{font-family:"SZ Heading";font-style:normal;font-weight:400;font-display:swap;src:url(data:font/woff2;base64,<f9a89a2e91b94530>) format("woff2");unicode-range:U+8089}
+@font-face{font-family:"SZ Heading";font-style:normal;font-weight:400;font-display:swap;src:url(data:font/woff2;base64,<46c6ee8dda388fd7>) format("woff2");unicode-range:U+5c3c,U+5c42,U+5de7,U+62ff,U+94c1}
+@font-face{font-family:"SZ Heading";font-style:normal;font-weight:400;font-display:swap;src:url(data:font/woff2;base64,<d5f0809d8a04b02a>) format("woff2");unicode-range:U+514b,U+5343}
+@font-face{font-family:"SZ Heading";font-style:normal;font-weight:400;font-display:swap;src:url(data:font/woff2;base64,<f5686f1465803b98>) format("woff2");unicode-range:U+5e97}
+@font-face{font-family:"SZ Heading";font-style:normal;font-weight:400;font-display:swap;src:url(data:font/woff2;base64,<76c241f393b351c5>) format("woff2");unicode-range:U+53e3,U+5e03,U+6c14,U+7b2c,U+91cc}
+@font-face{font-family:"SZ Heading";font-style:normal;font-weight:400;font-display:swap;src:url(data:font/woff2;base64,<494235ed574ecb76>) format("woff2");unicode-range:U+529b,U+53ef,U+5f0f,U+679c,U+7f8e,U+8fd8}
+@font-face{font-family:"SZ Heading";font-style:normal;font-weight:400;font-display:swap;src:url(data:font/woff2;base64,<ffa64dac6b402dc9>) format("woff2");unicode-range:U+4e00,U+6709,U+7684}
+@font-face{font-family:"SZ Body";font-style:normal;font-weight:400;font-display:swap;src:url(data:font/woff2;base64,<53ef1e1b0c8171b9>) format("woff2");unicode-range:U+7119}
+@font-face{font-family:"SZ Body";font-style:normal;font-weight:400;font-display:swap;src:url(data:font/woff2;base64,<b73eb1cac9a8d813>) format("woff2");unicode-range:U+67e0,U+6aac,U+9882}
+@font-face{font-family:"SZ Body";font-style:normal;font-weight:400;font-display:swap;src:url(data:font/woff2;base64,<8c2c262c45e9dcd4>) format("woff2");unicode-range:U+5df7}
+@font-face{font-family:"SZ Body";font-style:normal;font-weight:400;font-display:swap;src:url(data:font/woff2;base64,<333e75c2b3658153>) format("woff2");unicode-range:U+70d8}
+@font-face{font-family:"SZ Body";font-style:normal;font-weight:400;font-display:swap;src:url(data:font/woff2;base64,<21c5a6583b5e69ff>) format("woff2");unicode-range:U+53e0,U+62e8}
+@font-face{font-family:"SZ Body";font-style:normal;font-weight:400;font-display:swap;src:url(data:font/woff2;base64,<e836469dff2b5388>) format("woff2");unicode-range:U+a5,U+5561,U+6842,U+71d5,U+8292}
+@font-face{font-family:"SZ Body";font-style:normal;font-weight:400;font-display:swap;src:url(data:font/woff2;base64,<58038036d3606c48>) format("woff2");unicode-range:U+5496,U+6d53}
+@font-face{font-family:"SZ Body";font-style:normal;font-weight:400;font-display:swap;src:url(data:font/woff2;base64,<8e858b18bcd6250e>) format("woff2");unicode-range:U+6717,U+676d,U+6ce1,U+723d,U+8f85,U+9ea6}
+@font-face{font-family:"SZ Body";font-style:normal;font-weight:400;font-display:swap;src:url(data:font/woff2;base64,<52ba1b13bd76e9ea>) format("woff2");unicode-range:U+5377,U+5976,U+676f,U+7f29,U+82e6}
+@font-face{font-family:"SZ Body";font-style:normal;font-weight:400;font-display:swap;src:url(data:font/woff2;base64,<edc751daf2765ec5>) format("woff2");unicode-range:U+5750,U+8089}
+@font-face{font-family:"SZ Body";font-style:normal;font-weight:400;font-display:swap;src:url(data:font/woff2;base64,<ca176e6cbe06b122>) format("woff2");unicode-range:U+5757,U+590f,U+5b63,U+5c3c,U+5c42,U+5de7,U+62ff,U+65e9,U+6e56,U+725b,U+8c46,U+94c1}
+@font-face{font-family:"SZ Body";font-style:normal;font-weight:400;font-display:swap;src:url(data:font/woff2;base64,<fd971a28d3a00fce>) format("woff2");unicode-range:U+4efd,U+514b,U+5343,U+6309,U+9999}
+@font-face{font-family:"SZ Body";font-style:normal;font-weight:400;font-display:swap;src:url(data:font/woff2;base64,<42040ea592de17e2>) format("woff2");unicode-range:U+4ec0,U+4f9b,U+5468,U+5740,U+59cb,U+5dde,U+5e26,U+5e97,U+62db,U+81f3,U+822a,U+8425,U+914d,U+952e}
+@font-face{font-family:"SZ Body";font-style:normal;font-weight:400;font-display:swap;src:url(data:font/woff2;base64,<20ac547a5f533344>) format("woff2");unicode-range:U+4e48,U+4ece,U+52a9,U+53e3,U+5546,U+590d,U+5bfc,U+5df2,U+5e03,U+6c14,U+6e05,U+7531,U+7b2c,U+897f,U+8ba1,U+8bbe,U+8def,U+90fd,U+91cc,U+9650}
+@font-face{font-family:"SZ Body";font-style:normal;font-weight:400;font-display:swap;src:url(data:font/woff2;base64,<c73dc4ba35fa50d8>) format("woff2");unicode-range:U+4e09-4e0a,U+4e0d,U+4e1a,U+4e2a,U+4fe1,U+5236,U+529b,U+52a0,U+52a8,U+533a,U+53ef,U+53f7,U+54c1,U+56fe,U+5730,U+5916,U+5927,U+597d,U+5b50,U+5b9a,U+5b9e,U+5bb6,U+5e02,U+5f00,U+5f0f,U+5fae,U+606f,U+610f,U+6210,U+624b,U+63d0,U+6587,U+65f6,U+672c,U+6765,U+679c,U+70ed,U+751f,U+7535,U+7f8e,U+81ea,U+8bdd,U+8bf7,U+8fc7,U+8fd8,U+8fdb,U+957f,U+95f4,U+9875}
+@font-face{font-family:"SZ Body";font-style:normal;font-weight:400;font-display:swap;src:url(data:font/woff2;base64,<b2ab4501e4cc4e35>) format("woff2");unicode-range:U+2d-3a,U+41,U+49,U+53,U+61,U+63,U+65-69,U+6b-6f,U+75,U+78,U+7a,U+3002,U+4e00,U+65e5,U+6709,U+7684,U+ff0c}
+:root{--bg:#fff8f3;--surface:#ffffff;--primary:#d64545;--accent:#f2b84b;--text:#2b1d1a;
+--on-primary:#ffffff;--on-accent:#1a1a1a;
+--font-h:"SZ Heading", "Songti SC", "STSong", "SimSun", serif;--font-b:"SZ Body", system-ui, -apple-system, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;--fw-h:400}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font-b);font-size:16px;line-height:1.6;overflow-wrap:anywhere;padding-bottom:calc(76px + env(safe-area-inset-bottom))}
+img{display:block;max-width:100%;height:auto}
+h1,h2,h3,p{margin:0}
+.page{max-width:480px;margin:0 auto;overflow-x:hidden;min-height:100vh}
+.fh{font-family:var(--font-h);font-weight:var(--fw-h);line-height:1.25}
+.price{white-space:nowrap}
+.price-unit{font-size:.8em;opacity:.75}
+.price-unit::before{content:"/"}
+.tags{display:flex;flex-wrap:wrap;gap:6px;padding:0;margin:8px 0 0;list-style:none}
+.tag{font-size:13px;line-height:1.4;padding:2px 8px;border-radius:999px;background:color-mix(in srgb,var(--accent) 18%,transparent)}
+.claims{display:flex;flex-wrap:wrap;gap:8px;padding:0;margin:0;list-style:none}
+.claim{font-size:15px;padding:4px 12px;border-radius:999px;border:1px solid color-mix(in srgb,var(--primary) 45%,transparent)}
+.shop-info{margin:24px 16px 0;padding:16px;border-radius:14px;background:var(--surface)}
+.shop-info dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:6px 12px;font-size:15px}
+.shop-info dl>div{display:contents}.shop-info dt{opacity:.7}.shop-info dd{margin:0;min-width:0}
+.closing{margin:24px 16px 0;text-align:center;font-size:17px}
+.footer{margin:24px 16px 0;padding:16px 0 24px;text-align:center;font-size:13px;line-height:1.7;opacity:.7}
+.footer p{margin:0}
+.actions{position:fixed;left:0;right:0;bottom:0;z-index:10;display:flex;gap:8px;justify-content:center;
+padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:var(--bg);background:color-mix(in srgb,var(--bg) 92%,transparent);
+border-top:1px solid color-mix(in srgb,var(--text) 10%,transparent)}
+.act{flex:1 1 0;max-width:160px;min-width:0;min-height:48px;display:flex;align-items:center;justify-content:center;
+padding:0 10px;border:0;border-radius:12px;font:inherit;font-size:16px;text-decoration:none;cursor:pointer;
+background:var(--primary);color:var(--on-primary)}
+.act:nth-child(2){background:var(--accent);color:var(--on-accent)}
+.act:focus-visible{outline:3px solid var(--text);outline-offset:2px}
+.toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:20;
+padding:8px 16px;border-radius:999px;background:#1a1a1a;color:#ffffff;font-size:15px}
+.page{background-image:radial-gradient(circle at 77% 55%,var(--accent) 0 3px,transparent 4px),radial-gradient(circle at 36% 26%,var(--primary) 0 2px,transparent 3px),radial-gradient(circle at 95% 97%,var(--accent) 0 2px,transparent 3px);background-size:140px 160px,110px 130px,90px 120px}
+@media (prefers-reduced-motion:no-preference){@keyframes sz-rise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}.rise{animation:sz-rise .6s ease-out both}.rise:nth-child(2){animation-delay:.08s}.rise:nth-child(3){animation-delay:.16s}}
+
+.poster .p-hero{position:relative;overflow:hidden}
+.poster .p-hero-img{width:100%;aspect-ratio:4/5;object-fit:cover;background:var(--surface)}
+.poster .p-hero-text{padding:20px 20px 8px}
+.poster .p-shop{font-size:15px;letter-spacing:.12em;opacity:.8;margin-bottom:6px}
+.poster .p-headline{font-size:clamp(32px,10vw,46px);letter-spacing:.02em}
+.poster .p-subhead{margin-top:10px;font-size:17px;opacity:.85}
+.poster.hero-full-bleed .p-hero-text{position:absolute;left:0;right:0;bottom:0;padding:72px 20px 22px;color:#ffffff;
+background:linear-gradient(to top,rgba(0,0,0,.72),rgba(0,0,0,0))}
+.poster.hero-full-bleed.no-img .p-hero-text,.poster.no-img .p-hero-text{position:static;color:var(--on-primary);background:var(--primary);padding:56px 20px 32px}
+.poster.hero-split .p-hero{display:grid;grid-template-columns:1fr 1fr;align-items:end;gap:0;background:var(--surface)}
+.poster.hero-split .p-hero-img{aspect-ratio:3/5;order:2}
+.poster.hero-split .p-hero-text{padding:24px 14px}
+.poster.hero-split .p-headline{font-size:clamp(26px,8vw,36px)}
+.poster.hero-split.no-img .p-hero{display:block}
+.poster.hero-stacked .p-hero{padding:16px 16px 0}
+.poster.hero-stacked .p-hero-img{aspect-ratio:1/1;border-radius:20px}
+.poster.hero-stacked .p-hero-text{padding:20px 4px 4px}
+.poster .p-feature{margin:20px 16px 0;padding:20px;border-radius:18px;background:var(--surface);
+box-shadow:0 10px 30px -18px color-mix(in srgb,var(--text) 45%,transparent)}
+.poster .p-feature-name{font-size:24px}
+.poster .p-feature-price{display:inline-block;margin-top:6px;font-size:30px;font-weight:700;color:var(--primary)}
+.poster .p-spec{margin-top:4px;font-size:15px;opacity:.75}
+.poster .p-desc{margin-top:10px}
+.poster .p-blurb{margin-top:12px;padding-left:12px;border-left:3px solid var(--accent);font-size:15px}
+.poster .p-claims{margin:20px 16px 0}
+.poster .p-more{margin:32px 16px 0}
+.poster .p-more-title{font-size:20px;margin-bottom:12px}
+.poster .p-more-list{list-style:none;margin:0;padding:0;display:grid;gap:12px}
+.poster .p-more-item{display:flex;gap:12px;padding:12px;border-radius:14px;background:var(--surface)}
+.poster .p-more-img{flex:0 0 88px;width:88px;height:88px;object-fit:cover;border-radius:10px}
+.poster .p-more-body{min-width:0;flex:1}
+.poster .p-more-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.poster .p-more-name{font-size:17px}
+.poster .p-more-price{font-weight:700;color:var(--primary)}
+</style></head><body data-track="/api/track" data-slug="k7m2xq" data-version="ver_0001"><div class="page t-poster deco-confetti"><main class="poster hero-full-bleed"><header class="p-hero"><img src="media/img_menu01-display.webp" alt="美式咖啡" width="750" height="938" class="p-hero-img" fetchPriority="high" decoding="async"/><div class="p-hero-text"><p class="p-shop" data-fact="shop.name">巷口咖啡</p><h1 class="fh p-headline rise">巷口的第一杯</h1><p class="p-subhead rise">早上好，从一杯热咖啡开始</p></div></header><div class="deco-rule" aria-hidden="true"></div><section class="p-feature rise" aria-label="主推商品"><h2 class="fh p-feature-name" data-fact="items.m1aa0001.name">美式咖啡</h2><span class="price p-feature-price"><span data-fact="items.m1aa0001.price">¥18</span><span class="price-unit" data-fact="items.m1aa0001.price.unit">杯</span></span><p class="p-spec" data-fact="items.m1aa0001.spec">大杯 473ml</p><p class="p-blurb">清爽不苦，配什么都好。</p></section><section class="p-claims" aria-label="店家承诺"><ul class="claims"><li class="claim" data-fact="extraClaims.0">自家烘焙豆子</li><li class="claim" data-fact="extraClaims.1">可外带</li></ul></section><section class="p-more" aria-label="更多商品"><h2 class="fh p-more-title">店里还有</h2><ul class="p-more-list"><li class="p-more-item"><img src="media/img_menu02-thumb.webp" alt="拿铁" width="240" height="240" class="p-more-img" loading="lazy" decoding="async"/><div class="p-more-body"><div class="p-more-head"><h3 class="fh p-more-name" data-fact="items.m1aa0002.name">拿铁</h3><span class="price p-more-price"><span data-fact="items.m1aa0002.price">¥22.50</span><span class="price-unit" data-fact="items.m1aa0002.price.unit">杯</span></span></div><p class="p-desc" data-fact="items.m1aa0002.description">意式浓缩加热牛奶。</p></div></li><li class="p-more-item"><img src="media/img_menu03-thumb.webp" alt="燕麦拿铁" width="240" height="240" class="p-more-img" loading="lazy" decoding="async"/><div class="p-more-body"><div class="p-more-head"><h3 class="fh p-more-name" data-fact="items.m1aa0003.name">燕麦拿铁</h3><span class="price p-more-price"><span data-fact="items.m1aa0003.price">¥25</span><span class="price-unit" data-fact="items.m1aa0003.price.unit">杯</span></span></div></div></li><li class="p-more-item"><div class="p-more-body"><div class="p-more-head"><h3 class="fh p-more-name" data-fact="items.m1aa0004.name">柠檬气泡美式</h3><span class="price p-more-price"><span data-fact="items.m1aa0004.price">¥26</span><span class="price-unit" data-fact="items.m1aa0004.price.unit">杯</span></span></div><ul class="tags"><li class="tag" data-fact="items.m1aa0004.tags.0">夏季限定</li></ul></div></li><li class="p-more-item"><div class="p-more-body"><div class="p-more-head"><h3 class="fh p-more-name" data-fact="items.m1aa0005.name">可颂</h3><span class="price p-more-price"><span data-fact="items.m1aa0005.price">¥12.50</span><span class="price-unit" data-fact="items.m1aa0005.price.unit">个</span></span></div></div></li><li class="p-more-item"><div class="p-more-body"><div class="p-more-head"><h3 class="fh p-more-name" data-fact="items.m1aa0006.name">肉桂卷</h3><span class="price p-more-price"><span data-fact="items.m1aa0006.price">¥16</span><span class="price-unit" data-fact="items.m1aa0006.price.unit">个</span></span></div></div></li><li class="p-more-item"><div class="p-more-body"><div class="p-more-head"><h3 class="fh p-more-name" data-fact="items.m1aa0007.name">芒果千层</h3><span class="price p-more-price"><span data-fact="items.m1aa0007.price">¥32</span><span class="price-unit" data-fact="items.m1aa0007.price.unit">份</span></span></div><p class="p-blurb">层层叠叠的芒果香。</p></div></li><li class="p-more-item"><div class="p-more-body"><div class="p-more-head"><h3 class="fh p-more-name" data-fact="items.m1aa0008.name">巧克力布朗尼</h3><span class="price p-more-price"><span data-fact="items.m1aa0008.price">¥18.80</span><span class="price-unit" data-fact="items.m1aa0008.price.unit">块</span></span></div></div></li></ul></section><p class="closing">路过的话，进来坐坐。</p></main><section class="shop-info" aria-label="店铺信息"><dl><div><dt>营业时间</dt><dd data-fact="shop.hours">周一至周日 7:30-19:00</dd></div><div><dt>地址</dt><dd data-fact="shop.address">杭州市西湖区文三路 12 号</dd></div><div><dt>电话</dt><dd data-fact="shop.phone">13800001234</dd></div><div><dt>微信</dt><dd data-fact="shop.wechat">xiangkou-coffee</dd></div></dl></section><footer class="footer"><p>本页由 AI 辅助设计，商品信息由商家提供</p><p>由 实招 Shizhao 生成</p></footer></div><nav class="actions" aria-label="联系商家"><a class="act" href="tel:13800001234" data-act="call">一键拨号</a><button class="act" type="button" data-act="wechat_copy" data-copy="xiangkou-coffee">复制微信号</button><a class="act" href="https://surl.amap.com/abc123" data-act="navigate" rel="noopener noreferrer">地图导航</a></nav><p id="sz-toast" class="toast" role="status" aria-live="polite" hidden=""><span>已复制</span><span hidden="">请长按微信号手动复制</span></p><script>(function(){
+var b=document.body,d=b.dataset,t=d.track,src='link';
+try{if(new URLSearchParams(location.search).get('src')==='qr')src='qr'}catch(e){}
+function send(a){if(!t)return;try{
+var p=JSON.stringify({slug:d.slug,versionId:d.version,source:src,action:a});
+if(navigator.sendBeacon&&navigator.sendBeacon(t,new Blob([p],{type:'application/json'})))return;
+fetch(t,{method:'POST',body:p,keepalive:true,headers:{'Content-Type':'application/json'}}).catch(function(){})
+}catch(e){}}
+var toast=document.getElementById('sz-toast'),timer;
+function show(ok){if(!toast)return;toast.hidden=false;toast.children[0].hidden=!ok;toast.children[1].hidden=ok;
+clearTimeout(timer);timer=setTimeout(function(){toast.hidden=true},2000)}
+function fallback(v){var ok=false,x=document.createElement('textarea');x.value=v;x.setAttribute('readonly','');
+x.style.position='fixed';x.style.opacity='0';b.appendChild(x);x.select();
+try{ok=document.execCommand('copy')}catch(e){}b.removeChild(x);show(ok)}
+function copy(v){if(navigator.clipboard&&window.isSecureContext){
+navigator.clipboard.writeText(v).then(function(){show(true)},function(){fallback(v)})}else fallback(v)}
+document.addEventListener('click',function(e){
+var el=e.target&&e.target.closest?e.target.closest('[data-act]'):null;if(!el)return;
+var a=el.getAttribute('data-act');if(a==='wechat_copy')copy(el.getAttribute('data-copy')||'');send(a)});
+send('view')})();</script></body></html>"
+`;
+
+exports[`template poster > matches snapshot (single) 1`] = `
+"<!DOCTYPE html><html lang="zh-CN"><head><meta charSet="utf-8"/><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"/><link rel="preload" as="image" href="media/img_cake01-display.webp" fetchPriority="high"/><title>甜心烘焙坊</title><meta name="description" content="当季草莓，配上轻盈奶油"/><meta property="og:type" content="website"/><meta property="og:title" content="甜心烘焙坊"/><meta property="og:description" content="当季草莓，配上轻盈奶油"/><meta property="og:image" content="https://shizhao.example/p/k7m2xq/media/img_cake01-display.webp"/><meta property="og:url" content="https://shizhao.example/p/k7m2xq/"/><meta name="theme-color" content="#d64545"/><style>@font-face{font-family:"SZ Heading";font-style:normal;font-weight:400;font-display:swap;src:url(data:font/woff2;base64,<d1ddc4737e69a434>) format("woff2");unicode-range:U+8393}
+@font-face{font-family:"SZ Heading";font-style:normal;font-weight:400;font-display:swap;src:url(data:font/woff2;base64,<9219406fbec06cf4>) format("woff2");unicode-range:U+7cd5}
+@font-face{font-family:"SZ Heading";font-style:normal;font-weight:400;font-display:swap;src:url(data:font/woff2;base64,<8072433545d1f8ba>) format("woff2");unicode-range:U+5976}
+@font-face{font-family:"SZ Heading";font-style:normal;font-weight:400;font-display:swap;src:url(data:font/woff2;base64,<adc0a5e2dd8a1f75>) format("woff2");unicode-range:U+8349,U+86cb}
+@font-face{font-family:"SZ Heading";font-style:normal;font-weight:400;font-display:swap;src:url(data:font/woff2;base64,<5e9f2e993ec9bdb7>) format("woff2");unicode-range:U+6cb9}
+@font-face{font-family:"SZ Heading";font-style:normal;font-weight:400;font-display:swap;src:url(data:font/woff2;base64,<4e0bd1ecb70dfaad>) format("woff2");unicode-range:U+6625}
+@font-face{font-family:"SZ Heading";font-style:normal;font-weight:400;font-display:swap;src:url(data:font/woff2;base64,<f40c4dea56196fa3>) format("woff2");unicode-range:U+53e3,U+5c31}
+@font-face{font-family:"SZ Heading";font-style:normal;font-weight:400;font-display:swap;src:url(data:font/woff2;base64,<9249651964558ac6>) format("woff2");unicode-range:U+5929,U+662f}
+@font-face{font-family:"SZ Heading";font-style:normal;font-weight:400;font-display:swap;src:url(data:font/woff2;base64,<6e2d314d5bf37344>) format("woff2");unicode-range:U+4e00}
+@font-face{font-family:"SZ Body";font-style:normal;font-weight:400;font-display:swap;src:url(data:font/woff2;base64,<bd166e5ed6e94930>) format("woff2");unicode-range:U+6f15}
+@font-face{font-family:"SZ Body";font-style:normal;font-weight:400;font-display:swap;src:url(data:font/woff2;base64,<53ef1e1b0c8171b9>) format("woff2");unicode-range:U+7119}
+@font-face{font-family:"SZ Body";font-style:normal;font-weight:400;font-display:swap;src:url(data:font/woff2;base64,<9c0519b794b5a972>) format("woff2");unicode-range:U+70d8,U+8393}
+@font-face{font-family:"SZ Body";font-style:normal;font-weight:400;font-display:swap;src:url(data:font/woff2;base64,<e9bdb0f946927039>) format("woff2");unicode-range:U+62e8,U+6eaa,U+70e4}
+@font-face{font-family:"SZ Body";font-style:normal;font-weight:400;font-display:swap;src:url(data:font/woff2;base64,<c6f3c55a3fa84dce>) format("woff2");unicode-range:U+a5,U+574a,U+76c8,U+7cd5}
+@font-face{font-family:"SZ Body";font-style:normal;font-weight:400;font-display:swap;src:url(data:font/woff2;base64,<9af3ea4aea38fc22>) format("woff2");unicode-range:U+5c1d}
+@font-face{font-family:"SZ Body";font-style:normal;font-weight:400;font-display:swap;src:url(data:font/woff2;base64,<ea64a440705b2a15>) format("woff2");unicode-range:U+5f90,U+8f85}
+@font-face{font-family:"SZ Body";font-style:normal;font-weight:400;font-display:swap;src:url(data:font/woff2;base64,<fac6ce3767c105c0>) format("woff2");unicode-range:U+5976,U+5bf8,U+751c}
+@font-face{font-family:"SZ Body";font-style:normal;font-weight:400;font-display:swap;src:url(data:font/woff2;base64,<42418348ec9ac1c8>) format("woff2");unicode-range:U+523b,U+8349,U+86cb}
+@font-face{font-family:"SZ Body";font-style:normal;font-weight:400;font-display:swap;src:url(data:font/woff2;base64,<74f56f5ce1469c69>) format("woff2");unicode-range:U+5b63,U+6c47,U+6cb9}
+@font-face{font-family:"SZ Body";font-style:normal;font-weight:400;font-display:swap;src:url(data:font/woff2;base64,<49145b3b4e765b94>) format("woff2");unicode-range:U+5207,U+6309,U+6ee1,U+8ba2,U+8f7b,U+9884,U+9999}
+@font-face{font-family:"SZ Body";font-style:normal;font-weight:400;font-display:swap;src:url(data:font/woff2;base64,<751969dff7adf9f1>) format("woff2");unicode-range:U+4f9b,U+5740,U+5e97,U+62db,U+6625,U+6bcf,U+724c,U+7ea6,U+822a,U+8425,U+8fce,U+90a3,U+914d,U+952e,U+9700}
+@font-face{font-family:"SZ Body";font-style:normal;font-weight:400;font-display:swap;src:url(data:font/woff2;base64,<35ba873149cb2111>) format("woff2");unicode-range:U+505a,U+52a9,U+5317,U+53e3,U+5546,U+590d,U+5bfc,U+5c31,U+5df2,U+6b22,U+6d77,U+7531,U+8ba1,U+8bbe,U+8def,U+90fd}
+@font-face{font-family:"SZ Body";font-style:normal;font-weight:400;font-display:swap;src:url(data:font/woff2;base64,<35f57bae69c573b6>) format("woff2");unicode-range:U+5f,U+4e0a,U+4e1a,U+4eec,U+4f60,U+4fe1,U+5230,U+5236,U+52a8,U+533a,U+53f7,U+54c1,U+56fe,U+5730,U+5929,U+5b9e,U+5bb6,U+5e02,U+5f00,U+5f53,U+5fae,U+5fc3,U+606f,U+6210-6211,U+624b,U+63d0,U+65f6,U+662f,U+672c,U+6765,U+679c,U+7269,U+73b0,U+751f,U+7535,U+7b49,U+8bdd,U+8bf7,U+957f,U+95f4,U+9875}
+@font-face{font-family:"SZ Body";font-style:normal;font-weight:400;font-display:swap;src:url(data:font/woff2;base64,<92b24411b4afa5fb>) format("woff2");unicode-range:U+2d,U+2f-36,U+38,U+3a,U+41,U+49,U+53,U+61-62,U+65,U+67-69,U+6b,U+6e-6f,U+74,U+78,U+7a,U+3002,U+4e00,U+65e5,U+ff0c}
+:root{--bg:#fff8f3;--surface:#ffffff;--primary:#d64545;--accent:#f2b84b;--text:#2b1d1a;
+--on-primary:#ffffff;--on-accent:#1a1a1a;
+--font-h:"SZ Heading", "Songti SC", "STSong", "SimSun", serif;--font-b:"SZ Body", system-ui, -apple-system, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;--fw-h:400}
+*,*::before,*::after{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%;text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--text);font-family:var(--font-b);font-size:16px;line-height:1.6;overflow-wrap:anywhere;padding-bottom:calc(76px + env(safe-area-inset-bottom))}
+img{display:block;max-width:100%;height:auto}
+h1,h2,h3,p{margin:0}
+.page{max-width:480px;margin:0 auto;overflow-x:hidden;min-height:100vh}
+.fh{font-family:var(--font-h);font-weight:var(--fw-h);line-height:1.25}
+.price{white-space:nowrap}
+.price-unit{font-size:.8em;opacity:.75}
+.price-unit::before{content:"/"}
+.tags{display:flex;flex-wrap:wrap;gap:6px;padding:0;margin:8px 0 0;list-style:none}
+.tag{font-size:13px;line-height:1.4;padding:2px 8px;border-radius:999px;background:color-mix(in srgb,var(--accent) 18%,transparent)}
+.claims{display:flex;flex-wrap:wrap;gap:8px;padding:0;margin:0;list-style:none}
+.claim{font-size:15px;padding:4px 12px;border-radius:999px;border:1px solid color-mix(in srgb,var(--primary) 45%,transparent)}
+.shop-info{margin:24px 16px 0;padding:16px;border-radius:14px;background:var(--surface)}
+.shop-info dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:6px 12px;font-size:15px}
+.shop-info dl>div{display:contents}.shop-info dt{opacity:.7}.shop-info dd{margin:0;min-width:0}
+.closing{margin:24px 16px 0;text-align:center;font-size:17px}
+.footer{margin:24px 16px 0;padding:16px 0 24px;text-align:center;font-size:13px;line-height:1.7;opacity:.7}
+.footer p{margin:0}
+.actions{position:fixed;left:0;right:0;bottom:0;z-index:10;display:flex;gap:8px;justify-content:center;
+padding:10px 12px calc(10px + env(safe-area-inset-bottom));background:var(--bg);background:color-mix(in srgb,var(--bg) 92%,transparent);
+border-top:1px solid color-mix(in srgb,var(--text) 10%,transparent)}
+.act{flex:1 1 0;max-width:160px;min-width:0;min-height:48px;display:flex;align-items:center;justify-content:center;
+padding:0 10px;border:0;border-radius:12px;font:inherit;font-size:16px;text-decoration:none;cursor:pointer;
+background:var(--primary);color:var(--on-primary)}
+.act:nth-child(2){background:var(--accent);color:var(--on-accent)}
+.act:focus-visible{outline:3px solid var(--text);outline-offset:2px}
+.toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:20;
+padding:8px 16px;border-radius:999px;background:#1a1a1a;color:#ffffff;font-size:15px}
+.page{background-image:radial-gradient(circle at 77% 55%,var(--accent) 0 3px,transparent 4px),radial-gradient(circle at 36% 26%,var(--primary) 0 2px,transparent 3px),radial-gradient(circle at 95% 97%,var(--accent) 0 2px,transparent 3px);background-size:140px 160px,110px 130px,90px 120px}
+@media (prefers-reduced-motion:no-preference){@keyframes sz-rise{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}.rise{animation:sz-rise .6s ease-out both}.rise:nth-child(2){animation-delay:.08s}.rise:nth-child(3){animation-delay:.16s}}
+
+.poster .p-hero{position:relative;overflow:hidden}
+.poster .p-hero-img{width:100%;aspect-ratio:4/5;object-fit:cover;background:var(--surface)}
+.poster .p-hero-text{padding:20px 20px 8px}
+.poster .p-shop{font-size:15px;letter-spacing:.12em;opacity:.8;margin-bottom:6px}
+.poster .p-headline{font-size:clamp(32px,10vw,46px);letter-spacing:.02em}
+.poster .p-subhead{margin-top:10px;font-size:17px;opacity:.85}
+.poster.hero-full-bleed .p-hero-text{position:absolute;left:0;right:0;bottom:0;padding:72px 20px 22px;color:#ffffff;
+background:linear-gradient(to top,rgba(0,0,0,.72),rgba(0,0,0,0))}
+.poster.hero-full-bleed.no-img .p-hero-text,.poster.no-img .p-hero-text{position:static;color:var(--on-primary);background:var(--primary);padding:56px 20px 32px}
+.poster.hero-split .p-hero{display:grid;grid-template-columns:1fr 1fr;align-items:end;gap:0;background:var(--surface)}
+.poster.hero-split .p-hero-img{aspect-ratio:3/5;order:2}
+.poster.hero-split .p-hero-text{padding:24px 14px}
+.poster.hero-split .p-headline{font-size:clamp(26px,8vw,36px)}
+.poster.hero-split.no-img .p-hero{display:block}
+.poster.hero-stacked .p-hero{padding:16px 16px 0}
+.poster.hero-stacked .p-hero-img{aspect-ratio:1/1;border-radius:20px}
+.poster.hero-stacked .p-hero-text{padding:20px 4px 4px}
+.poster .p-feature{margin:20px 16px 0;padding:20px;border-radius:18px;background:var(--surface);
+box-shadow:0 10px 30px -18px color-mix(in srgb,var(--text) 45%,transparent)}
+.poster .p-feature-name{font-size:24px}
+.poster .p-feature-price{display:inline-block;margin-top:6px;font-size:30px;font-weight:700;color:var(--primary)}
+.poster .p-spec{margin-top:4px;font-size:15px;opacity:.75}
+.poster .p-desc{margin-top:10px}
+.poster .p-blurb{margin-top:12px;padding-left:12px;border-left:3px solid var(--accent);font-size:15px}
+.poster .p-claims{margin:20px 16px 0}
+.poster .p-more{margin:32px 16px 0}
+.poster .p-more-title{font-size:20px;margin-bottom:12px}
+.poster .p-more-list{list-style:none;margin:0;padding:0;display:grid;gap:12px}
+.poster .p-more-item{display:flex;gap:12px;padding:12px;border-radius:14px;background:var(--surface)}
+.poster .p-more-img{flex:0 0 88px;width:88px;height:88px;object-fit:cover;border-radius:10px}
+.poster .p-more-body{min-width:0;flex:1}
+.poster .p-more-head{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.poster .p-more-name{font-size:17px}
+.poster .p-more-price{font-weight:700;color:var(--primary)}
+</style></head><body data-track="/api/track" data-slug="k7m2xq" data-version="ver_0001"><div class="page t-poster deco-confetti"><main class="poster hero-full-bleed"><header class="p-hero"><img src="media/img_cake01-display.webp" alt="草莓奶油蛋糕" width="750" height="938" class="p-hero-img" fetchPriority="high" decoding="async"/><div class="p-hero-text"><p class="p-shop" data-fact="shop.name">甜心烘焙坊</p><h1 class="fh p-headline rise">一口就是春天</h1><p class="p-subhead rise">当季草莓，配上轻盈奶油</p></div></header><div class="deco-rule" aria-hidden="true"></div><section class="p-feature rise" aria-label="主推商品"><h2 class="fh p-feature-name" data-fact="items.ab12cd34.name">草莓奶油蛋糕</h2><span class="price p-feature-price"><span data-fact="items.ab12cd34.price">¥128</span><span class="price-unit" data-fact="items.ab12cd34.price.unit">6 寸</span></span><p class="p-spec" data-fact="items.ab12cd34.spec">约 450g</p><p class="p-desc" data-fact="items.ab12cd34.description">当季草莓配动物奶油，每日现做。</p><ul class="tags"><li class="tag" data-fact="items.ab12cd34.tags.0">招牌</li><li class="tag" data-fact="items.ab12cd34.tags.1">需预订</li></ul><p class="p-blurb">切开那一刻，满满都是果香。</p></section><section class="p-claims" aria-label="店家承诺"><ul class="claims"><li class="claim" data-fact="extraClaims.0">当天现烤</li></ul></section><p class="closing">欢迎到店，我们等你来尝。</p></main><section class="shop-info" aria-label="店铺信息"><dl><div><dt>营业时间</dt><dd data-fact="shop.hours">每天 8:00-21:00</dd></div><div><dt>地址</dt><dd data-fact="shop.address">上海市徐汇区漕溪北路 88 号</dd></div><div><dt>电话</dt><dd data-fact="shop.phone">021-6488 1234</dd></div><div><dt>微信</dt><dd data-fact="shop.wechat">tianxin_bake</dd></div></dl></section><footer class="footer"><p>本页由 AI 辅助设计，商品信息由商家提供</p><p>由 实招 Shizhao 生成</p></footer></div><nav class="actions" aria-label="联系商家"><a class="act" href="tel:021-64881234" data-act="call">一键拨号</a><button class="act" type="button" data-act="wechat_copy" data-copy="tianxin_bake">复制微信号</button><a class="act" href="https://uri.amap.com/search?keyword=%E7%94%9C%E5%BF%83%E7%83%98%E7%84%99%E5%9D%8A%20%E4%B8%8A%E6%B5%B7%E5%B8%82%E5%BE%90%E6%B1%87%E5%8C%BA%E6%BC%95%E6%BA%AA%E5%8C%97%E8%B7%AF%2088%20%E5%8F%B7&amp;src=shizhao&amp;callnative=1" data-act="navigate" rel="noopener noreferrer">地图导航</a></nav><p id="sz-toast" class="toast" role="status" aria-live="polite" hidden=""><span>已复制</span><span hidden="">请长按微信号手动复制</span></p><script>(function(){
+var b=document.body,d=b.dataset,t=d.track,src='link';
+try{if(new URLSearchParams(location.search).get('src')==='qr')src='qr'}catch(e){}
+function send(a){if(!t)return;try{
+var p=JSON.stringify({slug:d.slug,versionId:d.version,source:src,action:a});
+if(navigator.sendBeacon&&navigator.sendBeacon(t,new Blob([p],{type:'application/json'})))return;
+fetch(t,{method:'POST',body:p,keepalive:true,headers:{'Content-Type':'application/json'}}).catch(function(){})
+}catch(e){}}
+var toast=document.getElementById('sz-toast'),timer;
+function show(ok){if(!toast)return;toast.hidden=false;toast.children[0].hidden=!ok;toast.children[1].hidden=ok;
+clearTimeout(timer);timer=setTimeout(function(){toast.hidden=true},2000)}
+function fallback(v){var ok=false,x=document.createElement('textarea');x.value=v;x.setAttribute('readonly','');
+x.style.position='fixed';x.style.opacity='0';b.appendChild(x);x.select();
+try{ok=document.execCommand('copy')}catch(e){}b.removeChild(x);show(ok)}
+function copy(v){if(navigator.clipboard&&window.isSecureContext){
+navigator.clipboard.writeText(v).then(function(){show(true)},function(){fallback(v)})}else fallback(v)}
+document.addEventListener('click',function(e){
+var el=e.target&&e.target.closest?e.target.closest('[data-act]'):null;if(!el)return;
+var a=el.getAttribute('data-act');if(a==='wechat_copy')copy(el.getAttribute('data-copy')||'');send(a)});
+send('view')})();</script></body></html>"
+`;
