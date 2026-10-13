@@ -5,11 +5,14 @@
     "provider": "mock",
     "textModel": null,
     "visionModel": null,
+    "endpoint": null,
+    "profile": null,
+    "codeHash": "1b0ed2e586ca99b2",
     "n": 3,
     "temperature": 0.6
   },
   "date": "2026-10-13",
-  "commit": "b85c467",
+  "commit": "ea27797",
   "samples": [
     {
       "id": "bakery-croissant-single",
