@@ -316,3 +316,25 @@
 
 审查结论：无 CRITICAL / HIGH，第 1 轮即合并到 main。
 
+
+## 14 开源交付：一键运行（Claude 实现，Codex 审查）
+
+范围：`Dockerfile`、`docker-compose.yml`、`docker/entrypoint.sh`、`pnpm bootstrap`、`pnpm demo`（README 与治理文档在 `feat/14-docs` 另行完成）。
+
+### 第 1 轮（`cdx-review --base main --security`，gpt-5.6-sol / xhigh）：4 CRITICAL，5 HIGH
+
+Claude 核实后认为 4 条 CRITICAL 都是真实的加固点，但影响面达不到 CRITICAL（需要本机已有凭据文件或权限错误的文件，或运维者自己把 `DEMO_API_BASE` 指向公网），按 HIGH 处理并全部修复。
+
+| 级别 | 问题 | 处理 |
+|---|---|---|
+| CRITICAL | `COPY . .` 可能把工作目录里的 `.npmrc`、私钥、证书打进镜像 | 已修复：`.dockerignore` 排除 `**/.npmrc`、`*.pem`、`*.key`、`*.p12` 和 SSH 私钥 |
+| CRITICAL | bootstrap 向已有的 `.env` 写口令时保留原权限（可能是 0644） | 已修复：拒绝符号链接；无论 `.env` 是新建的还是已有的，都强制设为 0600 |
+| CRITICAL | entrypoint 复用 `data/admin-token` 时不检查文件类型和权限 | 已修复：拒绝符号链接和非普通文件；新口令先写入私有临时文件再改名；复用旧口令时强制设为 0600 |
+| CRITICAL | `DEMO_API_BASE` 可以是公网 http 地址，口令会明文发出 | 已修复：只允许本机 http 地址或 https 地址，拒绝网址中带用户名或密码；认证请求设置 `redirect: 'error'` |
+| HIGH | `.env.local` 中的空 `ADMIN_TOKEN=` 会盖过 `.env`，bootstrap 却打印了错误的「有效口令」 | 已修复：按「shell 环境变量 → `.env.local` → `.env`」的顺序判断口令的实际来源，来源为空时报错退出；新增回归测试 |
+| HIGH | Compose 只读取 `.env`，与 bootstrap 说明的优先级不一致 | 已修复：口令不是来自 `.env` 时，bootstrap 会明确提示「docker compose 只读取 .env」 |
+| HIGH | entrypoint 修正数据目录属主时只看顶层目录 | 已修复：只要数据目录下有任何文件不属于 node 用户就整体修正；降权后再检查目录是否可写，不可写时报错退出。会改写宿主 `./data` 属主这一点是有意为之（数据目录归容器所有） |
+| HIGH | demo 的请求没有超时，服务卡住时 demo 会一直挂起 | 已修复：每个请求 120 秒超时，超时或连接失败时给出中文错误 |
+| HIGH | demo 中途失败或被 Ctrl+C 时，自动启动的 `next dev` 可能残留 | 已修复：子进程放在独立进程组；启动前就安装 SIGINT/SIGTERM 处理；失败或中断时终止整个进程组，等待退出，10 秒后强制结束。已实测启动中 Ctrl+C、运行中 Ctrl+C、生成失败三种情况，都没有残留进程 |
+
+按项目负责人的安排只审 1 轮；修复后的行为由实测验证：全量测试 795 个用例通过；全新 clone 后 `docker compose up` 加容器内 `pnpm demo`，公开页返回 200；全新 clone 后 `pnpm i && pnpm bootstrap && pnpm demo`，公开页返回 200。
