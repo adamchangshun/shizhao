@@ -248,7 +248,6 @@
 | LOW | 额外开发依赖 `@types/qrcode` | 接受：只提供类型定义 |
 
 审查结论：无 CRITICAL / HIGH，合并到 main。实测 typecheck / lint / test 通过（706 通过、1 跳过；发布模块 37 个用例）。
-||||||| fcdedf2
 
 ## 12 评测集与对比实验
 
@@ -298,3 +297,22 @@
 | LOW | `usage_records.projectId` 改为可空、新增 `GUARD_TRUST_PROXY`，都没有写进 CONTRACT | 交由项目负责人决定是否在 CONTRACT 修订节中补充 |
 
 审查结论：没有 CRITICAL 或 HIGH，第 1 轮即合并到 main。
+
+## 10 公开页与访问统计（Codex 实现，Claude 审查）
+
+执行方 Codex（GPT 模式），审查方 Claude（只读）。依据共享契约 R2（公开页和公开图片按 `publishedVersionId` 指针读取版本目录）与 R6（`/api/health`）。
+
+### 第 1 轮（20a2e37）：0 CRITICAL，0 HIGH，2 MEDIUM，3 LOW（报告：提示词目录 `审查报告/10-第1轮.md`）
+
+在独立检出目录实际运行 typecheck / lint / test：790 通过、1 跳过（`tests/stats/` 23 个用例，含真实 Chromium 加载渲染器输出的 CSP 测试）。另在真实 `next dev` 中发布一个由 `renderPage` 生成的页面并逐项探测：`/p/<slug>` 308 到 `/p/<slug>/` 且保留查询串；CSP 中的 `script-src` hash 与渲染输出中唯一一段脚本的 SHA-256 逐字一致，`style-src` 只有 `'unsafe-inline'`，`img-src`/`font-src` 只有 `'self' data:`；media 按白名单正则校验后从当前指针版本读取；`/api/track` 要求 versionId 是该 slug 当前已发布的版本，非法请求统一返回 204 且不入库，伪造转发头无效；`visit_events` 只有契约字段，代码中没有日志输出；预览页 `data-track=""` 且 `connect-src 'none'`，点击后不产生埋点；错误页为固定中文文案，不泄露路径；北京时间切日有 UTC 15:59/16:01 跨日测试；`/api/health` 只返回 `{"ok":true}`。`next.config.ts` 新增 `skipTrailingSlashRedirect`，用来避免与 R2 的加斜杠重定向形成循环，已核实成立。
+
+| 级别 | 问题 | 处理 |
+|---|---|---|
+| MEDIUM | `TRACK_TRUST_PROXY` 默认关闭时所有访客共用一个限流桶，每个页面每 10 秒最多记 1 次 view，并发扫码会被明显少计 | 暂不修：默认不信任转发头在安全上正确，且已写入 PRIVACY.md。17 号部署时给 Caddy 加 `header_up X-Real-IP {remote_host}` 并设置 `TRACK_TRUST_PROXY=true`，真机验收时用两台手机在 10 秒内先后扫码确认记成 2 次 |
+| MEDIUM | 没有微信实机验证的证据 | 转入 17 号真机验收：微信内打开页面，点击拨号后统计加 1，复制微信号的提示正常显示 |
+| LOW | `skipTrailingSlashRedirect` 是全局开关，`/login/` 等页面不再统一斜杠 | 记录：现有链接都是绝对路径，功能不受影响 |
+| LOW | 无法阻止分布式刷量，键表写满后新来源被拒，source 可伪造 | 接受：与「匿名、可能被刷的互动计数」口径一致，已写入 PRIVACY.md |
+| LOW | 统计口径只写在 PRIVACY.md 中，后台界面上没有说明 | 交给 11 号：在统计卡片旁标注「匿名互动计数，可能包含重复或刷量，仅供观察趋势」 |
+
+审查结论：无 CRITICAL / HIGH，第 1 轮即合并到 main。
+

@@ -26,7 +26,8 @@
     "eval:compare": "tsx --tsconfig tsconfig.scripts.json --env-file-if-exists=.env.local eval/scripts/compare.ts",
     "eval:guard": "tsx --tsconfig tsconfig.scripts.json --env-file-if-exists=.env.local eval/scripts/guard.ts",
     "eval:report": "tsx --tsconfig tsconfig.scripts.json --env-file-if-exists=.env.local eval/scripts/report.ts",
-    "eval:promptfoo": "tsx --tsconfig tsconfig.scripts.json --env-file-if-exists=.env.local eval/scripts/promptfoo.ts"
+    "eval:promptfoo": "tsx --tsconfig tsconfig.scripts.json --env-file-if-exists=.env.local eval/scripts/promptfoo.ts",
+    "stats:export": "node --env-file-if-exists=.env.local --import tsx lib/stats/export.ts"
   },
   "dependencies": {
     "@fontsource/noto-sans-sc": "^5.3.1",

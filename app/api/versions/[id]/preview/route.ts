@@ -28,7 +28,9 @@ export async function GET(request: Request, { params }: Ctx): Promise<Response> 
     requireAdmin(request)
     const { id } = await params
     if (!isValidId(id)) throw Errors.notFound('版本')
-    return new Response(await readVersionHtml(id), {
+    // Preview is a response-only projection; stored version bytes and CSP script hash stay intact.
+    const html = (await readVersionHtml(id)).replace(/(<body\b[^>]*\bdata-track=)"[^"]*"/i, '$1""')
+    return new Response(html, {
       headers: {
         'content-type': 'text/html; charset=utf-8',
         'content-security-policy': PREVIEW_CSP,

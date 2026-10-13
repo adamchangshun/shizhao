@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 报告安全漏洞
+    url: https://gitee.com/sheng-changshun/shizhao/blob/main/SECURITY.md
+    about: 安全漏洞请不要公开提交，按 SECURITY.md 私下报告。
+  - name: 新人任务清单
+    url: https://gitee.com/sheng-changshun/shizhao/blob/main/docs/good-first-issues.md
+    about: 想参与但不知道从哪开始，可以先看这里。
