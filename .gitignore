@@ -11,3 +11,4 @@ next-env.d.ts
 .DS_Store
 .omc/
 CODEX_REVIEW_SUMMARY.md
+eval/runs/
