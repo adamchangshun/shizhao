@@ -67,6 +67,8 @@ const EnvSchema = z
       ),
     GUARD_KEY_DAILY_LIMIT: z.coerce.number().int().positive('必须是正整数').default(2000),
     LONG_IMAGE_ENABLED: bool,
+    JOB_STAGE_TIMEOUT_MS: z.coerce.number().int().positive('必须是正整数').default(60_000),
+    JOB_TOTAL_TIMEOUT_MS: z.coerce.number().int().positive('必须是正整数').default(180_000),
   })
   .superRefine((env, ctx) => {
     const base = new URL(env.PUBLIC_BASE_URL)

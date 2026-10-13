@@ -15,6 +15,13 @@
       "when": 1791780094861,
       "tag": "0001_assets_sha256_unique",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1791901628828,
+      "tag": "0002_job_stage_started_at",
+      "breakpoints": true
     }
   ]
 }

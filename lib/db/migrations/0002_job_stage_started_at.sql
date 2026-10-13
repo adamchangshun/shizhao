@@ -1,0 +1,1 @@
+ALTER TABLE `jobs` ADD `stage_started_at` text;
