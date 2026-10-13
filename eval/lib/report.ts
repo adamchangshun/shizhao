@@ -179,6 +179,8 @@ function configSection(r: Results): string[] {
     '',
     `- 运行编号：\`${r.runId}\`（产物目录 \`eval/runs/${r.runId}/\`，不提交到仓库）`,
     `- 模型接口：${r.config.provider}；文本模型 ${r.config.textModel ?? DASH}，视觉模型 ${r.config.visionModel ?? DASH}`,
+    `- 接口地址：${r.config.endpoint ?? DASH}；接口配置（LLM_PROFILE）：${r.config.profile ?? DASH}`,
+    `- 生成代码指纹：\`${r.config.codeHash}\`（流水线、模板、规则包与对照组 A 生成代码的内容哈希；与当前代码不一致的产物不计入本报告）`,
     `- 实际调用的模型（来自用量记录）：${r.models.length > 0 ? r.models.join('、') : DASH}`,
     `- 温度：对照组 A 生成整页 ${r.config.temperature}；实验组 B 沿用流水线内置温度（风格 0.9、文案 0.6、守卫判定与重写 0、事实抽取 0），对照组 A 的温度取与文案阶段相同的值`,
     `- 每组每样本运行次数 N：${r.config.n}`,

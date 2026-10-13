@@ -87,6 +87,24 @@ describe('pageFactErrors', () => {
     })
   })
 
+  it('accepts an item whose card shows the right price after an earlier promo mention', () => {
+    // 拿铁 first appears in a promo line next to 15 (美式's price), but its own card shows 20,
+    // so nothing is wrong; 美式 ¥15 is right too.
+    const text = '今日推荐拿铁 ¥15 起\n拿铁 ¥20\n美式 ¥15\n电话 13800138000'
+    expect(pageFactErrors(text, cafe)).toMatchObject({ wrongPrices: 0, total: 0 })
+  })
+
+  it('leaves an invented price next to a name to fabricatedPrices only', () => {
+    // 拿铁 ¥18 is not a gold price: 1 fabricated price and 1 missing price (20), not also wrong.
+    const text = '拿铁 ¥18\n美式 ¥15\n电话 13800138000'
+    expect(pageFactErrors(text, cafe)).toMatchObject({
+      fabricatedPrices: 1,
+      missingPrices: 1,
+      wrongPrices: 0,
+      total: 2,
+    })
+  })
+
   it('does not call a price wrong when no price follows the name', () => {
     // 拿铁 is followed directly by 美式, so there is no price to compare for 拿铁; 美式 ¥15 is right.
     expect(pageFactErrors('拿铁 美式 ¥15 ¥20 电话 13800138000', cafe)).toMatchObject({

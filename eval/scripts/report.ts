@@ -23,7 +23,9 @@ function run(): void {
       `run ${current.runId} not found; run eval:extract / eval:compare / eval:guard first`,
     )
   // The N and temperature the comparison actually ran with.
-  const config = readStoredRunConfig(dir) ?? current
+  const stored = readStoredRunConfig(dir)
+  // Settings of the run as stored, code as it is now: pages from older code are not counted.
+  const config = stored ? { ...stored, codeHash: current.codeHash } : current
   const samples = loadSamples(SAMPLES_DIR)
   const date = today()
   const results = computeResults({ runDir: dir, config, samples, date, commit: gitCommit() })

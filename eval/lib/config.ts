@@ -20,10 +20,53 @@ export const RunConfig = z.object({
   provider: z.string(),
   textModel: z.string().nullable(),
   visionModel: z.string().nullable(),
+  /** LLM_BASE_URL without credentials, query or fragment (never the API key). */
+  endpoint: z.string().nullable(),
+  profile: z.string().nullable(),
+  /** Hash of the code that generates pages and guard results (see generationCodeHash). */
+  codeHash: z.string(),
   n: z.number().int().positive(),
   temperature: z.number().min(0).max(2),
 })
 export type RunConfig = z.infer<typeof RunConfig>
+
+/** Code whose change makes earlier pages or guard results stale (metrics/report code is not). */
+const GENERATION_CODE = [
+  'lib',
+  'packages/fact-guard/src',
+  'rules',
+  'templates',
+  'eval/lib/experiments.ts',
+  'eval/lib/group-a.ts',
+  'eval/lib/pipeline.ts',
+]
+
+/** SHA-256 over the working-tree content of the tracked generation code files. */
+export function generationCodeHash(): string {
+  const files = execFileSync('git', ['ls-files', '-z', '--', ...GENERATION_CODE], {
+    encoding: 'utf8',
+  })
+    .split('\0')
+    .filter(Boolean)
+    .sort()
+  const hash = createHash('sha256')
+  for (const file of files) {
+    hash.update(file).update('\0')
+    if (fs.existsSync(file)) hash.update(fs.readFileSync(file))
+  }
+  return hash.digest('hex').slice(0, 16)
+}
+
+/** Origin and path of the endpoint only; user info, query and fragment are dropped. */
+export function endpointLabel(baseUrl: string | undefined): string | null {
+  if (!baseUrl?.trim()) return null
+  try {
+    const url = new URL(baseUrl.trim())
+    return `${url.origin}${url.pathname.replace(/\/+$/, '')}`
+  } catch {
+    return 'invalid-url'
+  }
+}
 
 function slug(text: string): string {
   return (
@@ -45,13 +88,31 @@ export function readRunConfig(source: NodeJS.ProcessEnv = process.env): RunConfi
   if (!RUN_ID.test(runId)) throw new Error('EVAL_RUN_ID 只能包含字母、数字、点、下划线和连字符')
   const n = Number(source.EVAL_N ?? 3)
   const temperature = Number(source.EVAL_TEMPERATURE ?? 0.6)
-  return RunConfig.parse({ runId, provider, textModel, visionModel, n, temperature })
+  return RunConfig.parse({
+    runId,
+    provider,
+    textModel,
+    visionModel,
+    endpoint: provider === 'mock' ? null : endpointLabel(source.LLM_BASE_URL),
+    profile: provider === 'mock' ? null : source.LLM_PROFILE?.trim() || null,
+    codeHash: generationCodeHash(),
+    n,
+    temperature,
+  })
 }
 
 /** The run settings that change what a part produces (N only adds parts, so it is not here). */
 export function runSettingsKey(config: RunConfig): string {
-  const { provider, textModel, visionModel, temperature } = config
-  return JSON.stringify({ provider, textModel, visionModel, temperature })
+  const { provider, textModel, visionModel, endpoint, profile, codeHash, temperature } = config
+  return JSON.stringify({
+    provider,
+    textModel,
+    visionModel,
+    endpoint,
+    profile,
+    codeHash,
+    temperature,
+  })
 }
 
 /** Fingerprint of a part's inputs: the run settings plus the hash of its input files. */
