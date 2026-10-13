@@ -2,8 +2,11 @@
 // Facts are printed only from the FactSheet (see shared/facts.tsx); copy is plain escaped text.
 // No dangerouslySetInnerHTML anywhere: React escapes everything it renders, and the only raw
 // strings spliced in are our own CSS and the fixed inline script.
-import { renderToStaticMarkup } from 'react-dom/server'
+import { createRequire } from 'node:module'
 import { z } from 'zod'
+
+// This renders standalone files in a Node job, outside Next's Server Component renderer.
+const { renderToStaticMarkup } = createRequire(import.meta.url)('react-dom/server') as typeof import('react-dom/server')
 import {
   DesignSpec as DesignSpecSchema,
   FactSheet as FactSheetSchema,

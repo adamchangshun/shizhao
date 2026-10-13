@@ -1,0 +1,188 @@
+openapi: 3.1.0
+info:
+  title: 实招文案检查 API
+  version: 0.1.0
+  description: 规则层免费开放；模型判定与行业规则需 API Key。输入不落库、不记日志。
+servers:
+  - url: http://localhost:6690
+paths:
+  /api/guard:
+    post:
+      operationId: checkMarketingCopy
+      summary: 检查营销文案
+      description: >-
+        无Key仅rules/general；有Key每分钟120次且计入每日额度，无Key每分钟20次。
+        UTF-16长度上限5000，最多80句，100KiB请求体。总期限30秒、模型并发2、排队最多64且等待10秒。
+        每请求最多一次批量judge和一次最多10句rewrite；建议仅规则复查，没有第二次语义判定。
+        默认不信任转发IP头，匿名请求共用预算；可信代理配置见docs/API.md。
+      security:
+        - {}
+        - GuardKey: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/GuardRequest'
+            example:
+              text: 零糖配方，全城销量第一
+              facts: []
+      responses:
+        '200':
+          description: 检查完成。passed只表示原文全部为ok；改写建议不使passed变为true。
+          headers:
+            X-RateLimit-Remaining:
+              $ref: '#/components/headers/Remaining'
+            Cache-Control:
+              schema: { type: string, const: no-store }
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/GuardResponse'
+        '400':
+          $ref: '#/components/responses/InvalidInput'
+        '403':
+          $ref: '#/components/responses/KeyRequired'
+        '413':
+          $ref: '#/components/responses/TooLarge'
+        '429':
+          $ref: '#/components/responses/RateLimited'
+        '499':
+          $ref: '#/components/responses/Cancelled'
+        '500':
+          $ref: '#/components/responses/Internal'
+        '502':
+          $ref: '#/components/responses/Provider'
+        '503':
+          $ref: '#/components/responses/Provider'
+        '504':
+          $ref: '#/components/responses/Timeout'
+components:
+  securitySchemes:
+    GuardKey:
+      type: http
+      scheme: bearer
+      description: 服务端GUARD_API_KEYS中的Key；管理Cookie或管理口令不替代此Key。
+  headers:
+    Remaining:
+      description: 当前分钟窗口剩余请求数，错误响应同样提供。
+      schema: { type: integer, minimum: 0, maximum: 120 }
+  schemas:
+    GuardRequest:
+      type: object
+      additionalProperties: false
+      required: [text]
+      properties:
+        text:
+          {
+            type: string,
+            minLength: 1,
+            maxLength: 5000,
+            description: 非空白；实际长度按UTF-16单元计算，最多80句。,
+          }
+        facts:
+          type: array
+          maxItems: 100
+          default: []
+          items: { type: string, maxLength: 100, description: 实际长度按UTF-16单元计算。 }
+        industry: { type: string, enum: [general, food], default: general }
+        mode: { type: string, enum: [rules, rules+judge], default: rules }
+        rewrite: { type: boolean, default: false, description: true仅限rules+judge模式，否则400。 }
+      allOf:
+        - if:
+            required: [rewrite]
+            properties: { rewrite: { const: true } }
+          then:
+            required: [mode]
+            properties: { mode: { const: rules+judge } }
+    Hit:
+      type: object
+      required: [reason, evidence, start, end]
+      additionalProperties: false
+      properties:
+        reason:
+          {
+            type: string,
+            enum: [unsupported_number, unsupported_claim, ad_law_absolute, llm_flagged],
+          }
+        evidence: { type: string, description: 命中文字或模型简短理由。 }
+        start: { type: integer, minimum: 0, description: 在该句原文中的UTF-16起始位置。 }
+        end: { type: integer, minimum: 0, description: UTF-16结束位置，不包含该位置。 }
+    Sentence:
+      type: object
+      additionalProperties: false
+      required: [text, status, hits]
+      properties:
+        text: { type: string, description: 保留原文标点和空白。 }
+        status: { type: string, enum: [ok, blocked, rewritten] }
+        hits: { type: array, items: { $ref: '#/components/schemas/Hit' } }
+        rewrite:
+          { type: string, maxLength: 500, description: 可选建议，仅规则复查；按UTF-16长度限制。 }
+    GuardResponse:
+      type: object
+      additionalProperties: false
+      required: [passed, sentences, stats, meta]
+      properties:
+        passed: { type: boolean, description: 原文所有句子都为ok时才为true。 }
+        sentences: { type: array, maxItems: 80, items: { $ref: '#/components/schemas/Sentence' } }
+        stats:
+          type: object
+          required: [total, blocked, rewritten]
+          additionalProperties: false
+          properties:
+            total: { type: integer, minimum: 0, maximum: 80 }
+            blocked:
+              { type: integer, minimum: 0, maximum: 80, description: 最终仍为blocked的原句数。 }
+            rewritten: { type: integer, minimum: 0, maximum: 10 }
+        meta:
+          type: object
+          required: [mode, industry, rulesVersion, latencyMs]
+          additionalProperties: false
+          properties:
+            mode: { type: string, enum: [rules, rules+judge] }
+            industry: { type: string, enum: [general, food] }
+            rulesVersion: { type: string, description: 包版本加所用规则YAML字节的SHA256前8位。 }
+            latencyMs: { type: integer, minimum: 0 }
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code: { type: string }
+            message: { type: string, description: 可安全展示的中文提示。 }
+  responses:
+    InvalidInput:
+      description: invalid_input，JSON或字段校验失败。
+      headers: { X-RateLimit-Remaining: { $ref: '#/components/headers/Remaining' } }
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    KeyRequired:
+      description: api_key_required，该功能需要 API Key。
+      headers: { X-RateLimit-Remaining: { $ref: '#/components/headers/Remaining' } }
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    TooLarge:
+      description: payload_too_large 或 too_many_sentences。
+      headers: { X-RateLimit-Remaining: { $ref: '#/components/headers/Remaining' } }
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    RateLimited:
+      description: rate_limited、daily_quota_exceeded、model_queue_full 或 model_queue_timeout。
+      headers: { X-RateLimit-Remaining: { $ref: '#/components/headers/Remaining' } }
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    Cancelled:
+      description: request_cancelled，客户端取消。
+      headers: { X-RateLimit-Remaining: { $ref: '#/components/headers/Remaining' } }
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    Internal:
+      description: internal_error，内部异常（不暴露原始错误）。
+      headers: { X-RateLimit-Remaining: { $ref: '#/components/headers/Remaining' } }
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    Provider:
+      description: provider_*，上游错误或响应无效；503用于上游限流。
+      headers: { X-RateLimit-Remaining: { $ref: '#/components/headers/Remaining' } }
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+    Timeout:
+      description: request_timeout 或 provider_timeout。
+      headers: { X-RateLimit-Remaining: { $ref: '#/components/headers/Remaining' } }
+      content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
