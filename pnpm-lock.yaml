@@ -44,6 +44,9 @@ importers:
       next:
         specifier: ^15.5.27
         version: 15.5.27(@playwright/test@1.64.0)(@types/node@24.19.2)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+      node-html-parser:
+        specifier: ^9.0.4
+        version: 9.0.4
       react:
         specifier: ^19.3.0
         version: 19.3.0
@@ -93,9 +96,6 @@ importers:
       eslint-config-next:
         specifier: ^15.5.27
         version: 15.5.27(eslint@9.39.4(supports-color@7.2.0))(supports-color@7.2.0)(typescript@5.9.3)
-      node-html-parser:
-        specifier: ^9.0.4
-        version: 9.0.4
       prettier:
         specifier: ^3.9.10
         version: 3.9.10

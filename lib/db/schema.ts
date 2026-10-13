@@ -127,6 +127,9 @@ export const jobs = sqliteTable(
     startedAt: text('started_at').notNull(),
     finishedAt: text('finished_at'),
     createdAt: text('created_at').notNull(),
+    // Module 08: ISO start time of each pipeline stage, for ETA statistics. Null for jobs resumed
+    // after a restart, whose stage times would be meaningless.
+    stageStartedAt: text('stage_started_at', { mode: 'json' }).$type<Record<string, string>>(),
   },
   (t) => [
     index('jobs_project_idx').on(t.projectId),

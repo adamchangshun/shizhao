@@ -1,4 +1,4 @@
-import { and, eq, isNull, notInArray } from 'drizzle-orm'
+import { and, desc, eq, isNotNull, isNull, notInArray } from 'drizzle-orm'
 import type { JobStatus } from '../../core/schemas'
 import { newId } from '../../core/ids'
 import { isTerminal, transition } from '../../core/job-state'
@@ -58,6 +58,7 @@ export function createJobIfIdle(
           startedAt: now,
           finishedAt: null,
           createdAt: now,
+          stageStartedAt: null,
         }
         tx.insert(jobs).values(row).run()
         return row
@@ -109,4 +110,66 @@ export function transitionJob(
     .where(and(eq(jobs.id, id), eq(jobs.status, expected)))
     .run()
   return result.changes === 1
+}
+
+export function findJob(id: string, db: Db = getDb()): JobRow | undefined {
+  return db.select().from(jobs).where(eq(jobs.id, id)).get()
+}
+
+/** Jobs a restarted process must either resume or time out. */
+export function listNonTerminalJobs(db: Db = getDb()): JobRow[] {
+  return db.select().from(jobs).where(notInArray(jobs.status, TERMINAL_STATUSES)).all()
+}
+
+/**
+ * Module 08: the runner picked the job up (it is now `designing`). Restarts the total-timeout
+ * clock and the per-stage timing log; a no-op if the job has moved on.
+ */
+export function beginJobRun(id: string, at: string, db: Db = getDb()): void {
+  db.update(jobs)
+    .set({ startedAt: at, stageStartedAt: { designing: at } })
+    .where(and(eq(jobs.id, id), eq(jobs.status, 'designing')))
+    .run()
+}
+
+/** Appends `stage`'s start time while the job is still in that stage and still timed. */
+export function recordStageStart(id: string, stage: JobStatus, at: string, db: Db = getDb()): void {
+  db.transaction((tx) => {
+    const row = tx
+      .select({ log: jobs.stageStartedAt })
+      .from(jobs)
+      .where(and(eq(jobs.id, id), eq(jobs.status, stage)))
+      .get()
+    if (!row?.log) return
+    tx.update(jobs)
+      .set({ stageStartedAt: { ...row.log, [stage]: at } })
+      .where(and(eq(jobs.id, id), eq(jobs.status, stage)))
+      .run()
+  })
+}
+
+/** A resumed job reruns stages it had already passed; its stage times are not real samples. */
+export function clearStageLog(id: string, db: Db = getDb()): void {
+  db.update(jobs).set({ stageStartedAt: null }).where(eq(jobs.id, id)).run()
+}
+
+export interface StageLogSample {
+  stageStartedAt: Record<string, string>
+  finishedAt: string
+}
+
+/** Stage logs of the most recent succeeded jobs, newest first (ETA statistics). */
+export function listRecentStageLogs(limit: number, db: Db = getDb()): StageLogSample[] {
+  return db
+    .select({ stageStartedAt: jobs.stageStartedAt, finishedAt: jobs.finishedAt })
+    .from(jobs)
+    .where(and(eq(jobs.status, 'succeeded'), isNotNull(jobs.stageStartedAt)))
+    .orderBy(desc(jobs.finishedAt))
+    .limit(limit)
+    .all()
+    .flatMap((r) =>
+      r.stageStartedAt && r.finishedAt
+        ? [{ stageStartedAt: r.stageStartedAt, finishedAt: r.finishedAt }]
+        : [],
+    )
 }
