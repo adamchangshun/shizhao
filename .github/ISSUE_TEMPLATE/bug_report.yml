@@ -1,0 +1,54 @@
+name: 缺陷报告
+description: 报告实招的错误或异常行为（安全漏洞请按 SECURITY.md 私下报告）
+title: "[缺陷] "
+labels: ["bug"]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: 问题描述
+      description: 发生了什么？你期望的结果是什么？
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      description: 尽量给出最少的步骤。涉及文案守卫时，请贴出原文和事实表（不要包含真实商家的电话、地址等隐私信息）。
+      placeholder: |
+        1. ...
+        2. ...
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: 涉及部分
+      options:
+        - 事实抽取与确认
+        - 风格 / 文案生成
+        - 事实守卫（漏拦或误伤）
+        - 页面渲染 / 模板
+        - 发布与二维码
+        - 文案检查页 / API
+        - 评测脚本
+        - 安装与运行
+        - 其他
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: 版本或提交
+      description: 例如 v0.1.0 或 `git rev-parse --short HEAD` 的输出
+  - type: input
+    id: provider
+    attributes:
+      label: 模型配置
+      description: PROVIDER 与 LLM_PROFILE，例如 mock 或 openai-compatible / qwen（不要贴密钥）
+  - type: textarea
+    id: env
+    attributes:
+      label: 运行环境与日志
+      description: 操作系统、Node.js 与 pnpm 版本、相关日志（请先删去密钥和口令）
+      render: text

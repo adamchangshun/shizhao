@@ -1,0 +1,50 @@
+name: 新模板提案
+description: 提议新增一套页面模板（实现前先在这里讨论）
+title: "[模板] "
+labels: ["template"]
+body:
+  - type: markdown
+    attributes:
+      value: 模板的文件结构与编写要求见 CONTRIBUTING.md「贡献一套新模板」一节。新增模板需要修改共享契约中的 TemplateId，所以请先在这里讨论。
+  - type: input
+    id: id
+    attributes:
+      label: 模板 id
+      description: 只用小写字母和连字符，例如 bakery-window
+    validations:
+      required: true
+  - type: input
+    id: name
+    attributes:
+      label: 中文名称与一句话说明
+      placeholder: 橱窗：大图横向滑动，适合新品上架
+    validations:
+      required: true
+  - type: checkboxes
+    id: supports
+    attributes:
+      label: 支持的项目类型
+      options:
+        - label: single（单品）
+        - label: menu（菜单）
+  - type: textarea
+    id: scene
+    attributes:
+      label: 适用的店铺和场景
+      description: 和现有的海报、卡片叠放、菜单板有什么不同？
+    validations:
+      required: true
+  - type: textarea
+    id: sketch
+    attributes:
+      label: 草图或参考
+      description: 可以贴草图、截图或参考链接（注意图片版权）
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: 确认
+      options:
+        - label: 所有事实（商品名、价格、规格、店铺信息）都会通过 lib/render/shared/facts 中的组件输出
+          required: true
+        - label: 只使用仓库已有的开源字体，或新字体为 OFL 等宽松许可
+          required: true
