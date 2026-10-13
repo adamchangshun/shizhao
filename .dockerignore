@@ -1,0 +1,15 @@
+**/node_modules
+.next
+.git
+data
+.env*
+!.env.example
+.omc
+.vitest
+eval/runs
+playwright-report
+test-results
+*.tsbuildinfo
+next-env.d.ts
+CODEX_REVIEW_SUMMARY.md
+.DS_Store
