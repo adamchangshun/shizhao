@@ -338,3 +338,38 @@ Claude 核实后认为 4 条 CRITICAL 都是真实的加固点，但影响面达
 | HIGH | demo 中途失败或被 Ctrl+C 时，自动启动的 `next dev` 可能残留 | 已修复：子进程放在独立进程组；启动前就安装 SIGINT/SIGTERM 处理；失败或中断时终止整个进程组，等待退出，10 秒后强制结束。已实测启动中 Ctrl+C、运行中 Ctrl+C、生成失败三种情况，都没有残留进程 |
 
 按项目负责人的安排只审 1 轮；修复后的行为由实测验证：全量测试 795 个用例通过；全新 clone 后 `docker compose up` 加容器内 `pnpm demo`，公开页返回 200；全新 clone 后 `pnpm i && pnpm bootstrap && pnpm demo`，公开页返回 200。
+||||||| f49c80b
+
+## 11 商家界面（Claude 实现，Codex 审查）
+
+执行方 Claude，审查方 Codex（`cdx-review`，只读）。分支 `feat/11-merchant-ui`，开发中途 main 合并了 10 号公开页，已 rebase 并接通真实统计与 `/p/<slug>/`。完整 diff 超过 cdx-review 单次上限，每轮拆成两块审查：`app/(console)` 与其余改动（e2e、Playwright 配置、登录页、`lib/jobs` 与 `lib/providers/mock.ts` 的小改动）。
+
+与「不改后端」的偏离（均为增量，已在交付汇报中说明）：`GET /api/projects/:id/versions` 的版本摘要增加 `factRevision`、`palette`、`guard.flagged`（预览页展示被拦截的原句和原因需要）；`MockProvider` 增加测试专用失败注入 `MOCK_FAIL_ONCE_MARKER`（生产环境不生效，仅 copy 阶段、按店名只失败一次）。
+
+### 第 1 轮：0 CRITICAL，7 HIGH，6 MEDIUM
+
+| 级别 | 问题 | 处理 |
+|---|---|---|
+| HIGH | 预览 iframe 同源且未加 sandbox | 已修：`sandbox="allow-same-origin"`，不允许脚本（保留同源以携带管理会话加载图片） |
+| HIGH | 发布核对卡展示最新事实，所选历史版本可能基于旧事实 | 已修：摘要返回 `factRevision`，与最新已确认事实不一致或事实有未确认改动时禁止发布并说明原因 |
+| HIGH | 保存文字说明先删旧再传新，上传失败会丢说明 | 已修：先上传新说明，成功后再删旧 |
+| HIGH | 前端直接显示后端 `error.message` | 不采纳：`toErrorResponse` 只输出 ApiError 的固定中文文案，未知错误统一为「服务器内部错误」，模块提示词要求显示后端中文 message |
+| HIGH | `job.error` 直接显示 | 不采纳：任务错误只写入 `STAGE_FAILURE` / 超时 / 通用失败等固定中文文案，技术细节只进服务器日志 |
+| HIGH ×2 | `factsConfirmed: true` 由客户端发送，勾选可被绕过 | 不采纳：只有持管理口令的商家本人能调用发布接口，勾选是防误操作的确认，不构成越权；属 09 号接口设计 |
+| MEDIUM | 网络错误（status 0）不重试 | 已修 |
+| MEDIUM | 按项目轮询生成状态时忽略错误 | 已修：显示中文错误 |
+| MEDIUM | 素材、版本请求错误未显示 | 已修：显示错误与「重新加载」 |
+| MEDIUM | 统计页忽略项目错误，任意 404 都当作暂无数据 | 已修：先处理项目错误，项目存在时统计 404 才降级为「—」 |
+| MEDIUM | e2e 公开页 404 时改查私有预览 | 已修：10 号已合并，改为用无会话的新浏览器上下文打开公开链接核对价格 |
+| MEDIUM | 未覆盖 360px | 已修：新增 `merchant-360` 项目跑完整流程与横向溢出检查 |
+
+另外修了一个自查发现的问题：步骤切换用 `router.replace` 会触发服务端组件重新渲染，期间文档标题短暂丢失，axe 偶发报 `document-title`。改为 `history.replaceState` 后连续 6 次通过。
+
+### 第 2 轮：0 CRITICAL，1 HIGH，1 MEDIUM（其余部分 APPROVE）
+
+| 级别 | 问题 | 处理 |
+|---|---|---|
+| HIGH | 发布约束只在前端：另一个标签页修改事实后，本页仍可发布旧版本，服务端不比对版本 `factRevision` 与最新已确认事实 | 暂不修（需改 09 号发布服务，超出本模块范围；无越权利用路径，只在商家多标签页并发操作时出现）。建议 09 号在发布事务内比对，不一致返回 409，交项目负责人决定 |
+| MEDIUM | 任务不存在等 4xx 错误时仍每 1.5 秒轮询 | 已修：不可重试的 4xx 停止轮询，提供「回到核对信息」 |
+
+审查结论：按约定最多 2 轮；剩余 1 条 HIGH 属 09 号范围、无利用路径，记录在案后合并。测试：typecheck、lint 通过；`pnpm test` 791 通过；`pnpm test:e2e` 9 通过（375×812、360×780、1280×800 三个视口，含 axe 浅色 / 深色扫描与生成失败重试）。

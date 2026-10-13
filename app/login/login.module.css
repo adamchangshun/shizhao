@@ -1,0 +1,32 @@
+.wrap {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: grid;
+  place-items: center;
+  padding: 1.5rem 1rem;
+}
+.card {
+  width: min(100%, 26rem);
+  display: grid;
+  gap: 0.5rem;
+  padding: 2rem 1.5rem;
+}
+.card h1 {
+  margin-top: 0.5rem;
+}
+.card > p {
+  margin: 0;
+}
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-family: var(--serif);
+  font-weight: 700;
+  font-size: 1.15rem;
+}
+.form {
+  display: grid;
+  gap: 0.9rem;
+  margin-top: 1rem;
+}

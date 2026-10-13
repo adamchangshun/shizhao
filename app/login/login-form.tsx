@@ -3,6 +3,8 @@
 import { useRouter, useSearchParams } from 'next/navigation'
 import { useState, type FormEvent } from 'react'
 import { safeNext } from '@/lib/safe-next'
+import s from '../(console)/shell.module.css'
+import l from './login.module.css'
 
 export function LoginForm() {
   const router = useRouter()
@@ -35,26 +37,30 @@ export function LoginForm() {
   }
 
   return (
-    <form onSubmit={onSubmit}>
-      <label htmlFor="token">管理口令</label>
-      <input
-        id="token"
-        name="token"
-        type="password"
-        autoComplete="current-password"
-        required
-        value={token}
-        onChange={(e) => setToken(e.target.value)}
-        aria-invalid={error !== null}
-        aria-describedby={error ? 'login-error' : undefined}
-        style={{ display: 'block', width: '100%', padding: '0.6rem', margin: '0.5rem 0 1rem' }}
-      />
+    <form onSubmit={onSubmit} className={l.form}>
+      <div className={s.field}>
+        <label htmlFor="token" className={s.label}>
+          管理口令
+        </label>
+        <input
+          id="token"
+          name="token"
+          type="password"
+          autoComplete="current-password"
+          required
+          value={token}
+          onChange={(e) => setToken(e.target.value)}
+          aria-invalid={error !== null}
+          aria-describedby={error ? 'login-error' : undefined}
+          className={s.input}
+        />
+      </div>
       {error && (
-        <p id="login-error" role="alert" style={{ color: 'var(--danger)' }}>
+        <p id="login-error" role="alert" className={s.error}>
           {error}
         </p>
       )}
-      <button type="submit" disabled={pending} style={{ padding: '0.6rem 1.2rem' }}>
+      <button type="submit" disabled={pending} className={s.btnPrimary}>
         {pending ? '登录中…' : '登录'}
       </button>
     </form>

@@ -27,6 +27,7 @@ export class MockProvider implements LLMProvider {
         design: { ...designs[seed % designs.length], seed },
       }
       if (!Object.hasOwn(fixtures, req.stage)) throw new ProviderError('bad_response')
+      if (shouldFailOnce(req.stage, req.prompt)) throw new ProviderError('upstream_error')
       // M7 callers supply dynamic item ids and batch sizes. Reuse fixed demo strings,
       // never infer facts or make judgments from the input text.
       let input: Record<string, unknown> = {}
@@ -79,4 +80,27 @@ export class MockProvider implements LLMProvider {
       control.close()
     }
   }
+}
+
+// Test-only failure injection for the merchant UI end-to-end test (module 11): with
+// MOCK_FAIL_ONCE_MARKER set outside production, the first copy-writing call for a shop whose
+// name contains the marker fails; later calls for that shop (the retry) succeed. Kept on globalThis because
+// Next.js dev may load this module once per route bundle.
+const failedOnce = ((
+  globalThis as { __shizhaoMockFailedOnce?: Set<string> }
+).__shizhaoMockFailedOnce ??= new Set<string>())
+
+function shouldFailOnce(stage: string, prompt: string): boolean {
+  const marker = process.env.MOCK_FAIL_ONCE_MARKER
+  if (!marker || process.env.NODE_ENV === 'production' || stage !== 'copy') return false
+  let shopName: unknown
+  try {
+    shopName = (JSON.parse(prompt) as { shopName?: unknown }).shopName
+  } catch {
+    return false
+  }
+  if (typeof shopName !== 'string' || !shopName.includes(marker) || failedOnce.has(shopName))
+    return false
+  failedOnce.add(shopName)
+  return true
 }
