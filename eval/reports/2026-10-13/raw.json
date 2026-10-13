@@ -9,7 +9,7 @@
     "temperature": 0.6
   },
   "date": "2026-10-13",
-  "commit": "fcdedf2（工作区有未提交改动）",
+  "commit": "b85c467",
   "samples": [
     {
       "id": "bakery-croissant-single",
@@ -284,7 +284,7 @@
         "priceNameErrors": 4,
         "unsupported": 4,
         "costCny": 0,
-        "latencyMs": 1,
+        "latencyMs": 0,
         "pageFile": "eval/runs/mock/bakery-croissant-single/A-gold/3/page.html",
         "visibleText": "欢迎光临本店\n全城销量第一的招牌好物！\n招牌产品\n¥ 25.00\n第二件半价，仅需 9.9元\n订购电话：13800000000",
         "factDetails": [
@@ -1813,7 +1813,7 @@
         "totalUnsupported": 36,
         "meanUnsupported": 4,
         "meanCostCny": 0,
-        "meanLatencyMs": 0.1111111111111111,
+        "meanLatencyMs": 0,
         "guard": null
       },
       "A-raw": {
