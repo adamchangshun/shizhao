@@ -13,3 +13,10 @@ test-results
 next-env.d.ts
 CODEX_REVIEW_SUMMARY.md
 .DS_Store
+# Credentials that may sit in a working copy must never reach a build layer.
+**/.npmrc
+**/*.pem
+**/*.key
+**/*.p12
+**/id_rsa*
+**/id_ed25519*

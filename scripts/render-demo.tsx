@@ -53,7 +53,13 @@ async function placeholderWebp(browser: Browser, seed: string, size: number): Pr
   }
 }
 
-async function render(browser: Browser, templateId: TemplateId, name: string, facts: FactSheet, copy: CopyDraft): Promise<string> {
+async function render(
+  browser: Browser,
+  templateId: TemplateId,
+  name: string,
+  facts: FactSheet,
+  copy: CopyDraft,
+): Promise<string> {
   const dir = path.join(OUT, `${templateId}-${name}`)
   fs.rmSync(dir, { recursive: true, force: true })
   fs.mkdirSync(path.join(dir, 'media'), { recursive: true })
@@ -66,7 +72,10 @@ async function render(browser: Browser, templateId: TemplateId, name: string, fa
     trackingBase: '',
   })
   for (const m of result.media) {
-    fs.writeFileSync(path.join(dir, 'media', m.file), await placeholderWebp(browser, m.assetId, m.size === 'display' ? 800 : 240))
+    fs.writeFileSync(
+      path.join(dir, 'media', m.file),
+      await placeholderWebp(browser, m.assetId, m.size === 'display' ? 800 : 240),
+    )
   }
   const file = path.join(dir, 'index.html')
   fs.writeFileSync(file, result.html)
@@ -83,7 +92,9 @@ async function screenshot(browser: Browser, files: string[]): Promise<void> {
       await page.emulateMedia({ reducedMotion: 'reduce' })
       await page.goto(`file://${file}`)
       await page.evaluate(() => document.fonts.ready)
-      const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth)
+      const overflow = await page.evaluate(
+        () => document.documentElement.scrollWidth - window.innerWidth,
+      )
       if (overflow > 0) console.log(`  OVERFLOW ${overflow}px at ${width}px: ${file}`)
       if (width === 375) {
         const shot = file.replace(/index\.html$/, 'screenshot-375x812.png')

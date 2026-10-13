@@ -18,11 +18,28 @@ const IMAGE_TYPES: Record<string, string> = {
 }
 const TERMINAL = new Set(['succeeded', 'failed', 'timed_out'])
 const JOB_DEADLINE_MS = 5 * 60_000
+// Upload and extraction with a real model can take a while; nothing legitimate takes longer.
+const REQUEST_TIMEOUT_MS = 120_000
+const LOOPBACK = new Set(['127.0.0.1', 'localhost', '[::1]'])
 
 loadEnvFiles()
 const apiBase = (process.env.DEMO_API_BASE ?? 'http://127.0.0.1:6688').replace(/\/+$/, '')
+let server: ChildProcess | null = null
 
 class DemoError extends Error {}
+
+/** The admin token travels in a header: only to this machine, or over https. */
+function checkApiBase(): void {
+  let url: URL
+  try {
+    url = new URL(apiBase)
+  } catch {
+    throw new DemoError(`DEMO_API_BASE 不是有效网址：${apiBase}`)
+  }
+  if (url.username || url.password) throw new DemoError('DEMO_API_BASE 不能包含用户名或密码')
+  if (url.protocol !== 'https:' && !(url.protocol === 'http:' && LOOPBACK.has(url.hostname)))
+    throw new DemoError('DEMO_API_BASE 只能是本机 http 地址或 https 地址，以免口令明文外传')
+}
 
 function adminToken(): string {
   if (process.env.ADMIN_TOKEN) return process.env.ADMIN_TOKEN
@@ -33,13 +50,24 @@ function adminToken(): string {
 }
 
 async function api<T>(token: string, method: string, route: string, body?: unknown): Promise<T> {
-  const init: RequestInit = { method, headers: { authorization: `Bearer ${token}` } }
+  const init: RequestInit = {
+    method,
+    headers: { authorization: `Bearer ${token}` },
+    redirect: 'error',
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+  }
   if (body instanceof FormData) init.body = body
   else if (body !== undefined) {
     init.body = JSON.stringify(body)
     init.headers = { ...init.headers, 'content-type': 'application/json' }
   }
-  const res = await fetch(`${apiBase}${route}`, init)
+  let res: Response
+  try {
+    res = await fetch(`${apiBase}${route}`, init)
+  } catch (err) {
+    const reason = err instanceof Error && err.name === 'TimeoutError' ? '请求超时' : '无法连接服务'
+    throw new DemoError(`${method} ${route} 失败：${reason}`)
+  }
   const data = (await res.json().catch(() => null)) as
     (T & { error?: { code: string; message: string } }) | null
   if (!res.ok)
@@ -67,29 +95,52 @@ async function publicStatus(url: string): Promise<number> {
   }
 }
 
-async function ensureServer(): Promise<ChildProcess | null> {
+/** Stops the `next dev` we started — its whole process group, workers included — and waits. */
+async function stopServer(signal: NodeJS.Signals = 'SIGTERM'): Promise<void> {
+  const child = server
+  server = null
+  if (!child?.pid || child.exitCode !== null || child.signalCode !== null) return
+  const exited = new Promise<void>((resolve) => child.once('exit', () => resolve()))
+  try {
+    process.kill(-child.pid, signal)
+  } catch {
+    child.kill(signal)
+  }
+  const forced = setTimeout(() => {
+    try {
+      process.kill(-child.pid!, 'SIGKILL')
+    } catch {
+      /* already gone */
+    }
+  }, 10_000)
+  await exited
+  clearTimeout(forced)
+}
+
+async function ensureServer(): Promise<boolean> {
   if (await healthy()) {
     console.info(`[实招] 使用已在运行的服务：${apiBase}`)
-    return null
+    return false
   }
   const url = new URL(apiBase)
-  if (!['127.0.0.1', 'localhost'].includes(url.hostname))
+  if (url.protocol !== 'http:' || !LOOPBACK.has(url.hostname))
     throw new DemoError(`${apiBase} 无法访问，请先启动服务`)
   const port = url.port || '80'
   console.info(`[实招] ${apiBase} 没有运行中的服务，正在启动 next dev（端口 ${port}）…`)
-  const child = spawn(
+  // Own process group, so stopServer() also reaches the workers next dev forks.
+  server = spawn(
     process.execPath,
     [path.resolve('node_modules/next/dist/bin/next'), 'dev', '--port', port],
-    { stdio: ['ignore', 'ignore', 'inherit'], env: process.env },
+    { stdio: ['ignore', 'ignore', 'inherit'], env: process.env, detached: true },
   )
+  const child = server
   const started = Date.now()
   while (Date.now() - started < 120_000) {
     if (child.exitCode !== null)
       throw new DemoError(`next dev 启动失败（退出码 ${child.exitCode}）`)
-    if (await healthy()) return child
+    if (await healthy()) return true
     await new Promise((r) => setTimeout(r, 1000))
   }
-  child.kill()
   throw new DemoError('next dev 120 秒内没有就绪')
 }
 
@@ -227,22 +278,23 @@ async function run(token: string): Promise<void> {
 }
 
 async function main(): Promise<void> {
-  let server: ChildProcess | null = null
+  // Installed before any child exists, so Ctrl+C at any point also stops a started next dev.
+  for (const signal of ['SIGINT', 'SIGTERM'] as const)
+    process.on(signal, () => void stopServer(signal).then(() => process.exit(130)))
+  let started = false
   try {
+    checkApiBase()
     const token = adminToken()
-    server = await ensureServer()
+    started = await ensureServer()
     await run(token)
   } catch (err) {
     console.error(`\n[实招] 演示失败：${err instanceof DemoError ? err.message : String(err)}`)
-    server?.kill()
+    await stopServer()
     process.exit(1)
   }
-  if (server) {
-    const child = server
+  if (started && server) {
     console.info('\n服务保持运行中，按 Ctrl+C 停止。')
-    process.on('SIGINT', () => child.kill('SIGINT'))
-    process.on('SIGTERM', () => child.kill('SIGTERM'))
-    child.on('exit', (code) => process.exit(code ?? 0))
+    server.once('exit', (code) => process.exit(code ?? 0))
   }
 }
 
