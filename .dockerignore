@@ -1,0 +1,22 @@
+**/node_modules
+.next
+.git
+data
+.env*
+!.env.example
+.omc
+.vitest
+eval/runs
+playwright-report
+test-results
+*.tsbuildinfo
+next-env.d.ts
+CODEX_REVIEW_SUMMARY.md
+.DS_Store
+# Credentials that may sit in a working copy must never reach a build layer.
+**/.npmrc
+**/*.pem
+**/*.key
+**/*.p12
+**/id_rsa*
+**/id_ed25519*

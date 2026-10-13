@@ -11,6 +11,8 @@
     "dev": "next dev -p 6688",
     "build": "next build",
     "start": "next start -p 6688",
+    "bootstrap": "tsx --tsconfig tsconfig.scripts.json scripts/bootstrap.ts",
+    "demo": "tsx --tsconfig tsconfig.scripts.json scripts/demo.ts",
     "typecheck": "tsc --noEmit && tsc --noEmit -p packages/fact-guard",
     "lint": "eslint .",
     "format": "prettier --write .",
