@@ -1,0 +1,84 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12.11.2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: pnpm
+      - run: pnpm i --frozen-lockfile
+      # Unit tests also render pages using Chromium.
+      - run: pnpm exec playwright install --with-deps chromium
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm test
+      - run: pnpm check:secrets
+      - run: pnpm check:licenses
+
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      CI: 'true'
+      PROVIDER: mock
+      ADMIN_TOKEN: ci-token-e2e-2026
+      PUBLIC_BASE_URL: http://localhost:6688
+      PORT: '6688'
+      DATA_DIR: ./data/ci-e2e
+      PLAYWRIGHT_HTML_OPEN: never
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12.11.2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: pnpm
+      - run: pnpm i --frozen-lockfile
+      - run: pnpm exec playwright install --with-deps chromium
+      # Start the built app so Playwright reuses production rather than its dev fallback.
+      - name: Build and run end-to-end tests
+        shell: bash
+        run: |
+          pnpm build
+          pnpm start > /tmp/shizhao-e2e-server.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          for attempt in {1..60}; do
+            if curl --fail --silent http://localhost:6688/api/health > /dev/null; then
+              pnpm test:e2e --reporter=list,html
+              exit 0
+            fi
+            if ! kill -0 "$server_pid" 2>/dev/null; then
+              cat /tmp/shizhao-e2e-server.log
+              exit 1
+            fi
+            sleep 1
+          done
+          cat /tmp/shizhao-e2e-server.log
+          exit 1
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: |
+            playwright-report/
+            test-results/
+            /tmp/shizhao-e2e-server.log
+          if-no-files-found: warn
+          retention-days: 7

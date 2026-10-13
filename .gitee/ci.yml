@@ -1,0 +1,39 @@
+# 未在 Gitee 上实际运行过，首次推送后需要确认。
+# 在 Gitee Go 导入本配置；本仓库按 A3 约束存放于 .gitee/，不假定自动发现。
+# 首次运行必须确认当前构建镜像支持 Node 24 和 Playwright 系统依赖。
+# 参考：https://help.gitee.com/gitee-go/plugin/ci-build
+version: '1.0'
+name: shizhao-ci
+displayName: 实招持续集成
+triggers:
+  push:
+    branches:
+      include:
+        - '.*'
+  pr:
+    branches:
+      include:
+        - '.*'
+stages:
+  - stage:
+    name: checks
+    displayName: 构建与合规检查
+    strategy: naturally
+    trigger: auto
+    steps:
+      - step: build@nodejs
+        name: node_checks
+        displayName: Node24验证
+        nodeVersion: '24.14.0'
+        commands:
+          - |
+            set -eu
+            test "$(node -p 'process.versions.node.split(".")[0]')" = 24
+            npm install --global pnpm@12.11.2
+            pnpm i --frozen-lockfile
+            pnpm exec playwright install --with-deps chromium
+            pnpm typecheck
+            pnpm lint
+            pnpm test
+            pnpm check:secrets
+            pnpm check:licenses
