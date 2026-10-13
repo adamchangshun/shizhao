@@ -8,7 +8,7 @@ describe('parseEnv', () => {
     const env = parseEnv(base)
     expect(env.PROVIDER).toBe('mock')
     expect(env.GUARD_KEY_DAILY_LIMIT).toBe(2000)
-    expect(env.LONG_IMAGE_ENABLED).toBe(true)
+    expect(env.LONG_IMAGE_ENABLED).toBe(false)
     expect(env.GUARD_API_KEYS).toEqual([])
     expect(env.LLM_PRICE_INPUT_PER_1K).toBe(0)
   })

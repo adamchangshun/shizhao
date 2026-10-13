@@ -13,7 +13,7 @@ const price = z.coerce
 
 const bool = z
   .enum(['true', 'false', '1', '0'], { errorMap: () => ({ message: '只能是 true 或 false' }) })
-  .default('true')
+  .default('false')
   .transform((v) => v === 'true' || v === '1')
 
 /** Hosts where plain http is acceptable: loopback, RFC 1918 LAN addresses, mDNS names. */
