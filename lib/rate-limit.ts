@@ -34,4 +34,17 @@ export class FixedWindowLimiter {
   reset(key: string): void {
     this.hits.delete(key)
   }
+
+  /** Atomically consume a hit and return remaining capacity; never evict a live budget. */
+  take(key: string, now: number = Date.now()): number | null {
+    if (this.isBlocked(key, now)) return null
+    const entry = this.hits.get(key)
+    if (!entry || entry.resetAt <= now) {
+      for (const [candidate, value] of this.hits)
+        if (value.resetAt <= now) this.hits.delete(candidate)
+      if (this.hits.size >= this.maxKeys) return null
+    }
+    this.hit(key, now)
+    return Math.max(0, this.limit - this.hits.get(key)!.count)
+  }
 }

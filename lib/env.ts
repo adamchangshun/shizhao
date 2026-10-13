@@ -66,6 +66,10 @@ const EnvSchema = z
           .filter((k) => k.length > 0),
       ),
     GUARD_KEY_DAILY_LIMIT: z.coerce.number().int().positive('必须是正整数').default(2000),
+    GUARD_TRUST_PROXY: z
+      .enum(['true', 'false'])
+      .default('false')
+      .transform((v) => v === 'true'),
     LONG_IMAGE_ENABLED: bool,
     JOB_STAGE_TIMEOUT_MS: z.coerce.number().int().positive('必须是正整数').default(60_000),
     JOB_TOTAL_TIMEOUT_MS: z.coerce.number().int().positive('必须是正整数').default(180_000),

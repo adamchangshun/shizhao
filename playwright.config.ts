@@ -12,7 +12,7 @@ export default defineConfig({
   },
   projects: [{ name: 'mobile-chrome', use: { ...devices['Pixel 7'] } }],
   webServer: {
-    command: 'pnpm dev',
+    command: `pnpm exec next dev --hostname 127.0.0.1 --port ${port}`,
     port,
     reuseExistingServer: true,
   },
