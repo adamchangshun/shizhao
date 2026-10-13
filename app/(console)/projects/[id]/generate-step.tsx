@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from 'react'
 import useSWR from 'swr'
 import type { ProjectState } from '@/lib/core/job-state'
-import { messageOf, postJson } from '../../_lib/api'
+import { ClientError, messageOf, postJson } from '../../_lib/api'
 import type { JobView, ProjectDetail } from '../../_lib/types'
 import s from '../../shell.module.css'
 import { StepHeading } from './step-heading'
@@ -39,10 +39,15 @@ function JobProgress({
   onFinished,
   onRestarted,
 }: GenerateStepProps & { jobId: string }) {
-  // SWR stops polling when this component unmounts and once the job reaches a final state.
+  // SWR stops polling when this component unmounts, once the job reaches a final state, and
+  // after an error that retrying cannot fix (job gone, not signed in).
+  const [halted, setHalted] = useState(false)
   const { data: job, error } = useSWR<JobView>(`/api/jobs/${encodeURIComponent(jobId)}`, {
-    refreshInterval: (latest) => (latest && TERMINAL.has(latest.status) ? 0 : POLL_MS),
+    refreshInterval: (latest) => (halted || (latest && TERMINAL.has(latest.status)) ? 0 : POLL_MS),
     dedupingInterval: 0,
+    onError: (err) => {
+      if (err instanceof ClientError && err.status >= 400 && err.status < 500) setHalted(true)
+    },
   })
   const [retrying, setRetrying] = useState(false)
   const [retryError, setRetryError] = useState<string | null>(null)
@@ -81,8 +86,16 @@ function JobProgress({
       <StepHeading>{failed ? '这次没有生成成功' : '正在生成宣传页'}</StepHeading>
       {error && (
         <p role="alert" className={s.error}>
-          {messageOf(error)}（会自动重新查询）
+          {messageOf(error)}
+          {halted ? '' : '（会自动重新查询）'}
         </p>
+      )}
+      {halted && (
+        <div className={w.actions}>
+          <button type="button" className={s.btn} onClick={() => onFinished(false)}>
+            回到核对信息
+          </button>
+        </div>
       )}
       {job && !failed && (
         <div aria-live="polite" className={w.stageNow}>
