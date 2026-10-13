@@ -14,7 +14,8 @@
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p .",
-    "build": "tsc -p ."
+    "build": "tsc -p .",
+    "test": "vitest run --config vitest.config.ts"
   },
   "files": [
     "dist",

@@ -1,5 +1,6 @@
 // Deliberately limited to characters used by the shipped rule vocabulary/numerals.
 const simplified: Record<string, string> = {
+  終: '终',
   銷: '销',
   無: '无',
   優: '优',

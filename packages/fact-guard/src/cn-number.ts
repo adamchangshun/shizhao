@@ -92,12 +92,18 @@ function numericValue(text: string): number | null {
 /** Parses exactly one complete expression. Percentages use 90 + '%' (not 0.9). */
 export function parseCnNumber(input: string): ParsedNumber | null {
   const normalized = normalizeText(input)
-  const match = new RegExp(`^(百分之)?(${valuePattern})\\s*(${units})?$`, 'u').exec(normalized.text)
+  const currency = /^[¥￥]\s*/u.exec(normalized.text)
+  const expression = currency ? normalized.text.slice(currency[0].length) : normalized.text
+  const match = new RegExp(`^(百分之)?(${valuePattern})\\s*(${units})?$`, 'u').exec(expression)
   if (!match) return null
   let value = numericValue(match[2]!)
   if (value === null || !Number.isFinite(value) || value < 0 || value > Number.MAX_SAFE_INTEGER)
     return null
   let unit = match[3] ?? ''
+  if (currency) {
+    if (match[1] || (unit && !['元', '块', '块钱'].includes(unit))) return null
+    unit = '元'
+  }
   if (match[1] && unit) return null
   if (match[1]) unit = '%'
   if (unit === '成' || unit === '折') {
@@ -115,13 +121,22 @@ export function parseCnNumber(input: string): ParsedNumber | null {
 export function extractNumbers(input: string): ParsedNumber[] {
   const normalized = normalizeText(input)
   const pattern = new RegExp(
-    `(?:百分之${valuePattern}|${valuePattern}\\s*(?:${units})|[0-9]+(?:\\.[0-9]+)?(?:万|亿)?|[${numericChars}]+)`,
+    `(?:[¥￥]\\s*${valuePattern}(?:\\s*(?:元|块钱|块))?|百分之${valuePattern}|${valuePattern}\\s*(?:${units})|[0-9]+(?:\\.[0-9]+)?(?:万|亿)?|[${numericChars}]+)`,
     'gu',
   )
   const output: ParsedNumber[] = []
   for (const match of normalized.text.matchAll(pattern)) {
     const parsed = parseCnNumber(match[0])
     if (!parsed) continue
+    // Bare Arabic "128块" is a colloquial price; "128块蛋糕" is a piece count.
+    // Chinese 一块/每一块 stay quantities, preserving mood-language handling below.
+    const after = normalized.text.slice(match.index + match[0].length)
+    if (
+      parsed.unit === '块' &&
+      /^[0-9]/u.test(match[0]) &&
+      (!/^\p{Script=Han}/u.test(after) || /^(?:钱|起|即可|就|带|买|到手)/u.test(after))
+    )
+      parsed.unit = '元'
     const before = normalized.text.slice(Math.max(0, match.index - 4), match.index)
     if (
       parsed.unit === '' &&

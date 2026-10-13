@@ -11,6 +11,10 @@ export interface Rule {
   /** RegExp sources, run globally on normalized text. */
   patterns?: string[]
   whitelist?: string[]
+  /** RegExp whitelist sources with caller-defined lexical boundaries. */
+  whitelistPatterns?: string[]
+  /** Require the entire punctuation-delimited claim instead of a matching keyword. */
+  evidenceScope?: 'match' | 'phrase'
   /** Absolute and inducement rules ignore merchant evidence. */
   always?: boolean
 }

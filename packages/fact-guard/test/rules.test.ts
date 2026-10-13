@@ -1,5 +1,4 @@
 import { readFileSync, writeSync } from 'node:fs'
-import { resolve } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import * as guard from '../src/index'
 import cases from './cases.zh.json'
@@ -134,12 +133,16 @@ describe('rules and evidence', () => {
   })
   it('keeps contribution YAML and executable rules identical', () => {
     // JSON-form documents are a lossless subset of YAML 1.2; no parser dependency.
-    expect(JSON.parse(readFileSync(resolve('rules/packs/base.zh.yaml'), 'utf8'))).toEqual(
-      guard.defaultRules,
-    )
-    expect(JSON.parse(readFileSync(resolve('rules/packs/food.zh.yaml'), 'utf8'))).toEqual(
-      guard.rulePacks.food,
-    )
+    expect(
+      JSON.parse(
+        readFileSync(new URL('../../../rules/packs/base.zh.yaml', import.meta.url), 'utf8'),
+      ),
+    ).toEqual(guard.defaultRules)
+    expect(
+      JSON.parse(
+        readFileSync(new URL('../../../rules/packs/food.zh.yaml', import.meta.url), 'utf8'),
+      ),
+    ).toEqual(guard.rulePacks.food)
   })
 })
 

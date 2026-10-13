@@ -11,6 +11,9 @@ export const defaultRules: RuleSet = {
     '一心一意',
     '十足',
     '三言两语',
+    '一年四季',
+    '三五好友',
+    '十全十美',
   ],
   rules: [
     {
@@ -49,6 +52,7 @@ export const defaultRules: RuleSet = {
     {
       id: 'honors',
       reason: 'unsupported_claim',
+      evidenceScope: 'phrase',
       terms: [
         '认证',
         '获奖',
@@ -61,6 +65,7 @@ export const defaultRules: RuleSet = {
         '官方',
         '指定',
         '权威检测',
+        '冠军',
       ],
       patterns: ['(?:拿|得|获)(?:过|得)?奖', '星级酒店[\\p{Script=Han}]{0,4}出身'],
       whitelist: [],
@@ -68,7 +73,8 @@ export const defaultRules: RuleSet = {
     {
       id: 'ranking',
       reason: 'unsupported_claim',
-      terms: ['销量', '热卖', '排名', '爆款', '回头客', '回购率', '好评率'],
+      evidenceScope: 'phrase',
+      terms: ['销量', '热卖', '排名', '爆款', '回头客', '回购率', '好评率', '领先'],
       patterns: [
         '\\btop\\s*[0-9]+',
         '\\bno\\.\\s*1\\b',
@@ -114,14 +120,19 @@ export const defaultRules: RuleSet = {
         '首选',
       ],
       patterns: ['100\\s*%', '百分之百', '\\bno\\.\\s*1\\b'],
-      whitelist: ['最近', '最后', '最初', '最终', '第一口', '第一次', '第一眼'],
+      whitelist: ['最近', '最后', '最初', '第一次', '第一眼'],
+      whitelistPatterns: ['第一口(?![碑味感])', '最终(?![极级])'],
     },
     {
       id: 'sharing',
       reason: 'unsupported_claim',
       always: true,
       terms: ['转发领', '分享后', '集赞', '砍价', '助力', '拉好友', '关注后领取', '不转不是'],
-      patterns: ['(?:转发|分享|关注)[\\p{Script=Han}]{0,6}(?:领取|领|解锁|获赠|优惠)'],
+      patterns: [
+        '(?:转发|分享|关注)[\\p{Script=Han}]{0,6}(?:领取|领|解锁|获赠|优惠)',
+        '关注[^，。！？；、,.!?;\\r\\n]{0,4}送',
+        '邀请好友[^。！？；.!?;\\r\\n]{0,16}(?:立减|优惠|领取|获赠|送)',
+      ],
       whitelist: [],
     },
   ],
@@ -153,6 +164,7 @@ export function mergeRules(...sets: RuleSet[]): RuleSet {
         terms: rule.terms?.slice(),
         patterns: rule.patterns?.slice(),
         whitelist: rule.whitelist?.slice(),
+        whitelistPatterns: rule.whitelistPatterns?.slice(),
       })
   }
   return {

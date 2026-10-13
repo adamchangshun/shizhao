@@ -19,6 +19,21 @@ function ranges(text: string, words: string[]): Array<[number, number]> {
 function covered(start: number, end: number, allow: Array<[number, number]>): boolean {
   return allow.some(([left, right]) => start >= left && end <= right)
 }
+function patternRanges(text: string, patterns: string[]): Array<[number, number]> {
+  return patterns.flatMap((source) =>
+    [...text.matchAll(new RegExp(source, 'gu'))]
+      .filter((match) => match[0].length > 0)
+      .map((match) => [match.index, match.index + match[0].length] as [number, number]),
+  )
+}
+function phraseRange(text: string, start: number, end: number): [number, number] {
+  const boundary = /[，。！？；、,.!?;：:\r\n]/u
+  while (start > 0 && !boundary.test(text[start - 1]!)) start--
+  while (end < text.length && !boundary.test(text[end]!)) end++
+  while (start < end && /\s/u.test(text[start]!)) start++
+  while (end > start && /\s/u.test(text[end - 1]!)) end--
+  return [start, end]
+}
 function supportedClaim(evidence: string, facts: string[]): boolean {
   return facts.some((fact) => {
     for (const [start] of ranges(fact, [evidence])) {
@@ -56,7 +71,10 @@ export function checkSentence(
     }
   }
   for (const rule of rules.rules) {
-    const allowed = ranges(normalized.text, rule.whitelist ?? [])
+    const allowed = [
+      ...ranges(normalized.text, rule.whitelist ?? []),
+      ...patternRanges(normalized.text, rule.whitelistPatterns ?? []),
+    ]
     const matches = ranges(normalized.text, rule.terms ?? [])
     for (const source of rule.patterns ?? [])
       for (const match of normalized.text.matchAll(new RegExp(source, 'gu'))) {
@@ -65,9 +83,11 @@ export function checkSentence(
     const seen = new Set<string>()
     for (const [start, end] of matches) {
       if (covered(start, end, allowed)) continue
-      const evidence = normalized.text.slice(start, end)
+      const [evidenceStart, evidenceEnd] =
+        rule.evidenceScope === 'phrase' ? phraseRange(normalized.text, start, end) : [start, end]
+      const evidence = normalized.text.slice(evidenceStart, evidenceEnd)
       if (!rule.always && supportedClaim(evidence, facts)) continue
-      const span = originalSpan(normalized, start, end)
+      const span = originalSpan(normalized, evidenceStart, evidenceEnd)
       const key = `${span.start}:${span.end}`
       if (seen.has(key)) continue
       seen.add(key)
