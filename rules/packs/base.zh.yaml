@@ -62,7 +62,7 @@
     {
       "id": "honors",
       "reason": "unsupported_claim",
-      "evidenceScope": "phrase",
+      "evidenceScope": "fact-span",
       "terms": [
         "认证",
         "获奖",
@@ -86,7 +86,7 @@
     {
       "id": "ranking",
       "reason": "unsupported_claim",
-      "evidenceScope": "phrase",
+      "evidenceScope": "fact-span",
       "terms": [
         "销量",
         "热卖",
@@ -149,12 +149,10 @@
       "whitelist": [
         "最近",
         "最后",
-        "最初",
-        "第一次",
-        "第一眼"
+        "最初"
       ],
       "whitelistPatterns": [
-        "第一口(?![碑味感])",
+        "第一(?:口|次|眼)(?=$|\\p{P}|就|便|都|即|尝|看|见|来|喝|吃|的)",
         "最终(?![极级])"
       ]
     },

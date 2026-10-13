@@ -463,5 +463,25 @@
     "sentence": "最终极口感",
     "facts": ["最终极口感"],
     "expect": "block"
+  },
+  {
+    "sentence": "全城第一 次次爆满",
+    "facts": ["全城第一 次次爆满"],
+    "expect": "block"
+  },
+  {
+    "sentence": "全城第一·次次爆满",
+    "facts": ["全城第一·次次爆满"],
+    "expect": "block"
+  },
+  {
+    "sentence": "全城第一口福",
+    "facts": ["全城第一口福"],
+    "expect": "block"
+  },
+  {
+    "sentence": "本地第一眼镜级精致",
+    "facts": ["本地第一眼镜级精致"],
+    "expect": "block"
   }
 ]

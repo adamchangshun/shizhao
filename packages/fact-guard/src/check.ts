@@ -3,18 +3,23 @@ import { normalizeText, originalSpan } from './normalize.js'
 import { defaultRules } from './rules/index.js'
 import type { FactCorpus, RuleHit, RuleSet } from './types.js'
 
-function ranges(text: string, words: string[]): Array<[number, number]> {
+function literalRanges(text: string, words: string[]): Array<[number, number]> {
   return words.flatMap((word) => {
-    const normalized = normalizeText(word).text
-    if (!normalized) return []
+    if (!word) return []
     const matches: Array<[number, number]> = []
-    let index = text.indexOf(normalized)
+    let index = text.indexOf(word)
     while (index !== -1) {
-      matches.push([index, index + normalized.length])
-      index = text.indexOf(normalized, index + 1)
+      matches.push([index, index + word.length])
+      index = text.indexOf(word, index + 1)
     }
     return matches
   })
+}
+function ranges(text: string, words: string[]): Array<[number, number]> {
+  return literalRanges(
+    text,
+    words.map((word) => normalizeText(word).text),
+  )
 }
 function covered(start: number, end: number, allow: Array<[number, number]>): boolean {
   return allow.some(([left, right]) => start >= left && end <= right)
@@ -51,6 +56,7 @@ export function checkSentence(
 ): RuleHit[] {
   const normalized = normalizeText(sentence)
   const facts = corpus.facts.map((fact) => normalizeText(fact).text)
+  const factSpans = literalRanges(sentence, corpus.facts)
   const hits: RuleHit[] = []
   if (rules.numbers) {
     const factNumbers = corpus.facts.flatMap(extractNumbers)
@@ -74,7 +80,11 @@ export function checkSentence(
     const allowed = [
       ...ranges(normalized.text, rule.whitelist ?? []),
       ...patternRanges(normalized.text, rule.whitelistPatterns ?? []),
-    ]
+    ].filter(([start, end]) => {
+      const span = originalSpan(normalized, start, end)
+      // Normalization may reveal a violation, but must not manufacture an exemption.
+      return span.end - span.start === end - start
+    })
     const matches = ranges(normalized.text, rule.terms ?? [])
     for (const source of rule.patterns ?? [])
       for (const match of normalized.text.matchAll(new RegExp(source, 'gu'))) {
@@ -86,8 +96,12 @@ export function checkSentence(
       const [evidenceStart, evidenceEnd] =
         rule.evidenceScope === 'phrase' ? phraseRange(normalized.text, start, end) : [start, end]
       const evidence = normalized.text.slice(evidenceStart, evidenceEnd)
-      if (!rule.always && supportedClaim(evidence, facts)) continue
       const span = originalSpan(normalized, evidenceStart, evidenceEnd)
+      const supported =
+        rule.evidenceScope === 'fact-span'
+          ? covered(span.start, span.end, factSpans)
+          : supportedClaim(evidence, facts)
+      if (!rule.always && supported) continue
       const key = `${span.start}:${span.end}`
       if (seen.has(key)) continue
       seen.add(key)

@@ -52,7 +52,7 @@ export const defaultRules: RuleSet = {
     {
       id: 'honors',
       reason: 'unsupported_claim',
-      evidenceScope: 'phrase',
+      evidenceScope: 'fact-span',
       terms: [
         '认证',
         '获奖',
@@ -73,7 +73,7 @@ export const defaultRules: RuleSet = {
     {
       id: 'ranking',
       reason: 'unsupported_claim',
-      evidenceScope: 'phrase',
+      evidenceScope: 'fact-span',
       terms: ['销量', '热卖', '排名', '爆款', '回头客', '回购率', '好评率', '领先'],
       patterns: [
         '\\btop\\s*[0-9]+',
@@ -120,8 +120,11 @@ export const defaultRules: RuleSet = {
         '首选',
       ],
       patterns: ['100\\s*%', '百分之百', '\\bno\\.\\s*1\\b'],
-      whitelist: ['最近', '最后', '最初', '第一次', '第一眼'],
-      whitelistPatterns: ['第一口(?![碑味感])', '最终(?![极级])'],
+      whitelist: ['最近', '最后', '最初'],
+      whitelistPatterns: [
+        '第一(?:口|次|眼)(?=$|\\p{P}|就|便|都|即|尝|看|见|来|喝|吃|的)',
+        '最终(?![极级])',
+      ],
     },
     {
       id: 'sharing',
