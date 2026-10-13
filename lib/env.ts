@@ -71,6 +71,7 @@ const EnvSchema = z
       .default('false')
       .transform((v) => v === 'true'),
     LONG_IMAGE_ENABLED: bool,
+    TRACK_TRUST_PROXY: bool,
     JOB_STAGE_TIMEOUT_MS: z.coerce.number().int().positive('必须是正整数').default(60_000),
     JOB_TOTAL_TIMEOUT_MS: z.coerce.number().int().positive('必须是正整数').default(180_000),
   })

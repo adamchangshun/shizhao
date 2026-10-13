@@ -1,3 +1,4 @@
+import { views7d } from './stats/summary'
 import { deriveProjectState, type ProjectState } from './core/job-state'
 import { findFirstImageAssetId } from './db/repo/assets'
 import { findLatestFactSheet } from './db/repo/fact-sheets'
@@ -52,7 +53,7 @@ export function toListItem(project: ProjectRow): ProjectListItem {
     title: project.title,
     state: stateOf(project),
     ...(thumbId ? { thumbUrl: `/api/assets/${thumbId}/thumb` } : {}),
-    views7d: 0, // filled in by module 10 (stats)
+    views7d: views7d(project.id),
   }
 }
 

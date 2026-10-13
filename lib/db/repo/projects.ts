@@ -1,7 +1,14 @@
 import { and, desc, eq, isNull, notInArray } from 'drizzle-orm'
 import { newId, newSlug } from '../../core/ids'
 import { getDb } from '../client'
-import { jobs, projects, type ProjectRow, PROJECT_TYPES, TERMINAL_JOB_STATUSES } from '../schema'
+import {
+  jobs,
+  projects,
+  visitEvents,
+  type ProjectRow,
+  PROJECT_TYPES,
+  TERMINAL_JOB_STATUSES,
+} from '../schema'
 
 export type ProjectType = (typeof PROJECT_TYPES)[number]
 
@@ -82,7 +89,10 @@ export function claimProjectDeletion(id: string): DeletionClaim {
         .where(eq(projects.id, id))
         .get()
       if (!project) return 'missing'
-      if (project.deletedAt !== null) return 'claimed'
+      if (project.deletedAt !== null) {
+        tx.delete(visitEvents).where(eq(visitEvents.projectId, id)).run()
+        return 'claimed'
+      }
       const active = tx
         .select({ id: jobs.id })
         .from(jobs)
@@ -93,6 +103,7 @@ export function claimProjectDeletion(id: string): DeletionClaim {
         .set({ deletedAt: new Date().toISOString() })
         .where(and(eq(projects.id, id), isNull(projects.deletedAt)))
         .run()
+      tx.delete(visitEvents).where(eq(visitEvents.projectId, id)).run()
       return 'claimed'
     },
     { behavior: 'immediate' },
