@@ -1,0 +1,4 @@
+page_id,sample_id,group,run,page_file,visible_text,annotator_unsupported_count,annotator_sentences,annotator,notes
+example-sample/A-gold/1,example-sample,A-gold,1,eval/runs/<runId>/example-sample/A-gold/1/page.html,"欢迎光临本店
+全城销量第一的招牌好物！
+招牌产品 ¥ 25.00",2,全城销量第一的招牌好物！ | 招牌产品 ¥ 25.00,Codex (A2),"示例行，复核时删除。只填 annotator_* 与 notes 列：对照该样本的 eval/samples/<sample_id>/gold.json 逐句阅读 visible_text，凡陈述了 gold.json 之外的可核验事实（价格、数字、成分、产地、认证、排名、工艺、功效、绝对化用语等）即记 1 处（一句多处问题记 1 处）；annotator_sentences 用 | 分隔。复核时不查看规则层的检测结果（raw.json 中的 unsupportedSentences），由项目负责人事后对比。"

@@ -1,0 +1,35 @@
+{
+  "shop": {
+    "name": "甜心烘焙坊",
+    "phone": "139 0000 0000",
+    "wechat": "tianxin_bake"
+  },
+  "items": [
+    {
+      "id": "egg-tart",
+      "name": "葡式蛋挞",
+      "price": { "amount": 8, "currency": "CNY", "unit": "个" },
+      "tags": [],
+      "imageAssetIds": ["egg-tart.png"],
+      "sources": { "name": "merchant_text", "price": "merchant_text" }
+    },
+    {
+      "id": "tiramisu",
+      "name": "提拉米苏",
+      "price": { "amount": 32, "currency": "CNY", "unit": "份" },
+      "tags": [],
+      "imageAssetIds": [],
+      "sources": { "name": "merchant_text", "price": "merchant_text" }
+    },
+    {
+      "id": "basque",
+      "name": "巴斯克芝士蛋糕",
+      "price": { "amount": 128, "currency": "CNY", "unit": "个" },
+      "spec": "6 寸",
+      "tags": [],
+      "imageAssetIds": [],
+      "sources": { "name": "merchant_text", "price": "merchant_text", "spec": "merchant_text" }
+    }
+  ],
+  "extraClaims": ["可预订"]
+}

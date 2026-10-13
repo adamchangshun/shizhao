@@ -1,0 +1,35 @@
+{
+  "shop": {
+    "name": "转角咖啡",
+    "address": "杭州市西湖区文三路 100 号",
+    "hours": "9:00-21:00"
+  },
+  "items": [
+    {
+      "id": "latte",
+      "name": "拿铁",
+      "price": { "amount": 22, "currency": "CNY", "unit": "杯" },
+      "spec": "中杯",
+      "tags": [],
+      "imageAssetIds": [],
+      "sources": { "name": "merchant_text", "price": "merchant_text", "spec": "merchant_text" }
+    },
+    {
+      "id": "americano",
+      "name": "美式",
+      "price": { "amount": 18, "currency": "CNY", "unit": "杯" },
+      "tags": [],
+      "imageAssetIds": [],
+      "sources": { "name": "merchant_text", "price": "merchant_text" }
+    },
+    {
+      "id": "lemon-tea",
+      "name": "柠檬茶",
+      "price": { "amount": 15, "currency": "CNY", "unit": "杯" },
+      "tags": [],
+      "imageAssetIds": [],
+      "sources": { "name": "merchant_text", "price": "merchant_text" }
+    }
+  ],
+  "extraClaims": []
+}

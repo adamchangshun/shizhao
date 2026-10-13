@@ -19,7 +19,12 @@
     "test:e2e": "playwright test",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "node --env-file-if-exists=.env.local --import tsx lib/db/migrate-cli.ts",
-    "render:demo": "tsx --tsconfig tsconfig.scripts.json scripts/render-demo.tsx"
+    "render:demo": "tsx --tsconfig tsconfig.scripts.json scripts/render-demo.tsx",
+    "eval:extract": "tsx --tsconfig tsconfig.scripts.json --env-file-if-exists=.env.local eval/scripts/extract.ts",
+    "eval:compare": "tsx --tsconfig tsconfig.scripts.json --env-file-if-exists=.env.local eval/scripts/compare.ts",
+    "eval:guard": "tsx --tsconfig tsconfig.scripts.json --env-file-if-exists=.env.local eval/scripts/guard.ts",
+    "eval:report": "tsx --tsconfig tsconfig.scripts.json --env-file-if-exists=.env.local eval/scripts/report.ts",
+    "eval:promptfoo": "tsx --tsconfig tsconfig.scripts.json --env-file-if-exists=.env.local eval/scripts/promptfoo.ts"
   },
   "dependencies": {
     "@fontsource/noto-sans-sc": "^5.3.1",

@@ -1,0 +1,1899 @@
+{
+  "runId": "mock",
+  "config": {
+    "runId": "mock",
+    "provider": "mock",
+    "textModel": null,
+    "visionModel": null,
+    "n": 3,
+    "temperature": 0.6
+  },
+  "date": "2026-10-13",
+  "commit": "fcdedf2（工作区有未提交改动）",
+  "samples": [
+    {
+      "id": "bakery-croissant-single",
+      "items": 1,
+      "images": 1
+    },
+    {
+      "id": "bakery-dessert-menu",
+      "items": 3,
+      "images": 2
+    },
+    {
+      "id": "drink-cafe-menu",
+      "items": 3,
+      "images": 1
+    }
+  ],
+  "models": [
+    "mock/mock-fixtures"
+  ],
+  "mock": true,
+  "extraction": {
+    "completed": 3,
+    "failed": [],
+    "scores": {
+      "name": {
+        "gold": 7,
+        "predicted": 3,
+        "correct": 1,
+        "precision": 0.3333333333333333,
+        "recall": 0.14285714285714285
+      },
+      "price": {
+        "gold": 7,
+        "predicted": 3,
+        "correct": 1,
+        "precision": 0.3333333333333333,
+        "recall": 0.14285714285714285
+      },
+      "spec": {
+        "gold": 3,
+        "predicted": 0,
+        "correct": 0,
+        "precision": null,
+        "recall": 0
+      },
+      "phone": {
+        "gold": 2,
+        "predicted": 1,
+        "correct": 1,
+        "precision": 1,
+        "recall": 0.5
+      },
+      "address": {
+        "gold": 2,
+        "predicted": 0,
+        "correct": 0,
+        "precision": null,
+        "recall": 0
+      }
+    },
+    "diffs": [
+      {
+        "sampleId": "bakery-croissant-single",
+        "field": "name",
+        "gold": "黄油可颂",
+        "predicted": null
+      },
+      {
+        "sampleId": "bakery-croissant-single",
+        "field": "name",
+        "gold": null,
+        "predicted": "拿铁"
+      },
+      {
+        "sampleId": "bakery-croissant-single",
+        "field": "phone",
+        "gold": "021-6123 4567",
+        "predicted": null
+      },
+      {
+        "sampleId": "bakery-croissant-single",
+        "field": "address",
+        "gold": "上海市徐汇区漕溪北路 88 号",
+        "predicted": null
+      },
+      {
+        "sampleId": "bakery-dessert-menu",
+        "field": "name",
+        "gold": "葡式蛋挞",
+        "predicted": null
+      },
+      {
+        "sampleId": "bakery-dessert-menu",
+        "field": "name",
+        "gold": "提拉米苏",
+        "predicted": null
+      },
+      {
+        "sampleId": "bakery-dessert-menu",
+        "field": "name",
+        "gold": "巴斯克芝士蛋糕",
+        "predicted": null
+      },
+      {
+        "sampleId": "bakery-dessert-menu",
+        "field": "name",
+        "gold": null,
+        "predicted": "拿铁"
+      },
+      {
+        "sampleId": "drink-cafe-menu",
+        "field": "name",
+        "gold": "美式",
+        "predicted": null
+      },
+      {
+        "sampleId": "drink-cafe-menu",
+        "field": "name",
+        "gold": "柠檬茶",
+        "predicted": null
+      },
+      {
+        "sampleId": "drink-cafe-menu",
+        "field": "spec",
+        "item": "拿铁",
+        "gold": "中杯",
+        "predicted": null
+      },
+      {
+        "sampleId": "drink-cafe-menu",
+        "field": "address",
+        "gold": "杭州市西湖区文三路 100 号",
+        "predicted": null
+      }
+    ]
+  },
+  "compare": {
+    "pages": [
+      {
+        "sampleId": "bakery-croissant-single",
+        "group": "A-gold",
+        "n": 1,
+        "ok": true,
+        "factErrors": 6,
+        "priceNameErrors": 4,
+        "unsupported": 4,
+        "costCny": 0,
+        "latencyMs": 0,
+        "pageFile": "eval/runs/mock/bakery-croissant-single/A-gold/1/page.html",
+        "visibleText": "欢迎光临本店\n全城销量第一的招牌好物！\n招牌产品\n¥ 25.00\n第二件半价，仅需 9.9元\n订购电话：13800000000",
+        "factDetails": [
+          "页面价格 25 不在事实表中",
+          "页面价格 9.9 不在事实表中",
+          "缺少「黄油可颂」的价格 12",
+          "缺少商品名「黄油可颂」",
+          "缺少电话 021-6123 4567",
+          "页面电话 13800000000 不在事实表中"
+        ],
+        "unsupportedSentences": [
+          {
+            "sentence": "全城销量第一的招牌好物！",
+            "reasons": [
+              "unsupported_claim",
+              "ad_law_absolute"
+            ],
+            "evidence": [
+              "销量",
+              "第一"
+            ]
+          },
+          {
+            "sentence": "¥ 25.00",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "¥ 25.00"
+            ]
+          },
+          {
+            "sentence": "第二件半价，仅需 9.9元",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "二件",
+              "半价",
+              "9.9元"
+            ]
+          },
+          {
+            "sentence": "订购电话：13800000000",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "13800000000"
+            ]
+          }
+        ]
+      },
+      {
+        "sampleId": "bakery-croissant-single",
+        "group": "A-gold",
+        "n": 2,
+        "ok": true,
+        "factErrors": 6,
+        "priceNameErrors": 4,
+        "unsupported": 4,
+        "costCny": 0,
+        "latencyMs": 0,
+        "pageFile": "eval/runs/mock/bakery-croissant-single/A-gold/2/page.html",
+        "visibleText": "欢迎光临本店\n全城销量第一的招牌好物！\n招牌产品\n¥ 25.00\n第二件半价，仅需 9.9元\n订购电话：13800000000",
+        "factDetails": [
+          "页面价格 25 不在事实表中",
+          "页面价格 9.9 不在事实表中",
+          "缺少「黄油可颂」的价格 12",
+          "缺少商品名「黄油可颂」",
+          "缺少电话 021-6123 4567",
+          "页面电话 13800000000 不在事实表中"
+        ],
+        "unsupportedSentences": [
+          {
+            "sentence": "全城销量第一的招牌好物！",
+            "reasons": [
+              "unsupported_claim",
+              "ad_law_absolute"
+            ],
+            "evidence": [
+              "销量",
+              "第一"
+            ]
+          },
+          {
+            "sentence": "¥ 25.00",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "¥ 25.00"
+            ]
+          },
+          {
+            "sentence": "第二件半价，仅需 9.9元",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "二件",
+              "半价",
+              "9.9元"
+            ]
+          },
+          {
+            "sentence": "订购电话：13800000000",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "13800000000"
+            ]
+          }
+        ]
+      },
+      {
+        "sampleId": "bakery-croissant-single",
+        "group": "A-gold",
+        "n": 3,
+        "ok": true,
+        "factErrors": 6,
+        "priceNameErrors": 4,
+        "unsupported": 4,
+        "costCny": 0,
+        "latencyMs": 1,
+        "pageFile": "eval/runs/mock/bakery-croissant-single/A-gold/3/page.html",
+        "visibleText": "欢迎光临本店\n全城销量第一的招牌好物！\n招牌产品\n¥ 25.00\n第二件半价，仅需 9.9元\n订购电话：13800000000",
+        "factDetails": [
+          "页面价格 25 不在事实表中",
+          "页面价格 9.9 不在事实表中",
+          "缺少「黄油可颂」的价格 12",
+          "缺少商品名「黄油可颂」",
+          "缺少电话 021-6123 4567",
+          "页面电话 13800000000 不在事实表中"
+        ],
+        "unsupportedSentences": [
+          {
+            "sentence": "全城销量第一的招牌好物！",
+            "reasons": [
+              "unsupported_claim",
+              "ad_law_absolute"
+            ],
+            "evidence": [
+              "销量",
+              "第一"
+            ]
+          },
+          {
+            "sentence": "¥ 25.00",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "¥ 25.00"
+            ]
+          },
+          {
+            "sentence": "第二件半价，仅需 9.9元",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "二件",
+              "半价",
+              "9.9元"
+            ]
+          },
+          {
+            "sentence": "订购电话：13800000000",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "13800000000"
+            ]
+          }
+        ]
+      },
+      {
+        "sampleId": "bakery-croissant-single",
+        "group": "A-raw",
+        "n": 1,
+        "ok": true,
+        "factErrors": 6,
+        "priceNameErrors": 4,
+        "unsupported": 4,
+        "costCny": 0,
+        "latencyMs": 0,
+        "pageFile": "eval/runs/mock/bakery-croissant-single/A-raw/1/page.html",
+        "visibleText": "欢迎光临本店\n全城销量第一的招牌好物！\n招牌产品\n¥ 25.00\n第二件半价，仅需 9.9元\n订购电话：13800000000",
+        "factDetails": [
+          "页面价格 25 不在事实表中",
+          "页面价格 9.9 不在事实表中",
+          "缺少「黄油可颂」的价格 12",
+          "缺少商品名「黄油可颂」",
+          "缺少电话 021-6123 4567",
+          "页面电话 13800000000 不在事实表中"
+        ],
+        "unsupportedSentences": [
+          {
+            "sentence": "全城销量第一的招牌好物！",
+            "reasons": [
+              "unsupported_claim",
+              "ad_law_absolute"
+            ],
+            "evidence": [
+              "销量",
+              "第一"
+            ]
+          },
+          {
+            "sentence": "¥ 25.00",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "¥ 25.00"
+            ]
+          },
+          {
+            "sentence": "第二件半价，仅需 9.9元",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "二件",
+              "半价",
+              "9.9元"
+            ]
+          },
+          {
+            "sentence": "订购电话：13800000000",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "13800000000"
+            ]
+          }
+        ]
+      },
+      {
+        "sampleId": "bakery-croissant-single",
+        "group": "A-raw",
+        "n": 2,
+        "ok": true,
+        "factErrors": 6,
+        "priceNameErrors": 4,
+        "unsupported": 4,
+        "costCny": 0,
+        "latencyMs": 0,
+        "pageFile": "eval/runs/mock/bakery-croissant-single/A-raw/2/page.html",
+        "visibleText": "欢迎光临本店\n全城销量第一的招牌好物！\n招牌产品\n¥ 25.00\n第二件半价，仅需 9.9元\n订购电话：13800000000",
+        "factDetails": [
+          "页面价格 25 不在事实表中",
+          "页面价格 9.9 不在事实表中",
+          "缺少「黄油可颂」的价格 12",
+          "缺少商品名「黄油可颂」",
+          "缺少电话 021-6123 4567",
+          "页面电话 13800000000 不在事实表中"
+        ],
+        "unsupportedSentences": [
+          {
+            "sentence": "全城销量第一的招牌好物！",
+            "reasons": [
+              "unsupported_claim",
+              "ad_law_absolute"
+            ],
+            "evidence": [
+              "销量",
+              "第一"
+            ]
+          },
+          {
+            "sentence": "¥ 25.00",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "¥ 25.00"
+            ]
+          },
+          {
+            "sentence": "第二件半价，仅需 9.9元",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "二件",
+              "半价",
+              "9.9元"
+            ]
+          },
+          {
+            "sentence": "订购电话：13800000000",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "13800000000"
+            ]
+          }
+        ]
+      },
+      {
+        "sampleId": "bakery-croissant-single",
+        "group": "A-raw",
+        "n": 3,
+        "ok": true,
+        "factErrors": 6,
+        "priceNameErrors": 4,
+        "unsupported": 4,
+        "costCny": 0,
+        "latencyMs": 0,
+        "pageFile": "eval/runs/mock/bakery-croissant-single/A-raw/3/page.html",
+        "visibleText": "欢迎光临本店\n全城销量第一的招牌好物！\n招牌产品\n¥ 25.00\n第二件半价，仅需 9.9元\n订购电话：13800000000",
+        "factDetails": [
+          "页面价格 25 不在事实表中",
+          "页面价格 9.9 不在事实表中",
+          "缺少「黄油可颂」的价格 12",
+          "缺少商品名「黄油可颂」",
+          "缺少电话 021-6123 4567",
+          "页面电话 13800000000 不在事实表中"
+        ],
+        "unsupportedSentences": [
+          {
+            "sentence": "全城销量第一的招牌好物！",
+            "reasons": [
+              "unsupported_claim",
+              "ad_law_absolute"
+            ],
+            "evidence": [
+              "销量",
+              "第一"
+            ]
+          },
+          {
+            "sentence": "¥ 25.00",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "¥ 25.00"
+            ]
+          },
+          {
+            "sentence": "第二件半价，仅需 9.9元",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "二件",
+              "半价",
+              "9.9元"
+            ]
+          },
+          {
+            "sentence": "订购电话：13800000000",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "13800000000"
+            ]
+          }
+        ]
+      },
+      {
+        "sampleId": "bakery-croissant-single",
+        "group": "B-gold",
+        "n": 1,
+        "ok": true,
+        "factErrors": 0,
+        "priceNameErrors": 0,
+        "unsupported": 0,
+        "costCny": 0,
+        "latencyMs": 0,
+        "guard": {
+          "intercepted": 1,
+          "rewritten": 1,
+          "removed": 0
+        },
+        "pageFile": "eval/runs/mock/bakery-croissant-single/B-gold/1/page.html",
+        "visibleText": "麦香小铺\n给午后一点温暖\n适合午后的一点美好。\n每天早上现烤\n黄油可颂\n¥12个\n约 80g\n适合午后的一杯暖意。\n来小店坐坐。\n营业时间\n每天 7:30-19:00\n地址\n上海市徐汇区漕溪北路 88 号\n电话\n021-6123 4567\n本页由 AI 辅助设计，商品信息由商家提供\n由 实招 Shizhao 生成\n一键拨号地图导航",
+        "factDetails": [],
+        "unsupportedSentences": []
+      },
+      {
+        "sampleId": "bakery-croissant-single",
+        "group": "B-gold",
+        "n": 2,
+        "ok": true,
+        "factErrors": 0,
+        "priceNameErrors": 0,
+        "unsupported": 0,
+        "costCny": 0,
+        "latencyMs": 0,
+        "guard": {
+          "intercepted": 1,
+          "rewritten": 1,
+          "removed": 0
+        },
+        "pageFile": "eval/runs/mock/bakery-croissant-single/B-gold/2/page.html",
+        "visibleText": "麦香小铺\n给午后一点温暖\n适合午后的一点美好。\n黄油可颂\n¥12个\n约 80g\n适合午后的一杯暖意。\n每天早上现烤\n来小店坐坐。\n营业时间\n每天 7:30-19:00\n地址\n上海市徐汇区漕溪北路 88 号\n电话\n021-6123 4567\n本页由 AI 辅助设计，商品信息由商家提供\n由 实招 Shizhao 生成\n一键拨号地图导航",
+        "factDetails": [],
+        "unsupportedSentences": []
+      },
+      {
+        "sampleId": "bakery-croissant-single",
+        "group": "B-gold",
+        "n": 3,
+        "ok": true,
+        "factErrors": 0,
+        "priceNameErrors": 0,
+        "unsupported": 0,
+        "costCny": 0,
+        "latencyMs": 0,
+        "guard": {
+          "intercepted": 1,
+          "rewritten": 1,
+          "removed": 0
+        },
+        "pageFile": "eval/runs/mock/bakery-croissant-single/B-gold/3/page.html",
+        "visibleText": "麦香小铺\n给午后一点温暖\n适合午后的一点美好。\n黄油可颂\n¥12个\n约 80g\n适合午后的一杯暖意。\n每天早上现烤\n来小店坐坐。\n营业时间\n每天 7:30-19:00\n地址\n上海市徐汇区漕溪北路 88 号\n电话\n021-6123 4567\n本页由 AI 辅助设计，商品信息由商家提供\n由 实招 Shizhao 生成\n一键拨号地图导航",
+        "factDetails": [],
+        "unsupportedSentences": []
+      },
+      {
+        "sampleId": "bakery-croissant-single",
+        "group": "B-e2e",
+        "n": 1,
+        "ok": true,
+        "factErrors": 4,
+        "priceNameErrors": 3,
+        "unsupported": 1,
+        "costCny": 0,
+        "latencyMs": 0,
+        "guard": {
+          "intercepted": 1,
+          "rewritten": 1,
+          "removed": 0
+        },
+        "pageFile": "eval/runs/mock/bakery-croissant-single/B-e2e/1/page.html",
+        "visibleText": "午后小店\n给午后一点温暖\n适合午后的一点美好。\n拿铁\n¥20杯\n适合午后的一杯暖意。\n来小店坐坐。\n本页由 AI 辅助设计，商品信息由商家提供\n由 实招 Shizhao 生成",
+        "factDetails": [
+          "页面价格 20 不在事实表中",
+          "缺少「黄油可颂」的价格 12",
+          "缺少商品名「黄油可颂」",
+          "缺少电话 021-6123 4567"
+        ],
+        "unsupportedSentences": [
+          {
+            "sentence": "¥20杯",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "¥20"
+            ]
+          }
+        ]
+      },
+      {
+        "sampleId": "bakery-croissant-single",
+        "group": "B-e2e",
+        "n": 2,
+        "ok": true,
+        "factErrors": 4,
+        "priceNameErrors": 3,
+        "unsupported": 1,
+        "costCny": 0,
+        "latencyMs": 0,
+        "guard": {
+          "intercepted": 1,
+          "rewritten": 1,
+          "removed": 0
+        },
+        "pageFile": "eval/runs/mock/bakery-croissant-single/B-e2e/2/page.html",
+        "visibleText": "午后小店\n给午后一点温暖\n适合午后的一点美好。\n拿铁\n¥20杯\n适合午后的一杯暖意。\n来小店坐坐。\n本页由 AI 辅助设计，商品信息由商家提供\n由 实招 Shizhao 生成",
+        "factDetails": [
+          "页面价格 20 不在事实表中",
+          "缺少「黄油可颂」的价格 12",
+          "缺少商品名「黄油可颂」",
+          "缺少电话 021-6123 4567"
+        ],
+        "unsupportedSentences": [
+          {
+            "sentence": "¥20杯",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "¥20"
+            ]
+          }
+        ]
+      },
+      {
+        "sampleId": "bakery-croissant-single",
+        "group": "B-e2e",
+        "n": 3,
+        "ok": true,
+        "factErrors": 4,
+        "priceNameErrors": 3,
+        "unsupported": 1,
+        "costCny": 0,
+        "latencyMs": 0,
+        "guard": {
+          "intercepted": 1,
+          "rewritten": 1,
+          "removed": 0
+        },
+        "pageFile": "eval/runs/mock/bakery-croissant-single/B-e2e/3/page.html",
+        "visibleText": "午后小店\n给午后一点温暖\n适合午后的一点美好。\n拿铁\n¥20杯\n适合午后的一杯暖意。\n来小店坐坐。\n本页由 AI 辅助设计，商品信息由商家提供\n由 实招 Shizhao 生成",
+        "factDetails": [
+          "页面价格 20 不在事实表中",
+          "缺少「黄油可颂」的价格 12",
+          "缺少商品名「黄油可颂」",
+          "缺少电话 021-6123 4567"
+        ],
+        "unsupportedSentences": [
+          {
+            "sentence": "¥20杯",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "¥20"
+            ]
+          }
+        ]
+      },
+      {
+        "sampleId": "bakery-dessert-menu",
+        "group": "A-gold",
+        "n": 1,
+        "ok": true,
+        "factErrors": 10,
+        "priceNameErrors": 8,
+        "unsupported": 4,
+        "costCny": 0,
+        "latencyMs": 0,
+        "pageFile": "eval/runs/mock/bakery-dessert-menu/A-gold/1/page.html",
+        "visibleText": "欢迎光临本店\n全城销量第一的招牌好物！\n招牌产品\n¥ 25.00\n第二件半价，仅需 9.9元\n订购电话：13800000000",
+        "factDetails": [
+          "页面价格 25 不在事实表中",
+          "页面价格 9.9 不在事实表中",
+          "缺少「葡式蛋挞」的价格 8",
+          "缺少「提拉米苏」的价格 32",
+          "缺少「巴斯克芝士蛋糕」的价格 128",
+          "缺少商品名「葡式蛋挞」",
+          "缺少商品名「提拉米苏」",
+          "缺少商品名「巴斯克芝士蛋糕」",
+          "缺少电话 139 0000 0000",
+          "页面电话 13800000000 不在事实表中"
+        ],
+        "unsupportedSentences": [
+          {
+            "sentence": "全城销量第一的招牌好物！",
+            "reasons": [
+              "unsupported_claim",
+              "ad_law_absolute"
+            ],
+            "evidence": [
+              "销量",
+              "第一"
+            ]
+          },
+          {
+            "sentence": "¥ 25.00",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "¥ 25.00"
+            ]
+          },
+          {
+            "sentence": "第二件半价，仅需 9.9元",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "二件",
+              "半价",
+              "9.9元"
+            ]
+          },
+          {
+            "sentence": "订购电话：13800000000",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "13800000000"
+            ]
+          }
+        ]
+      },
+      {
+        "sampleId": "bakery-dessert-menu",
+        "group": "A-gold",
+        "n": 2,
+        "ok": true,
+        "factErrors": 10,
+        "priceNameErrors": 8,
+        "unsupported": 4,
+        "costCny": 0,
+        "latencyMs": 0,
+        "pageFile": "eval/runs/mock/bakery-dessert-menu/A-gold/2/page.html",
+        "visibleText": "欢迎光临本店\n全城销量第一的招牌好物！\n招牌产品\n¥ 25.00\n第二件半价，仅需 9.9元\n订购电话：13800000000",
+        "factDetails": [
+          "页面价格 25 不在事实表中",
+          "页面价格 9.9 不在事实表中",
+          "缺少「葡式蛋挞」的价格 8",
+          "缺少「提拉米苏」的价格 32",
+          "缺少「巴斯克芝士蛋糕」的价格 128",
+          "缺少商品名「葡式蛋挞」",
+          "缺少商品名「提拉米苏」",
+          "缺少商品名「巴斯克芝士蛋糕」",
+          "缺少电话 139 0000 0000",
+          "页面电话 13800000000 不在事实表中"
+        ],
+        "unsupportedSentences": [
+          {
+            "sentence": "全城销量第一的招牌好物！",
+            "reasons": [
+              "unsupported_claim",
+              "ad_law_absolute"
+            ],
+            "evidence": [
+              "销量",
+              "第一"
+            ]
+          },
+          {
+            "sentence": "¥ 25.00",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "¥ 25.00"
+            ]
+          },
+          {
+            "sentence": "第二件半价，仅需 9.9元",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "二件",
+              "半价",
+              "9.9元"
+            ]
+          },
+          {
+            "sentence": "订购电话：13800000000",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "13800000000"
+            ]
+          }
+        ]
+      },
+      {
+        "sampleId": "bakery-dessert-menu",
+        "group": "A-gold",
+        "n": 3,
+        "ok": true,
+        "factErrors": 10,
+        "priceNameErrors": 8,
+        "unsupported": 4,
+        "costCny": 0,
+        "latencyMs": 0,
+        "pageFile": "eval/runs/mock/bakery-dessert-menu/A-gold/3/page.html",
+        "visibleText": "欢迎光临本店\n全城销量第一的招牌好物！\n招牌产品\n¥ 25.00\n第二件半价，仅需 9.9元\n订购电话：13800000000",
+        "factDetails": [
+          "页面价格 25 不在事实表中",
+          "页面价格 9.9 不在事实表中",
+          "缺少「葡式蛋挞」的价格 8",
+          "缺少「提拉米苏」的价格 32",
+          "缺少「巴斯克芝士蛋糕」的价格 128",
+          "缺少商品名「葡式蛋挞」",
+          "缺少商品名「提拉米苏」",
+          "缺少商品名「巴斯克芝士蛋糕」",
+          "缺少电话 139 0000 0000",
+          "页面电话 13800000000 不在事实表中"
+        ],
+        "unsupportedSentences": [
+          {
+            "sentence": "全城销量第一的招牌好物！",
+            "reasons": [
+              "unsupported_claim",
+              "ad_law_absolute"
+            ],
+            "evidence": [
+              "销量",
+              "第一"
+            ]
+          },
+          {
+            "sentence": "¥ 25.00",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "¥ 25.00"
+            ]
+          },
+          {
+            "sentence": "第二件半价，仅需 9.9元",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "二件",
+              "半价",
+              "9.9元"
+            ]
+          },
+          {
+            "sentence": "订购电话：13800000000",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "13800000000"
+            ]
+          }
+        ]
+      },
+      {
+        "sampleId": "bakery-dessert-menu",
+        "group": "A-raw",
+        "n": 1,
+        "ok": true,
+        "factErrors": 10,
+        "priceNameErrors": 8,
+        "unsupported": 4,
+        "costCny": 0,
+        "latencyMs": 0,
+        "pageFile": "eval/runs/mock/bakery-dessert-menu/A-raw/1/page.html",
+        "visibleText": "欢迎光临本店\n全城销量第一的招牌好物！\n招牌产品\n¥ 25.00\n第二件半价，仅需 9.9元\n订购电话：13800000000",
+        "factDetails": [
+          "页面价格 25 不在事实表中",
+          "页面价格 9.9 不在事实表中",
+          "缺少「葡式蛋挞」的价格 8",
+          "缺少「提拉米苏」的价格 32",
+          "缺少「巴斯克芝士蛋糕」的价格 128",
+          "缺少商品名「葡式蛋挞」",
+          "缺少商品名「提拉米苏」",
+          "缺少商品名「巴斯克芝士蛋糕」",
+          "缺少电话 139 0000 0000",
+          "页面电话 13800000000 不在事实表中"
+        ],
+        "unsupportedSentences": [
+          {
+            "sentence": "全城销量第一的招牌好物！",
+            "reasons": [
+              "unsupported_claim",
+              "ad_law_absolute"
+            ],
+            "evidence": [
+              "销量",
+              "第一"
+            ]
+          },
+          {
+            "sentence": "¥ 25.00",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "¥ 25.00"
+            ]
+          },
+          {
+            "sentence": "第二件半价，仅需 9.9元",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "二件",
+              "半价",
+              "9.9元"
+            ]
+          },
+          {
+            "sentence": "订购电话：13800000000",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "13800000000"
+            ]
+          }
+        ]
+      },
+      {
+        "sampleId": "bakery-dessert-menu",
+        "group": "A-raw",
+        "n": 2,
+        "ok": true,
+        "factErrors": 10,
+        "priceNameErrors": 8,
+        "unsupported": 4,
+        "costCny": 0,
+        "latencyMs": 0,
+        "pageFile": "eval/runs/mock/bakery-dessert-menu/A-raw/2/page.html",
+        "visibleText": "欢迎光临本店\n全城销量第一的招牌好物！\n招牌产品\n¥ 25.00\n第二件半价，仅需 9.9元\n订购电话：13800000000",
+        "factDetails": [
+          "页面价格 25 不在事实表中",
+          "页面价格 9.9 不在事实表中",
+          "缺少「葡式蛋挞」的价格 8",
+          "缺少「提拉米苏」的价格 32",
+          "缺少「巴斯克芝士蛋糕」的价格 128",
+          "缺少商品名「葡式蛋挞」",
+          "缺少商品名「提拉米苏」",
+          "缺少商品名「巴斯克芝士蛋糕」",
+          "缺少电话 139 0000 0000",
+          "页面电话 13800000000 不在事实表中"
+        ],
+        "unsupportedSentences": [
+          {
+            "sentence": "全城销量第一的招牌好物！",
+            "reasons": [
+              "unsupported_claim",
+              "ad_law_absolute"
+            ],
+            "evidence": [
+              "销量",
+              "第一"
+            ]
+          },
+          {
+            "sentence": "¥ 25.00",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "¥ 25.00"
+            ]
+          },
+          {
+            "sentence": "第二件半价，仅需 9.9元",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "二件",
+              "半价",
+              "9.9元"
+            ]
+          },
+          {
+            "sentence": "订购电话：13800000000",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "13800000000"
+            ]
+          }
+        ]
+      },
+      {
+        "sampleId": "bakery-dessert-menu",
+        "group": "A-raw",
+        "n": 3,
+        "ok": true,
+        "factErrors": 10,
+        "priceNameErrors": 8,
+        "unsupported": 4,
+        "costCny": 0,
+        "latencyMs": 0,
+        "pageFile": "eval/runs/mock/bakery-dessert-menu/A-raw/3/page.html",
+        "visibleText": "欢迎光临本店\n全城销量第一的招牌好物！\n招牌产品\n¥ 25.00\n第二件半价，仅需 9.9元\n订购电话：13800000000",
+        "factDetails": [
+          "页面价格 25 不在事实表中",
+          "页面价格 9.9 不在事实表中",
+          "缺少「葡式蛋挞」的价格 8",
+          "缺少「提拉米苏」的价格 32",
+          "缺少「巴斯克芝士蛋糕」的价格 128",
+          "缺少商品名「葡式蛋挞」",
+          "缺少商品名「提拉米苏」",
+          "缺少商品名「巴斯克芝士蛋糕」",
+          "缺少电话 139 0000 0000",
+          "页面电话 13800000000 不在事实表中"
+        ],
+        "unsupportedSentences": [
+          {
+            "sentence": "全城销量第一的招牌好物！",
+            "reasons": [
+              "unsupported_claim",
+              "ad_law_absolute"
+            ],
+            "evidence": [
+              "销量",
+              "第一"
+            ]
+          },
+          {
+            "sentence": "¥ 25.00",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "¥ 25.00"
+            ]
+          },
+          {
+            "sentence": "第二件半价，仅需 9.9元",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "二件",
+              "半价",
+              "9.9元"
+            ]
+          },
+          {
+            "sentence": "订购电话：13800000000",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "13800000000"
+            ]
+          }
+        ]
+      },
+      {
+        "sampleId": "bakery-dessert-menu",
+        "group": "B-gold",
+        "n": 1,
+        "ok": true,
+        "factErrors": 0,
+        "priceNameErrors": 0,
+        "unsupported": 0,
+        "costCny": 0,
+        "latencyMs": 0,
+        "guard": {
+          "intercepted": 1,
+          "rewritten": 1,
+          "removed": 0
+        },
+        "pageFile": "eval/runs/mock/bakery-dessert-menu/B-gold/1/page.html",
+        "visibleText": "甜心烘焙坊\n给午后一点温暖\n适合午后的一点美好。\n可预订\n葡式蛋挞\n¥8个\n适合午后的一杯暖意。\n提拉米苏\n¥32份\n适合午后的一杯暖意。\n巴斯克芝士蛋糕\n¥128个\n6 寸\n适合午后的一杯暖意。\n来小店坐坐。\n电话\n139 0000 0000\n微信\ntianxin_bake\n本页由 AI 辅助设计，商品信息由商家提供\n由 实招 Shizhao 生成\n一键拨号\n复制微信号",
+        "factDetails": [],
+        "unsupportedSentences": []
+      },
+      {
+        "sampleId": "bakery-dessert-menu",
+        "group": "B-gold",
+        "n": 2,
+        "ok": true,
+        "factErrors": 0,
+        "priceNameErrors": 0,
+        "unsupported": 0,
+        "costCny": 0,
+        "latencyMs": 0,
+        "guard": {
+          "intercepted": 1,
+          "rewritten": 1,
+          "removed": 0
+        },
+        "pageFile": "eval/runs/mock/bakery-dessert-menu/B-gold/2/page.html",
+        "visibleText": "甜心烘焙坊\n给午后一点温暖\n适合午后的一点美好。\n葡式蛋挞\n¥8个\n适合午后的一杯暖意。\n提拉米苏\n¥32份\n适合午后的一杯暖意。\n巴斯克芝士蛋糕\n¥128个\n6 寸\n适合午后的一杯暖意。\n可预订\n来小店坐坐。\n电话\n139 0000 0000\n微信\ntianxin_bake\n本页由 AI 辅助设计，商品信息由商家提供\n由 实招 Shizhao 生成\n一键拨号\n复制微信号",
+        "factDetails": [],
+        "unsupportedSentences": []
+      },
+      {
+        "sampleId": "bakery-dessert-menu",
+        "group": "B-gold",
+        "n": 3,
+        "ok": true,
+        "factErrors": 0,
+        "priceNameErrors": 0,
+        "unsupported": 0,
+        "costCny": 0,
+        "latencyMs": 0,
+        "guard": {
+          "intercepted": 1,
+          "rewritten": 1,
+          "removed": 0
+        },
+        "pageFile": "eval/runs/mock/bakery-dessert-menu/B-gold/3/page.html",
+        "visibleText": "甜心烘焙坊\n给午后一点温暖\n适合午后的一点美好。\n葡式蛋挞\n¥8个\n适合午后的一杯暖意。\n可预订\n店里还有\n提拉米苏\n¥32份\n适合午后的一杯暖意。\n巴斯克芝士蛋糕\n¥128个\n6 寸\n适合午后的一杯暖意。\n来小店坐坐。\n电话\n139 0000 0000\n微信\ntianxin_bake\n本页由 AI 辅助设计，商品信息由商家提供\n由 实招 Shizhao 生成\n一键拨号\n复制微信号",
+        "factDetails": [],
+        "unsupportedSentences": []
+      },
+      {
+        "sampleId": "bakery-dessert-menu",
+        "group": "B-e2e",
+        "n": 1,
+        "ok": true,
+        "factErrors": 7,
+        "priceNameErrors": 7,
+        "unsupported": 1,
+        "costCny": 0,
+        "latencyMs": 0,
+        "guard": {
+          "intercepted": 1,
+          "rewritten": 1,
+          "removed": 0
+        },
+        "pageFile": "eval/runs/mock/bakery-dessert-menu/B-e2e/1/page.html",
+        "visibleText": "午后小店\n给午后一点温暖\n适合午后的一点美好。\n拿铁\n¥20杯\n适合午后的一杯暖意。\n来小店坐坐。\n电话\n139 0000 0000\n本页由 AI 辅助设计，商品信息由商家提供\n由 实招 Shizhao 生成\n一键拨号",
+        "factDetails": [
+          "页面价格 20 不在事实表中",
+          "缺少「葡式蛋挞」的价格 8",
+          "缺少「提拉米苏」的价格 32",
+          "缺少「巴斯克芝士蛋糕」的价格 128",
+          "缺少商品名「葡式蛋挞」",
+          "缺少商品名「提拉米苏」",
+          "缺少商品名「巴斯克芝士蛋糕」"
+        ],
+        "unsupportedSentences": [
+          {
+            "sentence": "¥20杯",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "¥20"
+            ]
+          }
+        ]
+      },
+      {
+        "sampleId": "bakery-dessert-menu",
+        "group": "B-e2e",
+        "n": 2,
+        "ok": true,
+        "factErrors": 7,
+        "priceNameErrors": 7,
+        "unsupported": 1,
+        "costCny": 0,
+        "latencyMs": 0,
+        "guard": {
+          "intercepted": 1,
+          "rewritten": 1,
+          "removed": 0
+        },
+        "pageFile": "eval/runs/mock/bakery-dessert-menu/B-e2e/2/page.html",
+        "visibleText": "午后小店\n给午后一点温暖\n适合午后的一点美好。\n拿铁\n¥20杯\n适合午后的一杯暖意。\n来小店坐坐。\n电话\n139 0000 0000\n本页由 AI 辅助设计，商品信息由商家提供\n由 实招 Shizhao 生成\n一键拨号",
+        "factDetails": [
+          "页面价格 20 不在事实表中",
+          "缺少「葡式蛋挞」的价格 8",
+          "缺少「提拉米苏」的价格 32",
+          "缺少「巴斯克芝士蛋糕」的价格 128",
+          "缺少商品名「葡式蛋挞」",
+          "缺少商品名「提拉米苏」",
+          "缺少商品名「巴斯克芝士蛋糕」"
+        ],
+        "unsupportedSentences": [
+          {
+            "sentence": "¥20杯",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "¥20"
+            ]
+          }
+        ]
+      },
+      {
+        "sampleId": "bakery-dessert-menu",
+        "group": "B-e2e",
+        "n": 3,
+        "ok": true,
+        "factErrors": 7,
+        "priceNameErrors": 7,
+        "unsupported": 1,
+        "costCny": 0,
+        "latencyMs": 0,
+        "guard": {
+          "intercepted": 1,
+          "rewritten": 1,
+          "removed": 0
+        },
+        "pageFile": "eval/runs/mock/bakery-dessert-menu/B-e2e/3/page.html",
+        "visibleText": "午后小店\n给午后一点温暖\n适合午后的一点美好。\n拿铁\n¥20杯\n适合午后的一杯暖意。\n来小店坐坐。\n电话\n139 0000 0000\n本页由 AI 辅助设计，商品信息由商家提供\n由 实招 Shizhao 生成\n一键拨号",
+        "factDetails": [
+          "页面价格 20 不在事实表中",
+          "缺少「葡式蛋挞」的价格 8",
+          "缺少「提拉米苏」的价格 32",
+          "缺少「巴斯克芝士蛋糕」的价格 128",
+          "缺少商品名「葡式蛋挞」",
+          "缺少商品名「提拉米苏」",
+          "缺少商品名「巴斯克芝士蛋糕」"
+        ],
+        "unsupportedSentences": [
+          {
+            "sentence": "¥20杯",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "¥20"
+            ]
+          }
+        ]
+      },
+      {
+        "sampleId": "drink-cafe-menu",
+        "group": "A-gold",
+        "n": 1,
+        "ok": true,
+        "factErrors": 9,
+        "priceNameErrors": 8,
+        "unsupported": 4,
+        "costCny": 0,
+        "latencyMs": 0,
+        "pageFile": "eval/runs/mock/drink-cafe-menu/A-gold/1/page.html",
+        "visibleText": "欢迎光临本店\n全城销量第一的招牌好物！\n招牌产品\n¥ 25.00\n第二件半价，仅需 9.9元\n订购电话：13800000000",
+        "factDetails": [
+          "页面价格 25 不在事实表中",
+          "页面价格 9.9 不在事实表中",
+          "缺少「拿铁」的价格 22",
+          "缺少「美式」的价格 18",
+          "缺少「柠檬茶」的价格 15",
+          "缺少商品名「拿铁」",
+          "缺少商品名「美式」",
+          "缺少商品名「柠檬茶」",
+          "页面电话 13800000000 不在事实表中"
+        ],
+        "unsupportedSentences": [
+          {
+            "sentence": "全城销量第一的招牌好物！",
+            "reasons": [
+              "unsupported_claim",
+              "ad_law_absolute"
+            ],
+            "evidence": [
+              "销量",
+              "第一"
+            ]
+          },
+          {
+            "sentence": "¥ 25.00",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "¥ 25.00"
+            ]
+          },
+          {
+            "sentence": "第二件半价，仅需 9.9元",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "二件",
+              "半价",
+              "9.9元"
+            ]
+          },
+          {
+            "sentence": "订购电话：13800000000",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "13800000000"
+            ]
+          }
+        ]
+      },
+      {
+        "sampleId": "drink-cafe-menu",
+        "group": "A-gold",
+        "n": 2,
+        "ok": true,
+        "factErrors": 9,
+        "priceNameErrors": 8,
+        "unsupported": 4,
+        "costCny": 0,
+        "latencyMs": 0,
+        "pageFile": "eval/runs/mock/drink-cafe-menu/A-gold/2/page.html",
+        "visibleText": "欢迎光临本店\n全城销量第一的招牌好物！\n招牌产品\n¥ 25.00\n第二件半价，仅需 9.9元\n订购电话：13800000000",
+        "factDetails": [
+          "页面价格 25 不在事实表中",
+          "页面价格 9.9 不在事实表中",
+          "缺少「拿铁」的价格 22",
+          "缺少「美式」的价格 18",
+          "缺少「柠檬茶」的价格 15",
+          "缺少商品名「拿铁」",
+          "缺少商品名「美式」",
+          "缺少商品名「柠檬茶」",
+          "页面电话 13800000000 不在事实表中"
+        ],
+        "unsupportedSentences": [
+          {
+            "sentence": "全城销量第一的招牌好物！",
+            "reasons": [
+              "unsupported_claim",
+              "ad_law_absolute"
+            ],
+            "evidence": [
+              "销量",
+              "第一"
+            ]
+          },
+          {
+            "sentence": "¥ 25.00",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "¥ 25.00"
+            ]
+          },
+          {
+            "sentence": "第二件半价，仅需 9.9元",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "二件",
+              "半价",
+              "9.9元"
+            ]
+          },
+          {
+            "sentence": "订购电话：13800000000",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "13800000000"
+            ]
+          }
+        ]
+      },
+      {
+        "sampleId": "drink-cafe-menu",
+        "group": "A-gold",
+        "n": 3,
+        "ok": true,
+        "factErrors": 9,
+        "priceNameErrors": 8,
+        "unsupported": 4,
+        "costCny": 0,
+        "latencyMs": 0,
+        "pageFile": "eval/runs/mock/drink-cafe-menu/A-gold/3/page.html",
+        "visibleText": "欢迎光临本店\n全城销量第一的招牌好物！\n招牌产品\n¥ 25.00\n第二件半价，仅需 9.9元\n订购电话：13800000000",
+        "factDetails": [
+          "页面价格 25 不在事实表中",
+          "页面价格 9.9 不在事实表中",
+          "缺少「拿铁」的价格 22",
+          "缺少「美式」的价格 18",
+          "缺少「柠檬茶」的价格 15",
+          "缺少商品名「拿铁」",
+          "缺少商品名「美式」",
+          "缺少商品名「柠檬茶」",
+          "页面电话 13800000000 不在事实表中"
+        ],
+        "unsupportedSentences": [
+          {
+            "sentence": "全城销量第一的招牌好物！",
+            "reasons": [
+              "unsupported_claim",
+              "ad_law_absolute"
+            ],
+            "evidence": [
+              "销量",
+              "第一"
+            ]
+          },
+          {
+            "sentence": "¥ 25.00",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "¥ 25.00"
+            ]
+          },
+          {
+            "sentence": "第二件半价，仅需 9.9元",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "二件",
+              "半价",
+              "9.9元"
+            ]
+          },
+          {
+            "sentence": "订购电话：13800000000",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "13800000000"
+            ]
+          }
+        ]
+      },
+      {
+        "sampleId": "drink-cafe-menu",
+        "group": "A-raw",
+        "n": 1,
+        "ok": true,
+        "factErrors": 9,
+        "priceNameErrors": 8,
+        "unsupported": 4,
+        "costCny": 0,
+        "latencyMs": 0,
+        "pageFile": "eval/runs/mock/drink-cafe-menu/A-raw/1/page.html",
+        "visibleText": "欢迎光临本店\n全城销量第一的招牌好物！\n招牌产品\n¥ 25.00\n第二件半价，仅需 9.9元\n订购电话：13800000000",
+        "factDetails": [
+          "页面价格 25 不在事实表中",
+          "页面价格 9.9 不在事实表中",
+          "缺少「拿铁」的价格 22",
+          "缺少「美式」的价格 18",
+          "缺少「柠檬茶」的价格 15",
+          "缺少商品名「拿铁」",
+          "缺少商品名「美式」",
+          "缺少商品名「柠檬茶」",
+          "页面电话 13800000000 不在事实表中"
+        ],
+        "unsupportedSentences": [
+          {
+            "sentence": "全城销量第一的招牌好物！",
+            "reasons": [
+              "unsupported_claim",
+              "ad_law_absolute"
+            ],
+            "evidence": [
+              "销量",
+              "第一"
+            ]
+          },
+          {
+            "sentence": "¥ 25.00",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "¥ 25.00"
+            ]
+          },
+          {
+            "sentence": "第二件半价，仅需 9.9元",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "二件",
+              "半价",
+              "9.9元"
+            ]
+          },
+          {
+            "sentence": "订购电话：13800000000",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "13800000000"
+            ]
+          }
+        ]
+      },
+      {
+        "sampleId": "drink-cafe-menu",
+        "group": "A-raw",
+        "n": 2,
+        "ok": true,
+        "factErrors": 9,
+        "priceNameErrors": 8,
+        "unsupported": 4,
+        "costCny": 0,
+        "latencyMs": 0,
+        "pageFile": "eval/runs/mock/drink-cafe-menu/A-raw/2/page.html",
+        "visibleText": "欢迎光临本店\n全城销量第一的招牌好物！\n招牌产品\n¥ 25.00\n第二件半价，仅需 9.9元\n订购电话：13800000000",
+        "factDetails": [
+          "页面价格 25 不在事实表中",
+          "页面价格 9.9 不在事实表中",
+          "缺少「拿铁」的价格 22",
+          "缺少「美式」的价格 18",
+          "缺少「柠檬茶」的价格 15",
+          "缺少商品名「拿铁」",
+          "缺少商品名「美式」",
+          "缺少商品名「柠檬茶」",
+          "页面电话 13800000000 不在事实表中"
+        ],
+        "unsupportedSentences": [
+          {
+            "sentence": "全城销量第一的招牌好物！",
+            "reasons": [
+              "unsupported_claim",
+              "ad_law_absolute"
+            ],
+            "evidence": [
+              "销量",
+              "第一"
+            ]
+          },
+          {
+            "sentence": "¥ 25.00",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "¥ 25.00"
+            ]
+          },
+          {
+            "sentence": "第二件半价，仅需 9.9元",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "二件",
+              "半价",
+              "9.9元"
+            ]
+          },
+          {
+            "sentence": "订购电话：13800000000",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "13800000000"
+            ]
+          }
+        ]
+      },
+      {
+        "sampleId": "drink-cafe-menu",
+        "group": "A-raw",
+        "n": 3,
+        "ok": true,
+        "factErrors": 9,
+        "priceNameErrors": 8,
+        "unsupported": 4,
+        "costCny": 0,
+        "latencyMs": 0,
+        "pageFile": "eval/runs/mock/drink-cafe-menu/A-raw/3/page.html",
+        "visibleText": "欢迎光临本店\n全城销量第一的招牌好物！\n招牌产品\n¥ 25.00\n第二件半价，仅需 9.9元\n订购电话：13800000000",
+        "factDetails": [
+          "页面价格 25 不在事实表中",
+          "页面价格 9.9 不在事实表中",
+          "缺少「拿铁」的价格 22",
+          "缺少「美式」的价格 18",
+          "缺少「柠檬茶」的价格 15",
+          "缺少商品名「拿铁」",
+          "缺少商品名「美式」",
+          "缺少商品名「柠檬茶」",
+          "页面电话 13800000000 不在事实表中"
+        ],
+        "unsupportedSentences": [
+          {
+            "sentence": "全城销量第一的招牌好物！",
+            "reasons": [
+              "unsupported_claim",
+              "ad_law_absolute"
+            ],
+            "evidence": [
+              "销量",
+              "第一"
+            ]
+          },
+          {
+            "sentence": "¥ 25.00",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "¥ 25.00"
+            ]
+          },
+          {
+            "sentence": "第二件半价，仅需 9.9元",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "二件",
+              "半价",
+              "9.9元"
+            ]
+          },
+          {
+            "sentence": "订购电话：13800000000",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "13800000000"
+            ]
+          }
+        ]
+      },
+      {
+        "sampleId": "drink-cafe-menu",
+        "group": "B-gold",
+        "n": 1,
+        "ok": true,
+        "factErrors": 0,
+        "priceNameErrors": 0,
+        "unsupported": 0,
+        "costCny": 0,
+        "latencyMs": 0,
+        "guard": {
+          "intercepted": 1,
+          "rewritten": 1,
+          "removed": 0
+        },
+        "pageFile": "eval/runs/mock/drink-cafe-menu/B-gold/1/page.html",
+        "visibleText": "转角咖啡\n给午后一点温暖\n适合午后的一点美好。\n拿铁\n¥22杯\n中杯\n适合午后的一杯暖意。\n美式\n¥18杯\n适合午后的一杯暖意。\n柠檬茶\n¥15杯\n适合午后的一杯暖意。\n来小店坐坐。\n营业时间\n9:00-21:00\n地址\n杭州市西湖区文三路 100 号\n本页由 AI 辅助设计，商品信息由商家提供\n由 实招 Shizhao 生成\n地图导航",
+        "factDetails": [],
+        "unsupportedSentences": []
+      },
+      {
+        "sampleId": "drink-cafe-menu",
+        "group": "B-gold",
+        "n": 2,
+        "ok": true,
+        "factErrors": 0,
+        "priceNameErrors": 0,
+        "unsupported": 0,
+        "costCny": 0,
+        "latencyMs": 0,
+        "guard": {
+          "intercepted": 1,
+          "rewritten": 1,
+          "removed": 0
+        },
+        "pageFile": "eval/runs/mock/drink-cafe-menu/B-gold/2/page.html",
+        "visibleText": "转角咖啡\n给午后一点温暖\n适合午后的一点美好。\n拿铁\n¥22杯\n中杯\n适合午后的一杯暖意。\n美式\n¥18杯\n适合午后的一杯暖意。\n柠檬茶\n¥15杯\n适合午后的一杯暖意。\n来小店坐坐。\n营业时间\n9:00-21:00\n地址\n杭州市西湖区文三路 100 号\n本页由 AI 辅助设计，商品信息由商家提供\n由 实招 Shizhao 生成\n地图导航",
+        "factDetails": [],
+        "unsupportedSentences": []
+      },
+      {
+        "sampleId": "drink-cafe-menu",
+        "group": "B-gold",
+        "n": 3,
+        "ok": true,
+        "factErrors": 0,
+        "priceNameErrors": 0,
+        "unsupported": 0,
+        "costCny": 0,
+        "latencyMs": 0,
+        "guard": {
+          "intercepted": 1,
+          "rewritten": 1,
+          "removed": 0
+        },
+        "pageFile": "eval/runs/mock/drink-cafe-menu/B-gold/3/page.html",
+        "visibleText": "转角咖啡\n给午后一点温暖\n适合午后的一点美好。\n拿铁\n¥22杯\n中杯\n适合午后的一杯暖意。\n店里还有\n美式\n¥18杯\n适合午后的一杯暖意。\n柠檬茶\n¥15杯\n适合午后的一杯暖意。\n来小店坐坐。\n营业时间\n9:00-21:00\n地址\n杭州市西湖区文三路 100 号\n本页由 AI 辅助设计，商品信息由商家提供\n由 实招 Shizhao 生成\n地图导航",
+        "factDetails": [],
+        "unsupportedSentences": []
+      },
+      {
+        "sampleId": "drink-cafe-menu",
+        "group": "B-e2e",
+        "n": 1,
+        "ok": true,
+        "factErrors": 4,
+        "priceNameErrors": 4,
+        "unsupported": 0,
+        "costCny": 0,
+        "latencyMs": 0,
+        "guard": {
+          "intercepted": 1,
+          "rewritten": 1,
+          "removed": 0
+        },
+        "pageFile": "eval/runs/mock/drink-cafe-menu/B-e2e/1/page.html",
+        "visibleText": "午后小店\n给午后一点温暖\n适合午后的一点美好。\n拿铁\n¥22份\n适合午后的一杯暖意。\n来小店坐坐。\n本页由 AI 辅助设计，商品信息由商家提供\n由 实招 Shizhao 生成",
+        "factDetails": [
+          "缺少「美式」的价格 18",
+          "缺少「柠檬茶」的价格 15",
+          "缺少商品名「美式」",
+          "缺少商品名「柠檬茶」"
+        ],
+        "unsupportedSentences": []
+      },
+      {
+        "sampleId": "drink-cafe-menu",
+        "group": "B-e2e",
+        "n": 2,
+        "ok": true,
+        "factErrors": 4,
+        "priceNameErrors": 4,
+        "unsupported": 0,
+        "costCny": 0,
+        "latencyMs": 0,
+        "guard": {
+          "intercepted": 1,
+          "rewritten": 1,
+          "removed": 0
+        },
+        "pageFile": "eval/runs/mock/drink-cafe-menu/B-e2e/2/page.html",
+        "visibleText": "午后小店\n给午后一点温暖\n适合午后的一点美好。\n拿铁\n¥22份\n适合午后的一杯暖意。\n来小店坐坐。\n本页由 AI 辅助设计，商品信息由商家提供\n由 实招 Shizhao 生成",
+        "factDetails": [
+          "缺少「美式」的价格 18",
+          "缺少「柠檬茶」的价格 15",
+          "缺少商品名「美式」",
+          "缺少商品名「柠檬茶」"
+        ],
+        "unsupportedSentences": []
+      },
+      {
+        "sampleId": "drink-cafe-menu",
+        "group": "B-e2e",
+        "n": 3,
+        "ok": true,
+        "factErrors": 4,
+        "priceNameErrors": 4,
+        "unsupported": 0,
+        "costCny": 0,
+        "latencyMs": 0,
+        "guard": {
+          "intercepted": 1,
+          "rewritten": 1,
+          "removed": 0
+        },
+        "pageFile": "eval/runs/mock/drink-cafe-menu/B-e2e/3/page.html",
+        "visibleText": "午后小店\n给午后一点温暖\n适合午后的一点美好。\n拿铁\n¥22份\n适合午后的一杯暖意。\n来小店坐坐。\n本页由 AI 辅助设计，商品信息由商家提供\n由 实招 Shizhao 生成",
+        "factDetails": [
+          "缺少「美式」的价格 18",
+          "缺少「柠檬茶」的价格 15",
+          "缺少商品名「美式」",
+          "缺少商品名「柠檬茶」"
+        ],
+        "unsupportedSentences": []
+      }
+    ],
+    "missing": [],
+    "summaries": {
+      "A-gold": {
+        "attempts": 9,
+        "pages": 9,
+        "failed": 0,
+        "totalFactErrors": 75,
+        "meanFactErrors": 8.333333333333334,
+        "totalPriceNameErrors": 60,
+        "meanPriceNameErrors": 6.666666666666667,
+        "totalUnsupported": 36,
+        "meanUnsupported": 4,
+        "meanCostCny": 0,
+        "meanLatencyMs": 0.1111111111111111,
+        "guard": null
+      },
+      "A-raw": {
+        "attempts": 9,
+        "pages": 9,
+        "failed": 0,
+        "totalFactErrors": 75,
+        "meanFactErrors": 8.333333333333334,
+        "totalPriceNameErrors": 60,
+        "meanPriceNameErrors": 6.666666666666667,
+        "totalUnsupported": 36,
+        "meanUnsupported": 4,
+        "meanCostCny": 0,
+        "meanLatencyMs": 0,
+        "guard": null
+      },
+      "B-gold": {
+        "attempts": 9,
+        "pages": 9,
+        "failed": 0,
+        "totalFactErrors": 0,
+        "meanFactErrors": 0,
+        "totalPriceNameErrors": 0,
+        "meanPriceNameErrors": 0,
+        "totalUnsupported": 0,
+        "meanUnsupported": 0,
+        "meanCostCny": 0,
+        "meanLatencyMs": 0,
+        "guard": {
+          "intercepted": 9,
+          "rewritten": 9,
+          "removed": 0
+        }
+      },
+      "B-e2e": {
+        "attempts": 9,
+        "pages": 9,
+        "failed": 0,
+        "totalFactErrors": 45,
+        "meanFactErrors": 5,
+        "totalPriceNameErrors": 42,
+        "meanPriceNameErrors": 4.666666666666667,
+        "totalUnsupported": 6,
+        "meanUnsupported": 0.6666666666666666,
+        "meanCostCny": 0,
+        "meanLatencyMs": 0,
+        "guard": {
+          "intercepted": 9,
+          "rewritten": 9,
+          "removed": 0
+        }
+      }
+    }
+  },
+  "guard": {
+    "rules": {
+      "judgeProvider": null,
+      "rates": {
+        "blockCases": 67,
+        "detected": 67,
+        "passCases": 30,
+        "falsePositives": 0,
+        "blockRate": 1,
+        "falsePositiveRate": 0
+      },
+      "models": []
+    },
+    "rules-judge": {
+      "judgeProvider": "mock",
+      "rates": {
+        "blockCases": 67,
+        "detected": 67,
+        "passCases": 30,
+        "falsePositives": 0,
+        "blockRate": 1,
+        "falsePositiveRate": 0
+      },
+      "models": [
+        "mock/mock-fixtures"
+      ]
+    }
+  }
+}
