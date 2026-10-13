@@ -3,7 +3,7 @@ import { randomInt } from 'node:crypto'
 import fsp from 'node:fs/promises'
 import path from 'node:path'
 import { ApiError, Errors } from '../core/errors'
-import type { JobStatus } from '../core/schemas'
+import type { GuardViolation, JobStatus } from '../core/schemas'
 import { createJobIfIdle, findJob, listRecentStageLogs } from '../db/repo/jobs'
 import { findActiveProject } from '../db/repo/projects'
 import { findActiveVersion, listVersionsWithCost } from '../db/repo/versions'
@@ -79,7 +79,15 @@ export interface VersionSummary {
   createdAt: string
   templateId: string
   moodKeywords: string[]
-  guard: { violations: number; rewritten: number; removed: number }
+  /** Background and main colour, for the merchant UI's version thumbnails. */
+  palette: { bg: string; primary: string }
+  guard: {
+    violations: number
+    rewritten: number
+    removed: number
+    /** The original sentences the guard flagged, so the merchant can see what was changed. */
+    flagged: Array<{ field: string; sentence: string; reason: GuardViolation['reason'] }>
+  }
   costCny: number
   durationMs: number | null
 }
@@ -92,10 +100,16 @@ export function listProjectVersions(projectId: string): VersionSummary[] {
     createdAt: version.createdAt,
     templateId: version.designSpec.templateId,
     moodKeywords: version.designSpec.moodKeywords,
+    palette: { bg: version.designSpec.palette.bg, primary: version.designSpec.palette.primary },
     guard: {
       violations: version.guard.violations.length,
       rewritten: version.guard.rewritten,
       removed: version.guard.removed,
+      flagged: version.guard.violations.map(({ field, sentence, reason }) => ({
+        field,
+        sentence,
+        reason,
+      })),
     },
     costCny,
     durationMs:
