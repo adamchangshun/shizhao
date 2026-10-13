@@ -3,7 +3,7 @@ import os from 'node:os'
 import path from 'node:path'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { z } from 'zod'
-import { runPart } from '@/eval/lib/store'
+import { readPart, runPart } from '@/eval/lib/store'
 
 const Data = z.object({ value: z.number() })
 
@@ -20,11 +20,12 @@ afterEach(() => fs.rmSync(root, { recursive: true, force: true }))
 
 const dirOf = (n: number) => path.join(root, 'sample-a', 'A-gold', String(n))
 
-function run(n: number) {
+function run(n: number, fingerprint = 'inputs-v1') {
   return runPart({
     dir: dirOf(n),
     label: `sample-a/A-gold/${n}`,
     schema: Data,
+    fingerprint,
     log: (line) => lines.push(line),
     work: async () => {
       calls++
@@ -81,12 +82,23 @@ describe('runPart (resume)', () => {
     ])
   })
 
+  it('reruns a part made from different inputs, and readPart refuses it', async () => {
+    await run(1, 'inputs-v1')
+    expect(readPart(dirOf(1), Data, 'inputs-v2')).toEqual({ ok: false, reason: 'inputs changed' })
+    lines = []
+    await run(1, 'inputs-v2')
+    expect(calls).toBe(2)
+    expect(lines).toEqual(['[eval] rerun  sample-a/A-gold/1 (inputs changed)'])
+    expect(readPart(dirOf(1), Data, 'inputs-v2')).toEqual({ ok: true, data: { value: 1 } })
+  })
+
   it('leaves no completion marker when the work fails, so the next run retries', async () => {
     await expect(
       runPart({
         dir: dirOf(1),
         label: 'x',
         schema: Data,
+        fingerprint: 'inputs-v1',
         log: () => {},
         work: async () => {
           throw new Error('provider down')

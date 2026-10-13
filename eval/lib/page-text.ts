@@ -44,6 +44,21 @@ const BLOCK = new Set([
   'button',
 ])
 
+/** Utility classes that hide an element (Tailwind / Bootstrap names). */
+const HIDING_CLASSES = new Set(['hidden', 'invisible', 'sr-only', 'visually-hidden'])
+const HIDING_STYLE = /(?:^|;)\s*(?:display\s*:\s*none|visibility\s*:\s*hidden)\s*(?:;|!|$)/i
+
+/**
+ * Hidden by an attribute, an inline style or a hiding class. Rules in style sheets are not
+ * evaluated (the page is never rendered), so text hidden that way still counts.
+ */
+function isHidden(node: HTMLElement): boolean {
+  if (node.getAttribute('aria-hidden') === 'true' || node.hasAttribute('hidden')) return true
+  if (HIDING_STYLE.test(node.getAttribute('style') ?? '')) return true
+  const classes = (node.getAttribute('class') ?? '').split(/\s+/)
+  return classes.some((c) => HIDING_CLASSES.has(c))
+}
+
 function walk(node: Node, out: string[]): void {
   if (node.nodeType === NodeType.TEXT_NODE) {
     out.push(node.text)
@@ -53,7 +68,7 @@ function walk(node: Node, out: string[]): void {
   const tag = node.rawTagName?.toLowerCase() ?? ''
   if (HIDDEN.has(tag)) return
   // Decoration (e.g. card ordinals "01") and hidden elements carry no statement about the shop.
-  if (node.getAttribute('aria-hidden') === 'true' || node.hasAttribute('hidden')) return
+  if (isHidden(node)) return
   const block = BLOCK.has(tag)
   if (block) out.push('\n')
   for (const child of node.childNodes) walk(child, out)

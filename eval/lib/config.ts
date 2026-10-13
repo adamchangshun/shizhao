@@ -1,6 +1,7 @@
 // Run configuration and an isolated runtime: every run uses DATA_DIR=eval/runs/<runId>/data,
 // never the development data/ directory.
 import { execFileSync } from 'node:child_process'
+import { createHash } from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
 import { z } from 'zod'
@@ -45,6 +46,17 @@ export function readRunConfig(source: NodeJS.ProcessEnv = process.env): RunConfi
   const n = Number(source.EVAL_N ?? 3)
   const temperature = Number(source.EVAL_TEMPERATURE ?? 0.6)
   return RunConfig.parse({ runId, provider, textModel, visionModel, n, temperature })
+}
+
+/** The run settings that change what a part produces (N only adds parts, so it is not here). */
+export function runSettingsKey(config: RunConfig): string {
+  const { provider, textModel, visionModel, temperature } = config
+  return JSON.stringify({ provider, textModel, visionModel, temperature })
+}
+
+/** Fingerprint of a part's inputs: the run settings plus the hash of its input files. */
+export function partFingerprint(settingsKey: string, inputHash: string): string {
+  return createHash('sha256').update(`${settingsKey}\n${inputHash}`).digest('hex')
 }
 
 export function runDir(config: RunConfig): string {

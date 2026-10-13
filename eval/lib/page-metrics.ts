@@ -19,6 +19,12 @@ export interface FactErrors {
   fabricatedPrices: number
   /** Gold items with a price whose value appears nowhere on the page. */
   missingPrices: number
+  /**
+   * Gold items whose price value is on the page, but the first price shown after the item's name
+   * (before the next gold name, within PRICE_WINDOW characters) is a different value, e.g. two
+   * items' prices swapped. An item with no price after its name is not counted.
+   */
+  wrongPrices: number
   /** Gold item names absent from the page (whitespace ignored). */
   missingNames: number
   /** 1 when the gold sheet has a phone and the page does not show it. */
@@ -32,6 +38,28 @@ export interface FactErrors {
 
 const cents = (amount: number): number => Math.round(amount * 100)
 const compact = (text: string): string => text.normalize('NFKC').replace(/\s+/g, '')
+
+/** How far after an item name (whitespace removed) its own price is looked for. */
+const PRICE_WINDOW = 40
+
+/** Items whose price on the page is present but sits next to another item's name. */
+function wrongPriceItems(page: string, gold: GoldSheet, pageCents: Set<number>): string[] {
+  const found = gold.items
+    .map((item) => ({ item, name: compact(item.name), at: page.indexOf(compact(item.name)) }))
+    .filter((f) => f.at >= 0)
+    .sort((a, b) => a.at - b.at)
+  const details: string[] = []
+  found.forEach(({ item, name, at }, i) => {
+    if (!item.price || !pageCents.has(cents(item.price.amount))) return // counted as missing
+    const start = at + name.length
+    const end = Math.min(found[i + 1]?.at ?? page.length, start + PRICE_WINDOW)
+    const next = extractPagePrices(page.slice(start, Math.max(start, end)))[0]
+    if (next !== undefined && cents(next) !== cents(item.price.amount)) {
+      details.push(`「${item.name}」旁的价格是 ${next}，事实表为 ${item.price.amount}`)
+    }
+  })
+  return details
+}
 
 export function pageFactErrors(text: string, gold: GoldSheet): FactErrors {
   const details: string[] = []
@@ -49,6 +77,8 @@ export function pageFactErrors(text: string, gold: GoldSheet): FactErrors {
     }
   }
   const page = compact(text)
+  const wrong = wrongPriceItems(page, gold, pageCents)
+  details.push(...wrong)
   let missingNames = 0
   for (const item of gold.items) {
     if (!page.includes(compact(item.name))) {
@@ -60,18 +90,19 @@ export function pageFactErrors(text: string, gold: GoldSheet): FactErrors {
   const pagePhones = new Set(extractPhones(text))
   const missingPhone = goldPhone && !pagePhones.has(goldPhone) ? 1 : 0
   if (missingPhone) details.push(`缺少电话 ${gold.shop.phone}`)
-  const wrong = [...pagePhones].filter((p) => p !== goldPhone)
-  for (const p of wrong) details.push(`页面电话 ${p} 不在事实表中`)
+  const wrongPhones = [...pagePhones].filter((p) => p !== goldPhone)
+  for (const p of wrongPhones) details.push(`页面电话 ${p} 不在事实表中`)
 
-  const priceNameErrors = fabricated.length + missingPrices + missingNames
+  const priceNameErrors = fabricated.length + missingPrices + wrong.length + missingNames
   return {
     fabricatedPrices: fabricated.length,
     missingPrices,
+    wrongPrices: wrong.length,
     missingNames,
     missingPhone,
-    wrongPhones: wrong.length,
+    wrongPhones: wrongPhones.length,
     priceNameErrors,
-    total: priceNameErrors + missingPhone + wrong.length,
+    total: priceNameErrors + missingPhone + wrongPhones.length,
     details,
   }
 }

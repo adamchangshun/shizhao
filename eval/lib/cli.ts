@@ -1,6 +1,6 @@
 // Shared entry-point plumbing for the eval scripts.
 import { closeDb } from '../../lib/db/client'
-import { readRunConfig, runDir, setupRuntime, type RunConfig } from './config'
+import { readRunConfig, runDir, runSettingsKey, setupRuntime, type RunConfig } from './config'
 import type { PartContext } from './experiments'
 import { evalProvider } from './pipeline'
 import { loadSamples, type Sample } from './samples'
@@ -33,6 +33,7 @@ export async function main(
       runDir: runDir(config),
       provider: evalProvider(),
       temperature: config.temperature,
+      settingsKey: runSettingsKey(config),
       log,
       fail: (label, err) => {
         failures++

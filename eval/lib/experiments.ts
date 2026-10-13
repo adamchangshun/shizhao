@@ -1,4 +1,5 @@
 // The three experiments as resumable parts under eval/runs/<runId>/.
+import { createHash } from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
 import { z } from 'zod'
@@ -8,6 +9,7 @@ import { JUDGE_SYSTEM } from '../../lib/copy/prompt'
 import { ProviderError, type LLMProvider } from '../../lib/providers'
 import { guardDocument } from '../../packages/fact-guard/src/index'
 import type { Group } from './aggregate'
+import { partFingerprint } from './config'
 import { generatePageA, goldPrompt, rawPrompt } from './group-a'
 import { EVAL_RULES } from './page-metrics'
 import {
@@ -110,6 +112,8 @@ async function makePage(
 }
 
 export interface PartContext {
+  /** runSettingsKey(config) of the run. */
+  settingsKey: string
   runDir: string
   provider: LLMProvider
   temperature: number
@@ -126,6 +130,7 @@ export async function runComparePart(
     dir: partDir(ctx.runDir, sample.id, group, n),
     label: `${sample.id}/${group}/${n}`,
     schema: PagePart,
+    fingerprint: partFingerprint(ctx.settingsKey, sample.contentHash),
     log: ctx.log,
     work: async () => {
       const started = Date.now()
@@ -160,6 +165,7 @@ export async function runExtractPart(ctx: PartContext, sample: Sample): Promise<
     dir: partDir(ctx.runDir, sample.id, 'extract', 1),
     label: `${sample.id}/extract/1`,
     schema: ExtractPart,
+    fingerprint: partFingerprint(ctx.settingsKey, sample.contentHash),
     log: ctx.log,
     work: async (): Promise<PartOutput<ExtractPart>> => {
       try {
@@ -185,6 +191,11 @@ export const GuardCase = z.object({
 export type GuardCase = z.infer<typeof GuardCase>
 
 export const GUARD_CASES_PATH = path.resolve('packages/fact-guard/test/cases.zh.json')
+
+/** Hash of the guard case file, the input of the guard parts. */
+export function guardCasesHash(file: string = GUARD_CASES_PATH): string {
+  return createHash('sha256').update(fs.readFileSync(file)).digest('hex')
+}
 
 export function loadGuardCases(file: string = GUARD_CASES_PATH): GuardCase[] {
   return z.array(GuardCase).parse(JSON.parse(fs.readFileSync(file, 'utf8')))
@@ -260,6 +271,7 @@ export async function runGuardPart(ctx: PartContext, layer: GuardLayer): Promise
     dir: partDir(ctx.runDir, GUARD_DIR, layer, 1),
     label: `${GUARD_DIR}/${layer}/1`,
     schema: GuardPart,
+    fingerprint: partFingerprint(ctx.settingsKey, guardCasesHash()),
     log: ctx.log,
     work: async () => {
       const { outcomes, usage } = await evaluateGuard(loadGuardCases(), layer, ctx.provider)

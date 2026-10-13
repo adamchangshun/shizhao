@@ -73,6 +73,28 @@ describe('pageFactErrors', () => {
     })
   })
 
+  it('counts two swapped prices as two wrong prices', () => {
+    const text = '转角咖啡\n拿铁\n¥15\n美式\n¥20\n电话 13800138000'
+    // Hand count: both gold prices (20, 15) and both names appear, but the first price after
+    // 拿铁 is 15 (gold 20) and after 美式 is 20 (gold 15): 2 wrong prices, nothing else.
+    expect(pageFactErrors(text, cafe)).toMatchObject({
+      fabricatedPrices: 0,
+      missingPrices: 0,
+      wrongPrices: 2,
+      missingNames: 0,
+      priceNameErrors: 2,
+      total: 2,
+    })
+  })
+
+  it('does not call a price wrong when no price follows the name', () => {
+    // 拿铁 is followed directly by 美式, so there is no price to compare for 拿铁; 美式 ¥15 is right.
+    expect(pageFactErrors('拿铁 美式 ¥15 ¥20 电话 13800138000', cafe)).toMatchObject({
+      wrongPrices: 0,
+      total: 0,
+    })
+  })
+
   it('reports a missing gold phone', () => {
     expect(pageFactErrors('拿铁 ¥20 美式 ¥15', cafe)).toMatchObject({ missingPhone: 1, total: 1 })
   })

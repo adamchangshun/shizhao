@@ -19,6 +19,13 @@ describe('visibleText', () => {
     expect(visibleText(html)).toBe('拿铁\n美式')
   })
 
+  it('skips elements hidden by inline style or a common hiding class', () => {
+    const html = `<div><p style="display: none">¥10</p><p style="color:red;visibility:hidden">¥11</p>
+      <p class="price hidden">¥12</p><p class="invisible">¥13</p><p class="sr-only">¥14</p>
+      <p class="hidden-xs-up">拿铁 ¥20</p><p style="display:block">美式 ¥15</p></div>`
+    expect(visibleText(html)).toBe('拿铁 ¥20\n美式 ¥15')
+  })
+
   it('decodes entities', () => {
     expect(visibleText('<p>A&amp;B &yen;12</p>')).toBe('A&B ¥12')
   })

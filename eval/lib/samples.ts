@@ -1,6 +1,7 @@
 // Evaluation samples: eval/samples/<sampleId>/{images/, LICENSE.txt, input.txt, gold.json}.
 // gold.json is a hand-labelled FactSheet without projectId, revision and confirmedAt; its
 // imageAssetIds name files in images/ and are mapped to uploaded asset ids at run time.
+import { createHash } from 'node:crypto'
 import fs from 'node:fs'
 import path from 'node:path'
 import type { z } from 'zod'
@@ -33,6 +34,8 @@ export interface Sample {
   inputText: string
   gold: GoldSheet
   images: SampleImage[]
+  /** SHA-256 over input.txt, gold.json and every image (name + bytes). */
+  contentHash: string
 }
 
 export class SampleError extends Error {
@@ -71,9 +74,13 @@ export function loadSample(dir: string): Sample {
         throw new SampleError(id, `item ${item.id} references missing image ${ref}`)
     }
   }
+  const hash = createHash('sha256')
+  for (const file of ['input.txt', 'gold.json']) hash.update(fs.readFileSync(path.join(dir, file)))
+  for (const image of images) hash.update(image.file).update(fs.readFileSync(image.path))
   return {
     id,
     dir,
+    contentHash: hash.digest('hex'),
     inputText: fs.readFileSync(path.join(dir, 'input.txt'), 'utf8').trim(),
     gold: parsed.data,
     images,

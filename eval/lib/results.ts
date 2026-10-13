@@ -10,7 +10,7 @@ import {
   type GuardRates,
   type PageRecord,
 } from './aggregate'
-import type { RunConfig } from './config'
+import { partFingerprint, runSettingsKey, type RunConfig } from './config'
 import {
   compareExtraction,
   sumFieldCounts,
@@ -23,6 +23,7 @@ import {
   GUARD_DIR,
   GUARD_LAYERS,
   GuardPart,
+  guardCasesHash,
   PagePart,
   partDir,
   type GuardLayer,
@@ -76,13 +77,16 @@ export function computeResults(input: {
 }): Results {
   const { runDir, config, samples } = input
   const models = new Set<string>()
+  // Parts made from other settings or other sample/case content are not counted.
+  const settingsKey = runSettingsKey(config)
+  const sampleFp = (sample: Sample): string => partFingerprint(settingsKey, sample.contentHash)
 
   const counts = []
   const diffs: Results['extraction']['diffs'] = []
   const failed: Results['extraction']['failed'] = []
   let completed = 0
   for (const sample of samples) {
-    const state = readPart(partDir(runDir, sample.id, 'extract', 1), ExtractPart)
+    const state = readPart(partDir(runDir, sample.id, 'extract', 1), ExtractPart, sampleFp(sample))
     if (!state.ok) continue
     completed++
     modelsOf(state.data.usage).forEach((m) => models.add(m))
@@ -101,7 +105,7 @@ export function computeResults(input: {
     for (const group of GROUPS) {
       for (let n = 1; n <= config.n; n++) {
         const dir = partDir(runDir, sample.id, group, n)
-        const state = readPart(dir, PagePart)
+        const state = readPart(dir, PagePart, sampleFp(sample))
         if (!state.ok) {
           missing.push(`${sample.id}/${group}/${n}`)
           continue
@@ -138,7 +142,11 @@ export function computeResults(input: {
 
   const guard: Results['guard'] = {}
   for (const layer of GUARD_LAYERS) {
-    const state = readPart(partDir(runDir, GUARD_DIR, layer, 1), GuardPart)
+    const state = readPart(
+      partDir(runDir, GUARD_DIR, layer, 1),
+      GuardPart,
+      partFingerprint(settingsKey, guardCasesHash()),
+    )
     if (!state.ok) continue
     const layerModels = [...new Set(modelsOf(state.data.usage))]
     layerModels.forEach((m) => models.add(m))
