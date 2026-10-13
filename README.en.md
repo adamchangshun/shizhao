@@ -23,7 +23,7 @@ Among the open-source projects we searched on GitHub and Gitee, we found none th
 | Time to generate one page | To be filled in after rerunning with a real model | `eval/reports/` |
 | Block rate / false-positive rate (rules + model judge) | To be filled in after rerunning with a real model | `eval/reports/` |
 | Comparison: AI writes the whole page vs Shizhao | To be filled in after rerunning with a real model | `eval/reports/` |
-| Automated tests | 768 tests, all passing (2026-10-14, commit `dd054cc`) | `pnpm test` |
+| Automated tests | 791 tests, all passing (2026-10-14, commit `f49c80b`) | `pnpm test` |
 
 The report currently in `eval/reports/2026-10-13/` was produced with the mock model to verify the pipeline. Its numbers are meaningless and are not quoted.
 
@@ -51,7 +51,7 @@ flowchart LR
 - **Style**: the model outputs constrained style parameters (template, palette, font pairing, decoration, hero layout), never page code.
 - **Copy and fact guard**: the model writes mood copy; the rule layer checks absolute claims and unsupported sales / ranking / efficacy claims, and an optional model judge checks each sentence. Failing sentences are rewritten or removed.
 - **Render and check**: facts are filled into templates straight from the fact sheet, not through the model. After rendering, every fact on the page is compared with the fact sheet; any mismatch means no version is created.
-- **Publish**: each project has a fixed short URL. Republishing only switches the version it points to, so printed QR codes keep working.
+- **Publish**: each project has a fixed short URL `/p/<code>/`. Republishing only switches the version it points to, so printed QR codes keep working. The public page counts visits and tells QR scans from link visits.
 
 ## Status
 
@@ -59,8 +59,8 @@ flowchart LR
 |---|---|
 | Scaffold and auth, model adapters, uploads, fact extraction and confirmation | Done |
 | Style generation, rendering with 3 templates, fact guard and copy, job orchestration | Done |
-| Publishing and QR codes, evaluation suite, copy-check page and API | Done |
-| Public page and visit stats, merchant UI, customer corrections | In progress |
+| Publishing and QR codes, public page and visit stats, evaluation suite, copy-check page and API | Done |
+| Merchant UI, customer corrections | In progress |
 | Docker one-click run, `pnpm demo`, CI | In progress |
 
 The full "create project → upload → extract → confirm → generate → publish" flow currently works through the HTTP API (routes in section 6 and revision R1 of [docs/CONTRACT.md](docs/CONTRACT.md)).
@@ -166,7 +166,7 @@ pnpm eval:extract && pnpm eval:compare && pnpm eval:guard && pnpm eval:report
 
 ## How it was built
 
-Two models, Claude and Codex, split the work: each module was written by one and reviewed read-only by the other, with fixes and re-reviews whenever a HIGH issue was found. All reviews are public in [docs/review-log.md](docs/review-log.md). As of 2026-10-14 it records 26 review rounds across 10 modules; the round reports total 63 HIGH, 36 MEDIUM and 20 LOW findings (an issue reported in several rounds is counted each time). Of the 102 issues listed in its tables, 63 are fixed and every other one states why it was declined or deferred.
+Two models, Claude and Codex, split the work: each module was written by one and reviewed read-only by the other, with fixes and re-reviews whenever a HIGH issue was found. All reviews are public in [docs/review-log.md](docs/review-log.md). As of 2026-10-14 it records 27 review rounds across 11 modules; the round reports total 63 HIGH, 38 MEDIUM and 23 LOW findings (an issue reported in several rounds is counted each time). Of the 107 issues listed in its tables, 63 are fixed and every other one states why it was declined or deferred.
 
 ## Contributing
 
