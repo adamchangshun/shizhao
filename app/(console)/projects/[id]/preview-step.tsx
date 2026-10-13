@@ -89,7 +89,7 @@ export function PreviewStep(props: PreviewStepProps) {
         <div className={w.phoneScreen}>
           <iframe
             key={selected.id}
-            src={`/api/versions/${encodeURIComponent(selected.id)}/preview`}
+            src={`/api/versions/${encodeURIComponent(selected.id)}/`}
             title={`宣传页预览：第 ${list.length - index} 版`}
             className={w.frame}
             referrerPolicy="no-referrer"
