@@ -1,0 +1,487 @@
+[
+  {
+    "sentence": "零糖配方，吃不胖",
+    "facts": [],
+    "expect": "block"
+  },
+  {
+    "sentence": "精选新西兰进口黄油",
+    "facts": [],
+    "expect": "block"
+  },
+  {
+    "sentence": "全城销量第一",
+    "facts": [],
+    "expect": "block"
+  },
+  {
+    "sentence": "荣获2024年金奖",
+    "facts": [],
+    "expect": "block"
+  },
+  {
+    "sentence": "每天限量50个",
+    "facts": [],
+    "expect": "block"
+  },
+  {
+    "sentence": "回头客超过80%",
+    "facts": [],
+    "expect": "block"
+  },
+  {
+    "sentence": "最好吃的蛋糕",
+    "facts": [],
+    "expect": "block"
+  },
+  {
+    "sentence": "降血糖的健康零食",
+    "facts": [],
+    "expect": "block"
+  },
+  {
+    "sentence": "无糖拿铁",
+    "facts": [],
+    "expect": "block"
+  },
+  {
+    "sentence": "低糖面包",
+    "facts": [],
+    "expect": "block"
+  },
+  {
+    "sentence": "零添加饮料",
+    "facts": [],
+    "expect": "block"
+  },
+  {
+    "sentence": "无防腐剂配方",
+    "facts": [],
+    "expect": "block"
+  },
+  {
+    "sentence": "纯天然原料",
+    "facts": [],
+    "expect": "block"
+  },
+  {
+    "sentence": "有机燕麦",
+    "facts": [],
+    "expect": "block"
+  },
+  {
+    "sentence": "全麦面包",
+    "facts": [],
+    "expect": "block"
+  },
+  {
+    "sentence": "0脂牛奶",
+    "facts": [],
+    "expect": "block"
+  },
+  {
+    "sentence": "低脂蛋糕",
+    "facts": [],
+    "expect": "block"
+  },
+  {
+    "sentence": "无麸质食品",
+    "facts": [],
+    "expect": "block"
+  },
+  {
+    "sentence": "法国黄油",
+    "facts": [],
+    "expect": "block"
+  },
+  {
+    "sentence": "日本进口茶叶",
+    "facts": [],
+    "expect": "block"
+  },
+  {
+    "sentence": "云南直采咖啡",
+    "facts": [],
+    "expect": "block"
+  },
+  {
+    "sentence": "通过认证",
+    "facts": [],
+    "expect": "block"
+  },
+  {
+    "sentence": "米其林推荐",
+    "facts": [],
+    "expect": "block"
+  },
+  {
+    "sentence": "必吃榜名店",
+    "facts": [],
+    "expect": "block"
+  },
+  {
+    "sentence": "非遗配方",
+    "facts": [],
+    "expect": "block"
+  },
+  {
+    "sentence": "官方指定",
+    "facts": [],
+    "expect": "block"
+  },
+  {
+    "sentence": "热卖20万份",
+    "facts": [],
+    "expect": "block"
+  },
+  {
+    "sentence": "排名TOP1",
+    "facts": [],
+    "expect": "block"
+  },
+  {
+    "sentence": "美容养生",
+    "facts": [],
+    "expect": "block"
+  },
+  {
+    "sentence": "提高免疫力",
+    "facts": [],
+    "expect": "block"
+  },
+  {
+    "sentence": "助消化",
+    "facts": [],
+    "expect": "block"
+  },
+  {
+    "sentence": "顶级口感",
+    "facts": [],
+    "expect": "block"
+  },
+  {
+    "sentence": "全城唯一",
+    "facts": [],
+    "expect": "block"
+  },
+  {
+    "sentence": "首个产品",
+    "facts": [],
+    "expect": "block"
+  },
+  {
+    "sentence": "国家级工艺",
+    "facts": [],
+    "expect": "block"
+  },
+  {
+    "sentence": "世界级味道",
+    "facts": [],
+    "expect": "block"
+  },
+  {
+    "sentence": "100%纯手工",
+    "facts": [],
+    "expect": "block"
+  },
+  {
+    "sentence": "绝对好吃",
+    "facts": [],
+    "expect": "block"
+  },
+  {
+    "sentence": "万能食品",
+    "facts": [],
+    "expect": "block"
+  },
+  {
+    "sentence": "转发领福利",
+    "facts": [],
+    "expect": "block"
+  },
+  {
+    "sentence": "分享后领取",
+    "facts": [],
+    "expect": "block"
+  },
+  {
+    "sentence": "集赞换蛋糕",
+    "facts": [],
+    "expect": "block"
+  },
+  {
+    "sentence": "砍价活动",
+    "facts": [],
+    "expect": "block"
+  },
+  {
+    "sentence": "好友助力",
+    "facts": [],
+    "expect": "block"
+  },
+  {
+    "sentence": "拉好友领优惠",
+    "facts": [],
+    "expect": "block"
+  },
+  {
+    "sentence": "关注后领取",
+    "facts": [],
+    "expect": "block"
+  },
+  {
+    "sentence": "不转不是好朋友",
+    "facts": [],
+    "expect": "block"
+  },
+  {
+    "sentence": "手工现烤",
+    "facts": [],
+    "expect": "block"
+  },
+  {
+    "sentence": "鲜榨果汁",
+    "facts": [],
+    "expect": "block"
+  },
+  {
+    "sentence": "药膳养胃",
+    "facts": [],
+    "expect": "block"
+  },
+  {
+    "sentence": "三年老店",
+    "facts": [],
+    "expect": "block"
+  },
+  {
+    "sentence": "百分之三十回购",
+    "facts": [],
+    "expect": "block"
+  },
+  {
+    "sentence": "十二种配料",
+    "facts": [],
+    "expect": "block"
+  },
+  {
+    "sentence": "两百个限量",
+    "facts": [],
+    "expect": "block"
+  },
+  {
+    "sentence": "八折优惠",
+    "facts": [],
+    "expect": "block"
+  },
+  {
+    "sentence": "零 糖配方",
+    "facts": [],
+    "expect": "block"
+  },
+  {
+    "sentence": "零*糖配方",
+    "facts": [],
+    "expect": "block"
+  },
+  {
+    "sentence": "零✨糖配方",
+    "facts": [],
+    "expect": "block"
+  },
+  {
+    "sentence": "銷量第一",
+    "facts": [],
+    "expect": "block"
+  },
+  {
+    "sentence": "三倍芒果",
+    "facts": [],
+    "expect": "block"
+  },
+  {
+    "sentence": "半天熬汤",
+    "facts": [],
+    "expect": "block"
+  },
+  {
+    "sentence": "适合午后的一块甜",
+    "facts": [],
+    "expect": "pass"
+  },
+  {
+    "sentence": "最近天气转凉，来一杯热拿铁",
+    "facts": [],
+    "expect": "pass"
+  },
+  {
+    "sentence": "外酥里嫩，香气扑鼻",
+    "facts": [],
+    "expect": "pass"
+  },
+  {
+    "sentence": "每一口都是用心",
+    "facts": [],
+    "expect": "pass"
+  },
+  {
+    "sentence": "第一口就爱上",
+    "facts": [],
+    "expect": "pass"
+  },
+  {
+    "sentence": "最后留一点甜",
+    "facts": [],
+    "expect": "pass"
+  },
+  {
+    "sentence": "最初记忆中的味道",
+    "facts": [],
+    "expect": "pass"
+  },
+  {
+    "sentence": "最终选择是心动",
+    "facts": [],
+    "expect": "pass"
+  },
+  {
+    "sentence": "香气扑鼻",
+    "facts": [],
+    "expect": "pass"
+  },
+  {
+    "sentence": "今天来坐坐",
+    "facts": [],
+    "expect": "pass"
+  },
+  {
+    "sentence": "温暖的午后",
+    "facts": [],
+    "expect": "pass"
+  },
+  {
+    "sentence": "慢慢喝，慢慢聊",
+    "facts": [],
+    "expect": "pass"
+  },
+  {
+    "sentence": "一杯暖意送给你",
+    "facts": [],
+    "expect": "pass"
+  },
+  {
+    "sentence": "每一次相遇都很甜",
+    "facts": [],
+    "expect": "pass"
+  },
+  {
+    "sentence": "第一次来就很喜欢",
+    "facts": [],
+    "expect": "pass"
+  },
+  {
+    "sentence": "第一眼的心动",
+    "facts": [],
+    "expect": "pass"
+  },
+  {
+    "sentence": "和朋友分享一份甜蜜",
+    "facts": [],
+    "expect": "pass"
+  },
+  {
+    "sentence": "一个人来也很满足",
+    "facts": [],
+    "expect": "pass"
+  },
+  {
+    "sentence": "下班路上给自己一点甜",
+    "facts": [],
+    "expect": "pass"
+  },
+  {
+    "sentence": "舒适的小店",
+    "facts": [],
+    "expect": "pass"
+  },
+  {
+    "sentence": "当季果香扑面而来",
+    "facts": [],
+    "expect": "pass"
+  },
+  {
+    "sentence": "今天也要有一百分的心情",
+    "facts": [],
+    "expect": "pass"
+  },
+  {
+    "sentence": "当天现烤",
+    "facts": ["当天现烤"],
+    "expect": "pass"
+  },
+  {
+    "sentence": "6寸蛋糕",
+    "facts": ["6寸"],
+    "expect": "pass"
+  },
+  {
+    "sentence": "28元带回家",
+    "facts": ["28元"],
+    "expect": "pass"
+  },
+  {
+    "sentence": "新西兰黄油",
+    "facts": ["新西兰黄油"],
+    "expect": "pass"
+  },
+  {
+    "sentence": "零糖配方",
+    "facts": ["零糖配方"],
+    "expect": "pass"
+  },
+  {
+    "sentence": "手工拉面",
+    "facts": ["手工拉面"],
+    "expect": "pass"
+  },
+  {
+    "sentence": "第一口就爱上",
+    "facts": ["全城第一"],
+    "expect": "pass"
+  },
+  {
+    "sentence": "百分之三十回购",
+    "facts": ["30%回购"],
+    "expect": "pass"
+  },
+  {
+    "sentence": "全城第一口碑的蛋糕店",
+    "facts": ["全城第一口碑的蛋糕店"],
+    "expect": "block"
+  },
+  {
+    "sentence": "最终极口感",
+    "facts": ["最终极口感"],
+    "expect": "block"
+  },
+  {
+    "sentence": "全城第一 次次爆满",
+    "facts": ["全城第一 次次爆满"],
+    "expect": "block"
+  },
+  {
+    "sentence": "全城第一·次次爆满",
+    "facts": ["全城第一·次次爆满"],
+    "expect": "block"
+  },
+  {
+    "sentence": "全城第一口福",
+    "facts": ["全城第一口福"],
+    "expect": "block"
+  },
+  {
+    "sentence": "本地第一眼镜级精致",
+    "facts": ["本地第一眼镜级精致"],
+    "expect": "block"
+  }
+]

@@ -1,0 +1,24 @@
+{
+  "rules": [
+    {
+      "id": "food-process",
+      "reason": "unsupported_claim",
+      "terms": [
+        "现做",
+        "现烤",
+        "鲜榨",
+        "手工"
+      ],
+      "whitelist": []
+    },
+    {
+      "id": "food-effects",
+      "reason": "unsupported_claim",
+      "terms": [
+        "保健",
+        "药膳"
+      ],
+      "whitelist": []
+    }
+  ]
+}

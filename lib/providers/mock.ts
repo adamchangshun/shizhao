@@ -27,6 +27,34 @@ export class MockProvider implements LLMProvider {
         design: { ...designs[seed % designs.length], seed },
       }
       if (!Object.hasOwn(fixtures, req.stage)) throw new ProviderError('bad_response')
+      // M7 callers supply dynamic item ids and batch sizes. Reuse fixed demo strings,
+      // never infer facts or make judgments from the input text.
+      let input: Record<string, unknown> = {}
+      try {
+        const parsed: unknown = JSON.parse(req.prompt)
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed))
+          input = parsed as Record<string, unknown>
+      } catch {
+        /* Older fixture smoke tests use non-JSON prompts. */
+      }
+      if (
+        req.stage === 'copy' &&
+        Array.isArray(input.itemIds) &&
+        input.itemIds.every((id) => typeof id === 'string')
+      ) {
+        fixtures.copy = {
+          ...copy,
+          itemBlurbs: Object.fromEntries(
+            input.itemIds.map((id) => [id, copy.itemBlurbs['mock-latte']]),
+          ),
+        }
+      }
+      if (req.stage === 'guard-judge' && Array.isArray(input.sentences)) {
+        fixtures['guard-judge'] = input.sentences.map(() => ({ ...judge[0] }))
+      }
+      if (req.stage === 'guard-rewrite' && Array.isArray(input.items)) {
+        fixtures['guard-rewrite'] = input.items.map(() => rewrite[0])
+      }
       if (this.options.delay !== false) await control.wait(300 + Math.floor(Math.random() * 501))
       const parsed = req.schema.safeParse(structuredClone(fixtures[req.stage]))
       if (!parsed.success) throw new ProviderError('schema_mismatch')
