@@ -13,7 +13,13 @@ import type { FactSheet, JobStatus } from '../core/schemas'
 import { generateDesign } from '../design'
 import { getDb } from '../db/client'
 import { findFactSheet } from '../db/repo/fact-sheets'
-import { beginJobRun, findJob, recordStageStart, transitionJob } from '../db/repo/jobs'
+import {
+  beginJobRun,
+  findJob,
+  recordStageStart,
+  restartJobClock,
+  transitionJob,
+} from '../db/repo/jobs'
 import { findActiveProject } from '../db/repo/projects'
 import { insertVersion, listRecentDesignSpecs } from '../db/repo/versions'
 import type { JobRow, VersionRow } from '../db/schema'
@@ -137,7 +143,12 @@ export async function runJob(jobId: string, deps: PipelineDeps = {}): Promise<vo
     if (!project || !sheet || sheet.confirmedAt === null) throw new StageFailure(FACTS_UNAVAILABLE)
     const factSheet: FactSheet = sheet.json
 
-    if (resumed) armTotal(job.startedAt)
+    if (resumed) {
+      // The rerun starts over, so it gets a full total budget, not what the old run left.
+      const at = new Date().toISOString()
+      if (!restartJobClock(jobId, current, at)) throw new Superseded()
+      armTotal(at)
+    }
     advance('designing')
     if (!resumed) armTotal(findJob(jobId)?.startedAt ?? new Date().toISOString())
     const provider = deps.provider
@@ -219,6 +230,14 @@ async function writeStaging(
   media: readonly MediaRef[],
   signal: AbortSignal,
 ): Promise<void> {
+  // A render that returns after the deadline must not create files: runJob's cleanup has
+  // already run by then, so a late writer removes whatever it wrote itself.
+  const checkDeadline = async (): Promise<void> => {
+    if (!signal.aborted) return
+    await fsp.rm(staging, { recursive: true, force: true })
+    throw new JobTimeout()
+  }
+  if (signal.aborted) throw new JobTimeout()
   const own = new Set(
     listProjectAssets(job.projectId)
       .filter((a) => a.kind === 'image')
@@ -227,7 +246,7 @@ async function writeStaging(
   await fsp.rm(staging, { recursive: true, force: true })
   await fsp.mkdir(path.join(staging, 'media'), { recursive: true })
   for (const ref of media) {
-    if (signal.aborted) throw new JobTimeout()
+    await checkDeadline()
     if (!own.has(ref.assetId)) throw new StageFailure(IMAGE_MISSING)
     try {
       await fsp.copyFile(
@@ -238,8 +257,9 @@ async function writeStaging(
       throw new StageFailure(IMAGE_MISSING, { cause: err })
     }
   }
-  if (signal.aborted) throw new JobTimeout()
+  await checkDeadline()
   await fsp.writeFile(path.join(staging, 'index.html'), html, 'utf8')
+  await checkDeadline()
 }
 
 type VersionContent = Pick<VersionRow, 'factRevision' | 'designSpec' | 'copy' | 'copyRefs' | 'guard'>

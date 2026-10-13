@@ -12,7 +12,9 @@ import { GET as getPreview } from '@/app/api/versions/[id]/preview/route'
 import * as fx from '@/lib/assets/__fixtures__/generate'
 import { resetAuthFailures } from '@/lib/auth'
 import type { FactSheet, Usage } from '@/lib/core/schemas'
-import { runMigrations } from '@/lib/db/client'
+import { eq } from 'drizzle-orm'
+import { getDb, runMigrations } from '@/lib/db/client'
+import { jobs } from '@/lib/db/schema'
 import {
   beginJobRun,
   createJobIfIdle,
@@ -366,6 +368,24 @@ describe('timeouts', () => {
   })
 })
 
+describe('late render after a timeout', () => {
+  it('leaves no staging or version directory behind', async () => {
+    const { projectId, sheet } = await prepareProject()
+    const lateRender: typeof renderPage = async (input) => {
+      await new Promise((done) => setTimeout(done, 300))
+      return renderPage(input)
+    }
+    const jobId = await runWith(
+      projectId,
+      { provider: mock, render: lateRender, stageTimeoutMs: 150 },
+      sheet.revision,
+    )
+    await new Promise((done) => setTimeout(done, 500)) // let the late render finish
+    expect(await jobView(jobId)).toMatchObject({ status: 'timed_out', stage: 'rendering' })
+    expect(pagesEntries(projectId)).toEqual([])
+  })
+})
+
 describe('restart recovery', () => {
   it('times out a designing job that started 10 minutes ago and removes its staging dir', async () => {
     const { projectId, sheet } = await prepareProject()
@@ -395,6 +415,42 @@ describe('restart recovery', () => {
     expect(await versionsOf(projectId)).toHaveLength(1)
     // Stage times of a rerun are not ETA samples.
     expect(findJob(job.id)!.stageStartedAt).toBeNull()
+  })
+
+  it('requeues a queued job created long ago instead of timing it out', async () => {
+    const { projectId, sheet } = await prepareProject()
+    const job = createJobIfIdle(projectId, { factRevision: sheet.revision, seed: 1 })!
+    const tenMinutesAgo = new Date(Date.now() - 10 * 60_000).toISOString()
+    getDb()
+      .update(jobs)
+      .set({ startedAt: tenMinutesAgo, createdAt: tenMinutesAgo })
+      .where(eq(jobs.id, job.id))
+      .run()
+
+    const runner = new JobRunner({ provider: mock })
+    await runner.recover()
+    await runner.idle()
+    expect((await jobView(job.id)).status).toBe('succeeded')
+  })
+
+  it('gives a resumed job a fresh total deadline for its rerun', async () => {
+    const { projectId, sheet } = await prepareProject()
+    const job = createJobIfIdle(projectId, { factRevision: sheet.revision, seed: 1 })!
+    expect(transitionJob(job.id, 'queued', 'designing')).toBe(true)
+    // 300 ms of a 600 ms budget already spent before the restart.
+    beginJobRun(job.id, new Date(Date.now() - 300).toISOString())
+    const slow: LLMProvider = {
+      name: 'mock-slow',
+      async generateJSON<T>(r: GenerateJSONRequest<T>): Promise<{ data: T; usage: Usage }> {
+        await new Promise((done) => setTimeout(done, 80))
+        return mock.generateJSON(r)
+      },
+    }
+
+    const runner = new JobRunner({ provider: slow, totalTimeoutMs: 600 })
+    await runner.recover()
+    await runner.idle()
+    expect((await jobView(job.id)).status).toBe('succeeded')
   })
 })
 

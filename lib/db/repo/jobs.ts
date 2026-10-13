@@ -132,6 +132,20 @@ export function beginJobRun(id: string, at: string, db: Db = getDb()): void {
     .run()
 }
 
+/**
+ * Module 08: a job interrupted by a restart reruns from the start, so its total-timeout clock
+ * restarts too. Conditional on the status it was found in; false if another writer moved it.
+ */
+export function restartJobClock(id: string, status: JobStatus, at: string, db: Db = getDb()): boolean {
+  return (
+    db
+      .update(jobs)
+      .set({ startedAt: at })
+      .where(and(eq(jobs.id, id), eq(jobs.status, status)))
+      .run().changes === 1
+  )
+}
+
 /** Appends `stage`'s start time while the job is still in that stage and still timed. */
 export function recordStageStart(id: string, stage: JobStatus, at: string, db: Db = getDb()): void {
   db.transaction((tx) => {

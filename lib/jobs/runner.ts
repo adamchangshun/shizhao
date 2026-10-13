@@ -42,14 +42,15 @@ export class JobRunner {
   }
 
   /**
-   * Startup scan of non-terminal jobs: those whose `startedAt` is older than the total timeout
-   * become `timed_out`; the rest are queued again (oldest first).
+   * Startup scan of non-terminal jobs: running ones whose `startedAt` is older than the total
+   * timeout become `timed_out`; the rest are queued again (oldest first). A `queued` job never
+   * started, so its clock has not begun and it is always queued again.
    */
   async recover(now: number = Date.now()): Promise<void> {
     const totalMs = this.deps.totalTimeoutMs ?? getEnv().JOB_TOTAL_TIMEOUT_MS
     const jobs = listNonTerminalJobs().sort((a, b) => a.createdAt.localeCompare(b.createdAt))
     for (const job of jobs) {
-      if (now - Date.parse(job.startedAt) > totalMs) {
+      if (job.status !== 'queued' && now - Date.parse(job.startedAt) > totalMs) {
         transitionJob(job.id, job.status, 'timed_out', { stage: job.status, error: TIMEOUT_MESSAGE })
         await removeStaging(job.projectId, job.id).catch((err: unknown) => {
           console.error(`[jobs] could not remove staging dir of job ${job.id}`, err)
