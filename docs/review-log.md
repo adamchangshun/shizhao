@@ -232,3 +232,19 @@
 
 审查结论：无 CRITICAL / HIGH，合并到 main。实测 typecheck / lint / test 通过（669 通过、1 跳过）。
 
+
+## 09 发布与二维码
+
+执行方 Codex（GPT 模式），审查方 Claude（只读）。依据共享契约 R2：发布只在数据库事务中切换 `publishedVersionId`，不复制文件；长图兜底（R9）本次裁掉，未实现。
+
+### 第 1 轮（1a6a6b7）：0 CRITICAL，0 HIGH，0 MEDIUM，3 LOW
+
+清单 8 项全部通过：单事务条件更新，不移动文件（提交前失败、COMMIT 失败、条件更新影响 0 行时公开页仍为旧版本，均有测试）；按 `versions.projectId` 校验版本归属；`factsConfirmed` 为 `z.literal(true)`（缺省、`"true"`、`1`、`null` 均返回 400）；slug 不被修改，重新发布后二维码解码结果不变；二维码内容 `PUBLIC_BASE_URL/p/<slug>/?src=qr`，纠错级别 M，size 只接受 256～2048；`getPublishedHtmlPath` 四种状态正确；导出 `publishVersionTx`；三个路由都调用 `requireAdmin`。
+
+| 级别 | 问题 | 处理 |
+|---|---|---|
+| LOW | 下线从未发布的项目会写入 `unpublishedAt`，状态从 `never_published` 变为 `unpublished` | 记录：发布时会清空，界面不对未发布项目提供下线按钮 |
+| LOW | `lib/env.ts` 通用 `bool` 默认值改为 `false`（`LONG_IMAGE_ENABLED` 默认关闭），与契约 R9 写的「默认 true」不一致 | 记录：长图已裁掉，行为无影响；契约文字待项目负责人修订时同步 |
+| LOW | 额外开发依赖 `@types/qrcode` | 接受：只提供类型定义 |
+
+审查结论：无 CRITICAL / HIGH，合并到 main。实测 typecheck / lint / test 通过（706 通过、1 跳过；发布模块 37 个用例）。
