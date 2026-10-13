@@ -39,6 +39,15 @@ export function PublishStep({
   const live = project.state === 'live'
   const isLiveVersion = live && target?.id === project.publishedVersionId
   const sheet = facts.data?.factSheet
+  // The recap shows the latest facts, so only a version built from exactly those may be published.
+  const stale =
+    sheet && target
+      ? !facts.data?.confirmed
+        ? '商品信息有改动还没有确认。请先回到「核对信息」确认，再生成新的一版。'
+        : target.factRevision !== sheet.revision
+          ? '这一版是按之前的商品信息生成的，和下面列出的信息不一致。请回到预览选最新的一版，或换一个风格重新生成。'
+          : null
+      : null
   const shownLinks: PublishLinks | null =
     links ??
     (live
@@ -120,7 +129,12 @@ export function PublishStep({
           </dl>
         )}
 
-        {!isLiveVersion && (
+        {!isLiveVersion && stale && (
+          <p role="alert" className={s.notice}>
+            {stale}
+          </p>
+        )}
+        {!isLiveVersion && !stale && (
           <>
             <div className={w.confirm}>
               <input

@@ -93,6 +93,9 @@ export function PreviewStep(props: PreviewStepProps) {
             title={`宣传页预览：第 ${list.length - index} 版`}
             className={w.frame}
             referrerPolicy="no-referrer"
+            // Same origin so the authenticated preview images load; no scripts, so the page
+            // inside can never reach the console.
+            sandbox="allow-same-origin"
           />
         </div>
       </div>

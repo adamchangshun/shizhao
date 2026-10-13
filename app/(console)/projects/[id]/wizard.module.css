@@ -294,7 +294,7 @@ li[data-current='true'] .stepNum {
   border-radius: 8px;
   padding: 0.5rem 0.6rem 0.55rem;
   margin: -0.5rem -0.6rem -0.55rem;
-  box-shadow: inset 3px 0 0 var(--gold);
+  outline: 1px dashed var(--gold);
 }
 .flagNote {
   font-size: 0.8rem;
@@ -408,6 +408,9 @@ li[data-current='true'] .stepNum {
   gap: 0.25rem;
   align-content: start;
 }
+.inlineRetry {
+  margin-left: 0.75rem;
+}
 .inlineBadge {
   margin-left: 0.5rem;
 }
@@ -437,8 +440,7 @@ li[data-current='true'] .stepNum {
   padding: 1rem 1.1rem;
   border-radius: var(--radius);
   background: var(--surface);
-  border: 1px solid var(--line);
-  border-left: 4px solid var(--red);
+  border: 1px solid var(--red);
 }
 .guard p {
   margin: 0;

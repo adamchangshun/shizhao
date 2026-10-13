@@ -77,6 +77,8 @@ export function getJobView(jobId: string, now: number = Date.now()): JobView {
 export interface VersionSummary {
   id: string
   createdAt: string
+  /** The fact revision the page was built from (the merchant must re-check older ones). */
+  factRevision: number
   templateId: string
   moodKeywords: string[]
   /** Background and main colour, for the merchant UI's version thumbnails. */
@@ -98,6 +100,7 @@ export function listProjectVersions(projectId: string): VersionSummary[] {
   return listVersionsWithCost(projectId).map(({ version, job, costCny }) => ({
     id: version.id,
     createdAt: version.createdAt,
+    factRevision: version.factRevision,
     templateId: version.designSpec.templateId,
     moodKeywords: version.designSpec.moodKeywords,
     palette: { bg: version.designSpec.palette.bg, primary: version.designSpec.palette.primary },

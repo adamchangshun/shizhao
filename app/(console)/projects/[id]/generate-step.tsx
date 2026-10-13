@@ -81,7 +81,7 @@ function JobProgress({
       <StepHeading>{failed ? '这次没有生成成功' : '正在生成宣传页'}</StepHeading>
       {error && (
         <p role="alert" className={s.error}>
-          {messageOf(error)}
+          {messageOf(error)}（会自动重新查询）
         </p>
       )}
       {job && !failed && (
@@ -158,7 +158,7 @@ function JobProgress({
 }
 
 function ProjectWait({ projectId, onFinished }: GenerateStepProps) {
-  const { data } = useSWR<ProjectDetail>(`/api/projects/${encodeURIComponent(projectId)}`, {
+  const { data, error } = useSWR<ProjectDetail>(`/api/projects/${encodeURIComponent(projectId)}`, {
     refreshInterval: (latest) => (latest && latest.state !== 'generating' ? 0 : POLL_MS),
   })
   const reported = useRef(false)
@@ -176,6 +176,11 @@ function ProjectWait({ projectId, onFinished }: GenerateStepProps) {
           ? '生成还在进行，完成后会自动进入预览。'
           : '正在查询生成进度…'}
       </p>
+      {error && (
+        <p role="alert" className={s.error}>
+          {messageOf(error)}（会自动重新查询）
+        </p>
+      )}
     </div>
   )
 }

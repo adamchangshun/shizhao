@@ -77,14 +77,9 @@ async function waitForPreview(page: Page) {
   })
 }
 
-function projectIdOf(page: Page): string {
-  const id = /\/projects\/([^/?]+)/.exec(page.url())?.[1]
-  if (!id) throw new Error(`no project id in ${page.url()}`)
-  return id
-}
-
 test('upload → check → generate → restyle → publish, with corrected price', async ({
   page,
+  browser,
 }, info) => {
   await login(page)
   await shot(page, info, '0-list')
@@ -150,23 +145,13 @@ test('upload → check → generate → restyle → publish, with corrected pric
   await noHorizontalScroll(page)
   await shot(page, info, '5-publish')
 
-  // The published page shows the corrected price. Until the public page (module 10) is merged,
-  // /p/<slug>/ is not served, so the check falls back to the published version's HTML.
-  const pub = await page.request.get(url)
-  let html: string
-  if (pub.status() === 404) {
-    info.annotations.push({ type: 'pending', description: '公开页 /p/<slug>/ 待 10 号模块合并' })
-    const versions = (await (
-      await page.request.get(`/api/projects/${projectIdOf(page)}/versions`)
-    ).json()) as { versions: Array<{ id: string }> }
-    html = await (
-      await page.request.get(`/api/versions/${versions.versions[0]!.id}/preview`)
-    ).text()
-  } else {
-    html = await pub.text()
-  }
-  expect(html).toContain('18')
-  expect(html).not.toMatch(/¥\s*20(?!\d)|20\s*元/)
+  // A customer (no admin session) opens the link and sees the corrected price.
+  const customer = await browser.newContext()
+  const pub = await customer.newPage()
+  await pub.goto(url)
+  await expect(pub.getByText(/¥\s*18/).first()).toBeVisible()
+  expect(await pub.locator('body').innerText()).not.toMatch(/¥\s*20(?!\d)/)
+  await customer.close()
 })
 
 test('a failed generation shows the reason in Chinese and succeeds on retry', async ({ page }) => {

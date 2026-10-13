@@ -27,6 +27,13 @@ export default defineConfig({
       },
     },
     {
+      // The narrowest phone the console must support (spec: 360px wide).
+      name: 'merchant-360',
+      testMatch: /merchant\.spec\.ts$/,
+      grep: /corrected price/,
+      use: { ...devices['Pixel 7'], viewport: { width: 360, height: 780 } },
+    },
+    {
       name: 'merchant-desktop',
       testMatch: /merchant\.spec\.ts$/,
       use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 800 } },

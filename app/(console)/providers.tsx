@@ -10,8 +10,10 @@ export function ConsoleProviders({ children }: { children: ReactNode }) {
       value={{
         fetcher,
         revalidateOnFocus: false,
-        // Client errors (bad id, gone, not signed in) will not fix themselves by retrying.
-        shouldRetryOnError: (err) => !(err instanceof ClientError) || err.status >= 500,
+        // Client errors (bad id, gone, not signed in) will not fix themselves by retrying;
+        // network failures (status 0) and server errors may.
+        shouldRetryOnError: (err) =>
+          !(err instanceof ClientError) || err.status === 0 || err.status >= 500,
       }}
     >
       {children}

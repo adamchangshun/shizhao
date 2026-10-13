@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { usePathname, useRouter, useSearchParams } from 'next/navigation'
+import { usePathname, useSearchParams } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import useSWR from 'swr'
 import { ClientError, messageOf } from '../../_lib/api'
@@ -26,7 +26,6 @@ function isStep(v: string | null): v is Step {
 
 /** URL query state: the current tab, step, job and selected version survive a reload. */
 function useQuery() {
-  const router = useRouter()
   const pathname = usePathname()
   const params = useSearchParams()
   const set = useCallback(
@@ -37,9 +36,11 @@ function useQuery() {
         else next.set(k, v)
       }
       const qs = next.toString()
-      router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false })
+      // Native history update: Next keeps useSearchParams in sync without a server round trip
+      // (a router.replace would re-render the server page and briefly drop the document title).
+      window.history.replaceState(null, '', qs ? `${pathname}?${qs}` : pathname)
     },
-    [params, pathname, router],
+    [params, pathname],
   )
   return { params, set }
 }
@@ -162,6 +163,21 @@ export function Workspace({ projectId, publicBase }: { projectId: string; public
         </nav>
       </div>
 
+      {(assets.error || versions.error) && (
+        <p role="alert" className={s.error}>
+          {messageOf(assets.error ?? versions.error)}
+          <button
+            type="button"
+            className={`${s.btn} ${s.btnSmall} ${w.inlineRetry}`}
+            onClick={() => {
+              void assets.mutate()
+              void versions.mutate()
+            }}
+          >
+            重新加载
+          </button>
+        </p>
+      )}
       {tab === 'corrections' && <CorrectionsTab />}
       {tab === 'settings' && (
         <SettingsTab

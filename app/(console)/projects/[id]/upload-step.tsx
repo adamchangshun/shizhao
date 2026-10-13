@@ -87,13 +87,14 @@ export function UploadStep(props: UploadStepProps) {
   async function saveText(): Promise<boolean> {
     const next = currentText.trim()
     if (next === savedText.trim()) return false
-    for (const a of list.filter((x) => x.kind === 'text')) {
-      await api(`/api/assets/${encodeURIComponent(a.id)}`, { method: 'DELETE' })
-    }
+    // Store the new notes first: if that fails, the old notes are still there.
     if (next) {
       const form = new FormData()
       form.append('text', next)
       await uploadWithProgress(`${base}/assets`, form, () => undefined).promise
+    }
+    for (const a of list.filter((x) => x.kind === 'text')) {
+      await api(`/api/assets/${encodeURIComponent(a.id)}`, { method: 'DELETE' })
     }
     await assets.mutate()
     return true

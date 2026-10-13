@@ -25,7 +25,8 @@ export function StatsView({ projectId }: { projectId: string }) {
   const project = useSWR<ProjectDetail>(base)
   const stats = useSWR<StatsResponse>(`${base}/stats?days=7`)
   // Until the statistics service is available the route answers 404: show「—」, not an error.
-  const unavailable = stats.error instanceof ClientError && stats.error.status === 404
+  const unavailable =
+    project.data !== undefined && stats.error instanceof ClientError && stats.error.status === 404
   const data = stats.data
   const num = (n: number | undefined) => (data && n !== undefined ? String(n) : '—')
 
@@ -42,10 +43,19 @@ export function StatsView({ projectId }: { projectId: string }) {
           </Link>
           <h1 className={s.h1}>{project.data ? `${project.data.title} · 访问统计` : '访问统计'}</h1>
         </div>
-        <p className={s.muted}>最近 7 天（北京时间）。数据为匿名互动计数，用于了解趋势。</p>
+        <p className={s.muted}>
+          最近 7 天（北京时间）。匿名互动计数，可能包含重复或刷量，仅供观察趋势。
+        </p>
       </div>
 
-      {stats.error && !unavailable && (
+      {project.error && (
+        <p role="alert" className={s.error}>
+          {project.error instanceof ClientError && project.error.status === 404
+            ? '这个宣传页不存在或已被删除'
+            : messageOf(project.error)}
+        </p>
+      )}
+      {stats.error && !unavailable && !project.error && (
         <p role="alert" className={s.error}>
           {messageOf(stats.error)}
         </p>
