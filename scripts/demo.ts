@@ -215,7 +215,9 @@ async function run(token: string): Promise<void> {
   if (status !== 200)
     console.info(`          （当前返回 HTTP ${status}，可先用下面的管理预览或本地文件查看）`)
   console.info(`管理预览：${apiBase}/api/versions/${version.id}/preview （需要管理口令）`)
-  if (fs.existsSync(local)) console.info(`本地文件：${path.resolve(local)}`)
+  // Relative to the repo root, so the same path works on the host and in the container.
+  if (fs.existsSync(local))
+    console.info(`本地文件：${path.relative(process.cwd(), path.resolve(local))}`)
   console.info(`管理口令：${token}\n`)
   console.info(await QRCode.toString(links.url, { type: 'terminal', small: true }))
   if (/\/\/(localhost|127\.)/.test(links.url))
