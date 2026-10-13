@@ -70,10 +70,17 @@ async function api<T>(token: string, method: string, route: string, body?: unkno
   }
   const data = (await res.json().catch(() => null)) as
     (T & { error?: { code: string; message: string } }) | null
-  if (!res.ok)
+  if (!res.ok) {
+    // A 401 from a server we did not start usually means another instance (often the Docker
+    // container) owns the port with a different token.
+    const hint =
+      res.status === 401 && !server
+        ? `\n      ${apiBase} 上运行的服务使用了另一个管理口令（例如 Docker 容器）。请设置相同的 ADMIN_TOKEN，或先停止该服务`
+        : ''
     throw new DemoError(
-      `${method} ${route} 失败（${res.status}）：${data?.error?.message ?? '无法解析响应'}${data?.error?.code ? ` [${data.error.code}]` : ''}`,
+      `${method} ${route} 失败（${res.status}）：${data?.error?.message ?? '无法解析响应'}${data?.error?.code ? ` [${data.error.code}]` : ''}${hint}`,
     )
+  }
   return data as T
 }
 
