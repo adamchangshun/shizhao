@@ -279,3 +279,22 @@
 ### 第 3 轮（ea27797）：0 问题，结论 APPROVE
 
 审查结论：无 CRITICAL / HIGH，合并到 main。实测 typecheck / lint / test 通过（706 通过、1 跳过），mock 端到端 41 个部分跑通，续跑只重跑被删除或输入变化的部分。
+
+## 16 文案检查页与 API（Codex 实现，Claude 审查）
+
+### 第 1 轮（Claude 只读审查，报告：提示词目录 `审查报告/16-第1轮.md`）：0 CRITICAL，0 HIGH，2 MEDIUM，4 LOW
+
+在独立检出目录（`e74693f`）实际运行 typecheck / lint / test：693 通过、1 跳过。另用 20 处 emoji、扩展 B 区汉字和全角数字的命中做探针，`slice(start, end)` 全部等于 `evidence`。8 项检查清单（鉴权分层、Key 常量时间比较与泄露面、80 句、并发 2、排队 10 秒、总超时 30 秒、原子扣减每日配额、输入不落库、XSS、代理对位置、改动范围）全部通过。
+
+`next.config.ts`（`extensionAlias`）和 `lib/render/index.tsx`（`createRequire` 加载 `react-dom/server`）两处跨模块改动已核实：它们修复的是 07、08 号合并后 main 上已有的 `next build` 失败（`react-dom/server` 被路由引入，以及 fact-guard 源码的 `.js` 后缀无法解析）。分支上 `next build` 通过。
+
+| 级别 | 问题 | 处理 |
+|---|---|---|
+| MEDIUM | `GUARD_TRUST_PROXY` 默认关闭时，所有匿名访客共用每分钟 20 次的额度；17 号使用的 Caddy 默认不设置 `X-Real-IP`；限流表满时会拒绝新 IP，IPv6 没有按 /64 分桶 | 暂不修：只影响免费规则层的可用性，不消耗模型额度。17 号部署时为 Caddy 加上 `header_up X-Real-IP {remote_host}`，并设置 `GUARD_TRUST_PROXY=true` |
+| MEDIUM | `createRequire` 加载的 `react-dom/server`（19.3.0）与 Next 内置的 React（19.2 canary）不是同一份，没有在 `next start` 下验证生成和渲染流程 | 暂不修：目前模板没有用到 hooks 或 context。17 号真机验收前补一次 `next start` 下用 mock 生成版本的冒烟测试 |
+| LOW | 规格要求「零糖配方，全城销量第一」命中两处，实际命中三处（多了「销量」），测试用 `arrayContaining` 放宽了断言 | 交由项目负责人决定以规格还是规则为准 |
+| LOW | `safeError` 原样传出所有 `ZodError`，模型输出校验失败会被报成 400 | 暂不修：正式 provider 会把这类失败转成 `ProviderError`，实际很难触发 |
+| LOW | 02 号 provider 的失败日志摘录可能带出上游回显的原文片段 | 暂不修：属于 02 号已有代码，最多 200 字符，已脱敏密钥 |
+| LOW | `usage_records.projectId` 改为可空、新增 `GUARD_TRUST_PROXY`，都没有写进 CONTRACT | 交由项目负责人决定是否在 CONTRACT 修订节中补充 |
+
+审查结论：没有 CRITICAL 或 HIGH，第 1 轮即合并到 main。
