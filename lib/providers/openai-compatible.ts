@@ -198,10 +198,7 @@ export class OpenAICompatibleProvider implements LLMProvider {
       }
       const model = hasImages ? this.options.visionModel : this.options.textModel
       const messages: Message[] = [
-        {
-          role: 'system',
-          content: `${req.system}\n${capabilities.jsonMode ? '只输出 JSON。' : '只输出一个 JSON 对象。'}`,
-        },
+        { role: 'system', content: `${req.system}\n只输出 JSON。` },
         { role: 'user', content: hasImages ? parts : req.prompt },
       ]
       let format = capabilities.jsonMode,
@@ -311,7 +308,9 @@ export class OpenAICompatibleProvider implements LLMProvider {
                 .slice(0, 12)
                 .map((i) => `${i.path.join('.') || '(root)'}: ${i.code}`)
                 .join('; ')}`
-            : '请只输出符合要求的 JSON 对象，不要包含解释或 Markdown。'
+            : capabilities.jsonMode
+              ? '请只输出符合要求的 JSON 对象，不要包含解释或 Markdown。'
+              : '请只输出符合要求的 JSON，不要包含解释或 Markdown。'
         messages.push({ role: 'assistant', content: text }, { role: 'user', content: correction })
       }
     } catch (error) {

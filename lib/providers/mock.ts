@@ -2,7 +2,6 @@ import { createCallControl } from './control'
 import { ProviderError } from './errors'
 import type { GenerateJSONRequest, LLMProvider } from './types'
 import extract from './mock-fixtures/extract.json'
-import { echoExtract } from './mock-extract'
 import designs from './mock-fixtures/design.json'
 import copy from './mock-fixtures/copy.json'
 import judge from './mock-fixtures/guard-judge.json'
@@ -26,7 +25,7 @@ export class MockProvider implements LLMProvider {
       const seed = req.seed ?? 0
       if (!Number.isSafeInteger(seed) || seed < 0) throw new ProviderError('bad_response')
       const fixtures: Record<string, unknown> = {
-        extract: req.stage === 'extract' ? echoExtract(req.prompt) : extract,
+        extract,
         copy,
         'guard-judge': judge,
         'guard-rewrite': rewrite,

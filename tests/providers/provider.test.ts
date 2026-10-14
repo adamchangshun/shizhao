@@ -12,6 +12,7 @@ import { insertProject } from '@/lib/db/repo/projects'
 import { createJobIfIdle } from '@/lib/db/repo/jobs'
 import { usageRecords } from '@/lib/db/schema'
 import { parseEnv, resetEnvCache } from '@/lib/env'
+import { JUDGE_SYSTEM, REWRITE_SYSTEM } from '@/lib/copy/prompt'
 import {
   getProvider,
   MockProvider,
@@ -149,11 +150,55 @@ describe('OpenAI compatible provider HTTP boundary', () => {
       for (const body of server.bodies) {
         if (profile === 'ollama') {
           expect(body).not.toHaveProperty('response_format')
-          expect(body.messages[0]!.content).toMatch(/只输出一个 JSON 对象。$/)
+          expect(body.messages[0]!.content).toMatch(/只输出 JSON。$/)
         } else expect(body.response_format).toEqual({ type: 'json_object' })
       }
     },
   )
+  it('allows the Ollama guard-judge array schema without an object-only system suffix', async () => {
+    const server = await serve((_, res) => reply(res, '[{"unsupported":false}]'))
+    const result = await provider(server.baseUrl, 'ollama').generateJSON({
+      ...request,
+      stage: 'guard-judge',
+      system: JUDGE_SYSTEM,
+      prompt: JSON.stringify({ sentences: ['温暖日常'], facts: [] }),
+      schema: z.array(z.object({ unsupported: z.boolean() })),
+      temperature: 0,
+    })
+    expect(result.data).toEqual([{ unsupported: false }])
+    expect(server.bodies).toHaveLength(1)
+    expect(server.bodies[0]).not.toHaveProperty('response_format')
+    expect(server.bodies[0]!.messages[0]!.content).toBe(`${JUDGE_SYSTEM}\n只输出 JSON。`)
+  })
+  it('keeps Ollama guard-rewrite array instructions through one malformed-JSON repair', async () => {
+    const server = await serve((_, res, __, count) =>
+      reply(res, count === 1 ? '请稍候' : '["温暖日常"]'),
+    )
+    const result = await provider(server.baseUrl, 'ollama').generateJSON({
+      ...request,
+      stage: 'guard-rewrite',
+      system: REWRITE_SYSTEM,
+      prompt: JSON.stringify({ items: ['全城第一'], problems: ['ad_law_absolute'], facts: [] }),
+      schema: z.array(z.string()),
+      temperature: 0,
+    })
+    expect(result.data).toEqual(['温暖日常'])
+    expect(server.bodies).toHaveLength(2)
+    for (const body of server.bodies) {
+      expect(body).not.toHaveProperty('response_format')
+      expect(body.messages[0]!.content).toBe(`${REWRITE_SYSTEM}\n只输出 JSON。`)
+    }
+    expect(server.bodies[1]!.messages[3]!.content).not.toContain('JSON 对象')
+    expect(result.usage.inputTokens).toBe(2400)
+  })
+  it('extracts a bare JSON object after Chinese prose with Ollama without a repair', async () => {
+    const server = await serve((_, res) => reply(res, '好的，我先思考一下。\n{"answer":"x"}'))
+    const result = await provider(server.baseUrl, 'ollama').generateJSON(request)
+    expect(result.data).toEqual({ answer: 'x' })
+    expect(server.bodies).toHaveLength(1)
+    expect(server.bodies[0]).not.toHaveProperty('response_format')
+    expect(result.usage.inputTokens).toBe(1200)
+  })
   it('does not retry an Ollama response_format rejection when format was never sent', async () => {
     const server = await serve((_, res) => {
       res.statusCode = 400
