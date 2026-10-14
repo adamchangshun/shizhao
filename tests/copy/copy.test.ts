@@ -5,6 +5,7 @@ import { getDb, runMigrations } from '@/lib/db/client'
 import { insertProject } from '@/lib/db/repo/projects'
 import { usageRecords } from '@/lib/db/schema'
 import * as copyApi from '@/lib/copy'
+import { checkSentence } from '@/packages/fact-guard/src/index'
 import {
   MockProvider,
   ProviderError,
@@ -73,6 +74,49 @@ const usageFor = (projectId: string) =>
 const sentencesIn = (input: Record<string, unknown>) => input.sentences as string[]
 
 describe('copy generation and guard integration', () => {
+  it('passes shop hours and address with their source paths into the real guard', () => {
+    const sheet = facts()
+    sheet.shop.hours = '每天7:30-19:00'
+    sheet.shop.address = '杭州市西湖区文三路100号'
+    const corpus = copyApi.buildFactCorpus(sheet)
+    expect(corpus.facts).toContain(sheet.shop.hours)
+    expect(corpus.facts).toContain(sheet.shop.address)
+    expect(corpus.paths?.[corpus.facts.indexOf(sheet.shop.hours)]).toBe('shop.hours')
+    expect(corpus.paths?.[corpus.facts.indexOf(sheet.shop.address)]).toBe('shop.address')
+    expect(checkSentence('每天 7:30 — 19:00', corpus)).toEqual([])
+    expect(checkSentence('每天７点３０分至１９点', corpus)).toEqual([])
+    expect(checkSentence('杭州 · 西湖区文三路 100 号', corpus)).toEqual([])
+    expect(checkSentence('每天7:00-19:30', corpus)).toContainEqual(
+      expect.objectContaining({ reason: 'unsupported_number' }),
+    )
+  })
+
+  it.each(['name', 'description', 'extraClaims'] as const)(
+    'grounds process and positioning words from FactSheet %s',
+    (field) => {
+      const sheet = facts()
+      if (field === 'extraClaims') sheet.extraClaims = ['手作招牌爆款黄油可颂']
+      else sheet.items[0]![field] = '手作招牌爆款黄油可颂'
+      const corpus = copyApi.buildFactCorpus(sheet)
+      expect(checkSentence('手作招牌爆款，香气扑鼻。', corpus)).toEqual([])
+      expect(checkSentence('秘制热销', corpus).map((hit) => hit.ruleId)).toEqual([
+        'process',
+        'positioning',
+      ])
+    },
+  )
+
+  it('keeps final literal copy references for shop facts', () => {
+    const sheet = facts()
+    sheet.shop.hours = '每天7:30-19:00'
+    sheet.shop.address = '西湖区文三路100号'
+    const copy = { ...basicCopy, subhead: sheet.shop.hours, closing: sheet.shop.address }
+    expect(copyApi.computeCopyRefs(copy, sheet)).toMatchObject({
+      subhead: [{ sentence: sheet.shop.hours, refs: ['shop.hours'] }],
+      closing: [{ sentence: sheet.shop.address, refs: ['shop.address'] }],
+    })
+  })
+
   it('does not reintroduce absolute or inducement claims through the shop fallback', () => {
     const sheet = facts('全城第一蛋糕店')
     const result = copyApi.guardWithRulesOnly(

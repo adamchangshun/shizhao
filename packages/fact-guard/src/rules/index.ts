@@ -74,7 +74,7 @@ export const defaultRules: RuleSet = {
       id: 'ranking',
       reason: 'unsupported_claim',
       evidenceScope: 'fact-span',
-      terms: ['销量', '热卖', '排名', '爆款', '回头客', '回购率', '好评率', '领先'],
+      terms: ['销量', '热卖', '排名', '回头客', '回购率', '好评率', '领先'],
       patterns: [
         '\\btop\\s*[0-9]+',
         '\\bno\\.\\s*1\\b',
@@ -82,6 +82,18 @@ export const defaultRules: RuleSet = {
         '人气[\\p{Script=Han}]{0,8}(?:居高|攀升|领先)',
         '(?:全城|全市|全国)[\\p{Script=Han}]{0,6}(?:排队|抢购)',
       ],
+      whitelist: [],
+    },
+    {
+      id: 'process',
+      reason: 'unsupported_claim',
+      terms: ['手作', '手工', '现烤', '现做', '现磨', '手切', '慢烤', '低温', '古法', '秘制'],
+      whitelist: [],
+    },
+    {
+      id: 'positioning',
+      reason: 'unsupported_claim',
+      terms: ['招牌', '热销', '人气', '爆款', '必点', '限量', '限定', '本周限定', '新鲜出炉'],
       whitelist: [],
     },
     {
