@@ -12,3 +12,5 @@ next-env.d.ts
 .omc/
 CODEX_REVIEW_SUMMARY.md
 eval/runs/
+docs/assets/walkthrough/
+docs/assets/templates/
