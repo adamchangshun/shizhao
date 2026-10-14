@@ -1,6 +1,7 @@
 // Parts every template shares: shop details, action buttons, correction slot, footer.
 import type { ReactElement } from 'react'
-import type { Shop } from '@/lib/core/schemas'
+import type { FactSheet, Shop } from '@/lib/core/schemas'
+import { correctionOptions } from '@/lib/corrections/options'
 import { telHref } from '../format'
 import { ShopText } from './facts'
 
@@ -11,12 +12,12 @@ export function ShopInfo({ shop }: { shop: Shop }): ReactElement | null {
     { label: '电话', field: 'phone' },
     { label: '微信', field: 'wechat' },
   ]
-  const present = rows.filter(row => shop[row.field])
+  const present = rows.filter((row) => shop[row.field])
   if (present.length === 0) return null
   return (
     <section className="shop-info" aria-label="店铺信息">
       <dl>
-        {present.map(row => (
+        {present.map((row) => (
           <div key={row.field}>
             <dt>{row.label}</dt>
             <ShopText shop={shop} field={row.field} as="dd" />
@@ -62,9 +63,45 @@ export function CopyToast(): ReactElement {
   )
 }
 
-/** Slot above the footer reserved for the customer correction entry (module 15). */
-export function CorrectionSlot(): ReactElement | null {
-  return null
+/**
+ * Customer correction entry above the footer (module 15). Expands in place via <details>; the
+ * inline script submits it. Options come from correctionOptions(), the same list the API checks.
+ * `api` is empty on previews, where submitting only shows the failure message.
+ */
+export function CorrectionSlot({ facts, api }: { facts: FactSheet; api: string }): ReactElement {
+  return (
+    <details className="fix">
+      <summary>信息有误？告诉老板</summary>
+      <form id="sz-fix" data-api={api} noValidate>
+        <label>
+          哪一项有误
+          <select name="field">
+            {correctionOptions(facts).map((o) => (
+              <option key={o.path} value={o.path} data-nv={o.noValue ? '1' : undefined}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label id="sz-fix-v">
+          正确的是
+          <input name="sv" maxLength={100} autoComplete="off" />
+        </label>
+        <label>
+          补充说明（选填）
+          <textarea name="note" maxLength={200} rows={2} />
+        </label>
+        <p className="fix-tip">请勿填写你的手机号等个人信息</p>
+        <button type="submit">提交</button>
+        <p id="sz-fix-msg" role="status" aria-live="polite" hidden>
+          <span>已转告老板，谢谢你</span>
+          <span>提交失败，请稍后再试</span>
+          <span>请勿填写个人信息</span>
+          <span>请填写正确的内容</span>
+        </p>
+      </form>
+    </details>
+  )
 }
 
 export function SiteFooter(): ReactElement {

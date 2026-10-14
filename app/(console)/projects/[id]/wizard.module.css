@@ -47,6 +47,20 @@
   border-bottom-color: var(--red);
 }
 
+.tabBadge {
+  display: inline-grid;
+  place-items: center;
+  min-width: 1.35rem;
+  height: 1.35rem;
+  padding: 0 0.35rem;
+  margin-left: 0.35rem;
+  border-radius: 999px;
+  background: var(--red);
+  color: var(--on-red);
+  font-size: 0.75rem;
+  font-variant-numeric: tabular-nums;
+}
+
 /* ---------- stepper ---------- */
 .stepper ol {
   list-style: none;
@@ -696,4 +710,50 @@ li[data-current='true'] .stepNum {
   .stepper ol {
     gap: 0.15rem;
   }
+}
+
+/* ---------- customer corrections ---------- */
+.corrections {
+  display: grid;
+  gap: 0.75rem;
+  max-width: 48rem;
+}
+.corrections > p {
+  margin: 0;
+}
+.corrList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.75rem;
+}
+.corrItem {
+  display: grid;
+  gap: 0.5rem;
+}
+.corrItem p {
+  margin: 0;
+}
+.corrLine {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.75rem;
+  align-items: baseline;
+}
+.corrField {
+  font-weight: 700;
+}
+.corrValues strong {
+  color: var(--red);
+}
+.corrNote {
+  color: var(--ink-2);
+}
+.corrHandled {
+  list-style: none;
+  margin: 0.5rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.4rem;
 }

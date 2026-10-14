@@ -97,6 +97,16 @@ background:var(--primary);color:var(--on-primary)}
 .act:focus-visible{outline:3px solid var(--text);outline-offset:2px}
 .toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:20;
 padding:8px 16px;border-radius:999px;background:#1a1a1a;color:#ffffff;font-size:15px}
+.fix{margin:24px 16px 0;font-size:15px}
+.fix summary{cursor:pointer;opacity:.75;text-decoration:underline;text-underline-offset:3px;min-height:44px;display:flex;align-items:center;justify-content:center;list-style:none}
+.fix summary::-webkit-details-marker{display:none}
+.fix form{display:grid;gap:10px;margin-top:8px;padding:16px;border-radius:14px;background:var(--surface)}
+.fix label{display:grid;gap:4px}
+.fix select,.fix input,.fix textarea{font:inherit;font-size:16px;color:var(--text);background:var(--bg);border:1px solid color-mix(in srgb,var(--text) 30%,transparent);border-radius:8px;padding:8px 10px;min-height:44px;max-width:100%;box-sizing:border-box;width:100%}
+.fix button{font:inherit;min-height:44px;border:0;border-radius:10px;background:var(--primary);color:var(--on-primary)}
+.fix-tip{margin:0;font-size:15px;opacity:.75}
+.fix [hidden]{display:none}
+#sz-fix-msg{margin:0}
 ${decorationCss(design)}
 ${motionCss(design)}`
 }

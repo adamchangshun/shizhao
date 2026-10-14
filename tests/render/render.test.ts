@@ -196,7 +196,7 @@ describe('renderPage shared behavior', () => {
     const script = parse(html).querySelector('script')?.textContent ?? ''
     expect(script).toBe(INLINE_SCRIPT)
     expect(createHash('sha256').update(script, 'utf8').digest('base64')).toBe(INLINE_SCRIPT_SHA256)
-    expect(Buffer.byteLength(script, 'utf8')).toBeLessThanOrEqual(2048)
+    expect(Buffer.byteLength(script, 'utf8')).toBeLessThanOrEqual(4096)
   })
 
   it('puts tracking configuration in body data attributes', async () => {
