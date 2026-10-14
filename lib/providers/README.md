@@ -1,6 +1,6 @@
 # M0 模型适配层
 
-业务模块从 `@/lib/providers` 导入 `getProvider`、`recordUsage`、`ProviderError`；从现有 `lib/core/schemas` 选择输出 schema。仅使用原生 fetch，没有厂商 SDK 或新增依赖。
+业务模块从 `@/lib/providers` 导入 `getProvider`、`recordUsage`、`ProviderError`；从现有 `lib/core/schemas` 选择输出 schema。HTTP 使用原生 fetch，图片转换复用已有 sharp，没有厂商 SDK 或新增依赖。
 
 ```ts
 const provider = getProvider()
@@ -34,10 +34,14 @@ recordUsage(db, result.usage, { projectId, jobId })
 | qwen     | OpenAI `image_url: {url: data URL}` | 支持，0–2147483647 | JSON mode，拒绝时降级一次      |        1 |
 | glm      | OpenAI `image_url: {url: data URL}` | 不发送             | JSON mode，拒绝时降级一次      |        1 |
 | deepseek | 本项目契约限定为文本                | 不发送             | JSON mode，拒绝时降级一次      |        1 |
-| ollama   | 需要本机模型支持视觉                | 支持               | JSON mode，拒绝时降级一次      |        3 |
+| ollama   | 需要本机模型支持视觉；WebP 转 PNG   | 支持               | 不发送，使用提示词约束         |        3 |
 | generic  | 未验证接口只允许文本                | 不发送             | 尝试 JSON mode，拒绝时降级一次 |        1 |
 
 `PROFILE_CAPABILITIES[profile].etaMultiplier` 供任务编排调整预计耗时；不会擅自延长调用超时。文本配置使用纯字符串 user content，有非空图片列表时使用视觉模型和多模态 content。
+
+`PROFILE_CAPABILITIES[profile].jsonMode` 控制 JSON 协议参数：ollama 为 `false`，其他 profile 为 `true`。关闭时所有请求（包括重试和修正）省略 `response_format`，system 末尾追加「只输出一个 JSON 对象」。JSON 提取、schema 校验及共享的一次修正额度保持不变，无新增环境变量。
+
+仅 Ollama 将 WebP 在内存中解码并转成 PNG，data URL 同步使用 `image/png`，不写文件。PNG/JPEG 及其他 profile 的图片保持原样。转换失败报 `bad_response`；转换前后检查同一个超时/取消信号，不在已取消时发送请求。
 
 以上是项目明确支持的协议配置，不代表所有模型版本均已实测。各 profile 的本地 HTTP 协议测试均已覆盖；使用者必须选择自己服务中支持相应能力的模型。模型名不内置在适配器中。
 
@@ -55,15 +59,17 @@ usage 缺失或无效时，按输入消息文本与输出字符数分别除以 1
 
 `new MockProvider({ delay: false })` 可在测试中关闭延迟；默认随机模拟 300–800ms，支持同样的超时和外部取消。不会请求网络或读传入图片。每次深拷贝 fixture 并校验调用方 schema，避免污染后续调用。
 
-| stage         | fixture / schema 格式                                                                                                                                                                                                                |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| extract       | `extract.json`：完整 FactSheet；业务模块可用 `FactSheet.pick({shop:true,items:true,extraClaims:true})`。id/projectId/revision 为演示占位，真实持久化应由抽取模块赋值。拿铁图片识别价格预置 20 元，供 04 号测试商家文本 18 元覆盖它。 |
-| design        | `design.json`：六组 DesignSpec，按 seed % 6 选择，并把本次 seed 写入返回值。                                                                                                                                                         |
-| copy          | `copy.json`：CopyDraft；subhead 故意包含「零糖配方，全城销量第一。」供 07 号规则守卫拦截。                                                                                                                                           |
-| guard-judge   | `guard-judge.json`：`Array<{unsupported:boolean; reason?:string}>`，预置单句安全判定。                                                                                                                                               |
-| guard-rewrite | `guard-rewrite.json`：`string[]`，预置单句安全氛围文案。                                                                                                                                                                             |
+| stage         | fixture / schema 格式                                                                                                                                                |
+| ------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| extract       | 优先从商家文字回显店名和商品价格；缺失字段回落到 `extract.json` 的午后小店、拿铁 20 元。完整 FactSheet；id/projectId/revision 为演示占位，真实持久化由抽取模块赋值。 |
+| design        | `design.json`：六组 DesignSpec，按 seed % 6 选择，并把本次 seed 写入返回值。                                                                                         |
+| copy          | `copy.json`：CopyDraft；subhead 故意包含「零糖配方，全城销量第一。」供 07 号规则守卫拦截。                                                                           |
+| guard-judge   | `guard-judge.json`：`Array<{unsupported:boolean; reason?:string}>`，预置单句安全判定。                                                                               |
+| guard-rewrite | `guard-rewrite.json`：`string[]`，预置单句安全氛围文案。                                                                                                             |
 
-Mock 是固定数据演示，不执行任意业务提示词。批量 judge/rewriter 的句数和业务结构由调用方定义，后续模块应按此固定单句 fixture 组织 Mock 演示，不把「安全判定 fixture」当成真实事实校验。
+Mock 不执行任意业务提示词。extract 只解析 `<商家文字>` 内的内容，也接受直接传入的原始文字。店名优先取「店名：」后文本，否则取非空首行（商品行、说明占位和指令除外）。商品按行或分号/句号分隔，支持「黄油可颂，12 元一个」「红豆包 6.50元/个」「奶茶 ¥18」等明确价格；无单位时用「份」。新商品仅标注 `merchant_text`，不借用拿铁描述或图片，不读取评测 gold；无法解析的店名和商品分别回落到旧 fixture。它只是演示用文本回显，不是 OCR 或真实模型识别率证据。
+
+批量 judge/rewriter 的句数和业务结构由调用方定义，不把「安全判定 fixture」当成真实事实校验。04 号 grounding 仍独立校验价格，例如商品名后的逗号可能使已回显价格在落地时留空；本次不修改该业务规则。
 
 ## 验证
 

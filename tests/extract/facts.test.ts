@@ -91,7 +91,7 @@ function editable(sheet: FactSheet) {
 
 describe('POST /api/projects/:id/extract (MockProvider)', () => {
   it('stores a schema-valid, unconfirmed revision 1 and records usage', async () => {
-    const id = await newProjectWith('我们是一家社区咖啡馆')
+    const id = await newProjectWith(null)
     const { res, body } = await extract(id)
     expect(res.status).toBe(201)
     expect(FactSheet.safeParse(body.factSheet).success).toBe(true)
@@ -113,7 +113,14 @@ describe('POST /api/projects/:id/extract (MockProvider)', () => {
 
   it('takes the merchant text over the image: 拿铁 18 元 vs image 20 → 18 with one conflict', async () => {
     const id = await newProjectWith('拿铁 18 元')
-    const { body } = await extract(id)
+    // Fix the provider boundary at an image-only 20-yuan reading. The normal Mock now
+    // echoes the merchant's 18-yuan text, so it no longer creates this conflict itself.
+    const body = await extractFacts(id, {
+      provider: {
+        name: 'mock-image-only',
+        generateJSON: (req) => mock.generateJSON({ ...req, prompt: '' }),
+      },
+    })
     expect(body.factSheet.items[0]!.price).toEqual({ amount: 18, currency: 'CNY', unit: '份' })
     expect(body.factSheet.items[0]!.sources).toMatchObject({
       name: 'merchant_text',
