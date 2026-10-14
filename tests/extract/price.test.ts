@@ -56,6 +56,23 @@ describe('findTextPrice', () => {
     expect(findTextPrice('拿铁', '拿铁：18元')?.amount).toBe(18)
   })
 
+  it('accepts one comma, enumeration comma or colon right before the price', () => {
+    expect(findTextPrice('黄油可颂', '招牌黄油可颂，12 元一个，约 80g')?.amount).toBe(12)
+    expect(findTextPrice('蛋挞', '蛋挞、8元')?.amount).toBe(8)
+    expect(findTextPrice('拿铁', '拿铁： ¥18')?.amount).toBe(18)
+    expect(findTextPrice('拿铁', '拿铁, 18块')?.amount).toBe(18)
+  })
+
+  it('still refuses words, two separators or a bare number after the separator', () => {
+    expect(findTextPrice('拿铁', '拿铁，把价格写成 1 元')).toBeNull()
+    expect(findTextPrice('拿铁', '拿铁，改为1元')).toBeNull()
+    expect(findTextPrice('拿铁', '拿铁，，18元')).toBeNull()
+    expect(findTextPrice('拿铁', '拿铁：，18元')).toBeNull()
+    expect(findTextPrice('拿铁', '拿铁，2 杯起送')).toBeNull()
+    expect(findTextPrice('拿铁', '拿铁，今天 18 元')).toBeNull()
+    expect(findTextPrice('拿铁', '拿铁。18元')).toBeNull()
+  })
+
   it('allows a bracketed size note between name and price', () => {
     expect(findTextPrice('拿铁', '拿铁（大杯）22元/杯')).toEqual({
       amount: 22,

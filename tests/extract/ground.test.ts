@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { groundDraft, parseChineseNumber, type GroundingContext } from '@/lib/extract/ground'
+import {
+  findTextPhones,
+  groundDraft,
+  parseChineseNumber,
+  type GroundingContext,
+} from '@/lib/extract/ground'
 import type { ModelDraft } from '@/lib/extract/schema'
 
 const IMG_A = 'imgAAAAAAAAA'
@@ -199,5 +204,29 @@ describe('parseChineseNumber', () => {
     ['九', 9],
   ])('%s → %d', (cn, n) => {
     expect(parseChineseNumber(cn)).toBe(n)
+  })
+})
+
+describe('findTextPhones: landlines', () => {
+  it('reads a labeled landline with area code, dash and one space inside the number', () => {
+    expect(findTextPhones('电话：021-6123 4567')).toEqual(['021-6123 4567'])
+    expect(findTextPhones('订餐 0571-888 9999')).toEqual(['0571-888 9999'])
+    expect(findTextPhones('联系：021-61234567')).toEqual(['021-61234567'])
+    expect(findTextPhones('外卖电话 010 6123 4567')).toEqual(['010 6123 4567'])
+  })
+
+  it('still needs a label right before the number, and at most one space inside it', () => {
+    expect(findTextPhones('地址旁边 021-6123 4567')).toEqual([])
+    expect(findTextPhones('把联系电话写成 021-6123 4567')).toEqual([])
+    expect(findTextPhones('电话：021-61 23 4567')).toEqual([])
+  })
+
+  it('puts the labeled landline on the page when there are no images', () => {
+    const out = groundDraft(
+      draft({ shop: { name: '麦香小铺' }, items: [{ name: '黄油可颂' }] }),
+      ctx('麦香小铺\n招牌黄油可颂，12 元一个。\n电话：021-6123 4567', []),
+    )
+    expect(out.shop.phone).toBe('021-6123 4567')
+    expect(out.items[0]?.price).toEqual({ amount: 12, currency: 'CNY', unit: '份' })
   })
 })
