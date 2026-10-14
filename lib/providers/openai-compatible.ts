@@ -1,4 +1,5 @@
 import { readFile } from 'node:fs/promises'
+import sharp from 'sharp'
 import { z } from 'zod'
 import type { Usage } from '../core/schemas'
 import { createCallControl } from './control'
@@ -173,8 +174,17 @@ export class OpenAICompatibleProvider implements LLMProvider {
         if (!['image/webp', 'image/jpeg', 'image/png'].includes(image.mime))
           throw new ProviderError('bad_response')
         let bytes: Buffer
+        let mime = image.mime
         try {
           bytes = await readFile(image.path, { signal: control.signal })
+          control.check()
+          // Uploads use WebP display renditions; Ollama's image decoder needs PNG/JPEG.
+          // Convert in memory so stored assets and other profiles keep their original format.
+          if (this.profile === 'ollama' && mime === 'image/webp') {
+            bytes = await sharp(bytes).png().toBuffer()
+            mime = 'image/png'
+          }
+          control.check()
         } catch {
           control.check()
           throw new ProviderError('bad_response')
@@ -183,7 +193,7 @@ export class OpenAICompatibleProvider implements LLMProvider {
         secrets.push(encoded)
         parts.push({
           type: 'image_url',
-          image_url: { url: `data:${image.mime};base64,${encoded}` },
+          image_url: { url: `data:${mime};base64,${encoded}` },
         })
       }
       const model = hasImages ? this.options.visionModel : this.options.textModel
@@ -191,7 +201,7 @@ export class OpenAICompatibleProvider implements LLMProvider {
         { role: 'system', content: `${req.system}\n只输出 JSON。` },
         { role: 'user', content: hasImages ? parts : req.prompt },
       ]
-      let format = true,
+      let format = capabilities.jsonMode,
         repaired = false,
         retries = 0,
         inputTokens = 0,
@@ -298,7 +308,9 @@ export class OpenAICompatibleProvider implements LLMProvider {
                 .slice(0, 12)
                 .map((i) => `${i.path.join('.') || '(root)'}: ${i.code}`)
                 .join('; ')}`
-            : '请只输出符合要求的 JSON 对象，不要包含解释或 Markdown。'
+            : capabilities.jsonMode
+              ? '请只输出符合要求的 JSON 对象，不要包含解释或 Markdown。'
+              : '请只输出符合要求的 JSON，不要包含解释或 Markdown。'
         messages.push({ role: 'assistant', content: text }, { role: 'user', content: correction })
       }
     } catch (error) {

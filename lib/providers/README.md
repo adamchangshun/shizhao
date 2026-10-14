@@ -1,6 +1,6 @@
 # M0 模型适配层
 
-业务模块从 `@/lib/providers` 导入 `getProvider`、`recordUsage`、`ProviderError`；从现有 `lib/core/schemas` 选择输出 schema。仅使用原生 fetch，没有厂商 SDK 或新增依赖。
+业务模块从 `@/lib/providers` 导入 `getProvider`、`recordUsage`、`ProviderError`；从现有 `lib/core/schemas` 选择输出 schema。HTTP 使用原生 fetch，图片转换复用已有 sharp，没有厂商 SDK 或新增依赖。
 
 ```ts
 const provider = getProvider()
@@ -19,7 +19,7 @@ recordUsage(db, result.usage, { projectId, jobId })
 
 - 默认 `temperature=0.7`、`timeoutMs=45000`；超时预算覆盖整次调用，包括读图片、读响应、退避、格式降级与结构修正。外部信号优先报 `aborted`，无重试。
 - 网络失败、HTTP 5xx 和 429 共最多重试三次，等待 1/2/4 秒 + 0–300ms 抖动。最初请求之外，格式不支持时最多追加一次降级请求，JSON 提取失败或 schema 不匹配时共享最多一次修正请求；这些过程共享同一个三次网络重试预算。因此总 HTTP 请求最多六次。
-- 普通 4xx 不重试；只有 400/422 明确表示不支持 `response_format` 时移除它一次。system 从第一次请求起带「只输出 JSON」。修正请求保留原消息与模型回复；提取失败时明确要求仅输出符合要求的 JSON 对象，schema 不符时增加 zod 错误路径/代码摘要。
+- 普通 4xx 不重试；只有 400/422 明确表示不支持 `response_format` 时移除它一次。system 从第一次请求起带「只输出 JSON」。修正请求保留原消息与模型回复；提取失败时要求仅输出符合要求的 JSON（jsonMode 开启时要求对象），schema 不符时增加 zod 错误路径/代码摘要。
 - 回复支持字符串或 `[{type:'text',text:...}]`；先解析完整 JSON，再提取第一个 JSON 代码块或第一个平衡对象，正确跳过字符串中的括号和转义字符。JSON 提取失败与 schema 不符共享一次修正额度；修正后仍无法解析报 `bad_response`，能够解析但仍不符合 schema 则报 `schema_mismatch`。HTTP 成功响应本身不是合法协议 envelope 时仍立即报 `bad_response`。
 - 读响应限制为 2 MiB，超出即取消响应并报 `bad_response`。不跟随重定向，以免向另一个目标转发凭据。
 - 失败日志仅输出 HTTP 状态与脱敏后的前 200 字符；先处理转义 JSON 和纯文本中转义的斜杠，再删除配置密钥及已发送图片的 base64，最后截断。错误对象不附带响应正文、请求或底层 cause。
@@ -34,10 +34,16 @@ recordUsage(db, result.usage, { projectId, jobId })
 | qwen     | OpenAI `image_url: {url: data URL}` | 支持，0–2147483647 | JSON mode，拒绝时降级一次      |        1 |
 | glm      | OpenAI `image_url: {url: data URL}` | 不发送             | JSON mode，拒绝时降级一次      |        1 |
 | deepseek | 本项目契约限定为文本                | 不发送             | JSON mode，拒绝时降级一次      |        1 |
-| ollama   | 需要本机模型支持视觉                | 支持               | JSON mode，拒绝时降级一次      |        3 |
+| ollama   | 需要本机模型支持视觉；WebP 转 PNG   | 支持               | 不发送，使用提示词约束         |        3 |
 | generic  | 未验证接口只允许文本                | 不发送             | 尝试 JSON mode，拒绝时降级一次 |        1 |
 
 `PROFILE_CAPABILITIES[profile].etaMultiplier` 供任务编排调整预计耗时；不会擅自延长调用超时。文本配置使用纯字符串 user content，有非空图片列表时使用视觉模型和多模态 content。
+
+`PROFILE_CAPABILITIES[profile].jsonMode` 控制 JSON 协议参数：ollama 为 `false`，其他 profile 为 `true`。关闭时所有请求（包括重试和修正）省略 `response_format`，system 仍追加「只输出 JSON。」，不限制对象或数组；提取失败后的修正提示同样不限定类型。实际输出类型由调用方提示词与 schema 决定，复用原 JSON 提取、校验及共享的一次修正额度，无新增环境变量。
+
+仅 Ollama 将 WebP 在内存中解码并转成 PNG，data URL 同步使用 `image/png`，不写文件。PNG/JPEG 及其他 profile 的图片保持原样。转换失败报 `bad_response`；转换前后检查同一个超时/取消信号，不在已取消时发送请求。
+
+关闭 JSON 模式后，普通说明文字加裸 JSON 对象可直接提取，不消耗修正机会。第 3 轮审查 M1 指出的原有解析边界仍待独立处理：`<think>` 内的花括号可能先被选中；说明文字包裹的数组可能被截成首个对象。纯数组和 JSON 代码块内数组可直接解析。本次按范围要求不修改通用 `json.ts`，也不改变调用超时。
 
 以上是项目明确支持的协议配置，不代表所有模型版本均已实测。各 profile 的本地 HTTP 协议测试均已覆盖；使用者必须选择自己服务中支持相应能力的模型。模型名不内置在适配器中。
 

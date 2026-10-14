@@ -1,16 +1,18 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http'
 import { once } from 'node:events'
-import { mkdtemp, writeFile, rm } from 'node:fs/promises'
+import { mkdtemp, writeFile, readFile, rm } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest'
 import { z } from 'zod'
+import sharp from 'sharp'
 import { CopyDraft, DesignSpec, FactSheet, Usage } from '@/lib/core/schemas'
 import { getDb, runMigrations } from '@/lib/db/client'
 import { insertProject } from '@/lib/db/repo/projects'
 import { createJobIfIdle } from '@/lib/db/repo/jobs'
 import { usageRecords } from '@/lib/db/schema'
 import { parseEnv, resetEnvCache } from '@/lib/env'
+import { JUDGE_SYSTEM, REWRITE_SYSTEM } from '@/lib/copy/prompt'
 import {
   getProvider,
   MockProvider,
@@ -95,6 +97,120 @@ async function image() {
 }
 
 describe('OpenAI compatible provider HTTP boundary', () => {
+  it.each(['ollama', 'qwen', 'glm'] as const)(
+    '%s sends decodable image bytes with the correct MIME without changing the source',
+    async (profile) => {
+      const img = await image()
+      const original = await sharp({
+        create: { width: 12, height: 8, channels: 4, background: '#a0704080' },
+      })
+        .webp()
+        .toBuffer()
+      await writeFile(img.path, original)
+      const server = await serve((_, res) => reply(res))
+      await provider(server.baseUrl, profile).generateJSON({
+        ...request,
+        images: [{ ...img, mime: 'image/webp' }],
+      })
+      const parts = server.bodies[0]!.messages[1]!.content as Array<{ image_url?: { url: string } }>
+      const url = parts[1]!.image_url!.url
+      const bytes = Buffer.from(url.split(',')[1]!, 'base64')
+      expect(url.startsWith(`data:image/${profile === 'ollama' ? 'png' : 'webp'};base64,`)).toBe(
+        true,
+      )
+      expect(await sharp(bytes).metadata()).toMatchObject({
+        format: profile === 'ollama' ? 'png' : 'webp',
+        width: 12,
+        height: 8,
+      })
+      expect(await sharp(bytes).raw().toBuffer()).toEqual(await sharp(original).raw().toBuffer())
+      expect(await readFile(img.path)).toEqual(original)
+    },
+  )
+  it('rejects corrupt Ollama WebP before sending', async () => {
+    const img = await image()
+    const server = await serve((_, res) => reply(res))
+    await expect(
+      provider(server.baseUrl, 'ollama').generateJSON({
+        ...request,
+        images: [{ ...img, mime: 'image/webp' }],
+      }),
+    ).rejects.toMatchObject({ code: 'bad_response' })
+    expect(server.bodies).toHaveLength(0)
+  })
+  it.each(['ollama', 'qwen', 'glm', 'deepseek', 'generic'] as const)(
+    '%s follows profile JSON mode through schema repair',
+    async (profile) => {
+      const server = await serve((_, res, __, count) =>
+        reply(res, count === 1 ? '{}' : '```json\n{"answer":"fixed"}\n```'),
+      )
+      const result = await provider(server.baseUrl, profile).generateJSON(request)
+      expect(result.data.answer).toBe('fixed')
+      expect(server.bodies).toHaveLength(2)
+      for (const body of server.bodies) {
+        if (profile === 'ollama') {
+          expect(body).not.toHaveProperty('response_format')
+          expect(body.messages[0]!.content).toMatch(/只输出 JSON。$/)
+        } else expect(body.response_format).toEqual({ type: 'json_object' })
+      }
+    },
+  )
+  it('allows the Ollama guard-judge array schema without an object-only system suffix', async () => {
+    const server = await serve((_, res) => reply(res, '[{"unsupported":false}]'))
+    const result = await provider(server.baseUrl, 'ollama').generateJSON({
+      ...request,
+      stage: 'guard-judge',
+      system: JUDGE_SYSTEM,
+      prompt: JSON.stringify({ sentences: ['温暖日常'], facts: [] }),
+      schema: z.array(z.object({ unsupported: z.boolean() })),
+      temperature: 0,
+    })
+    expect(result.data).toEqual([{ unsupported: false }])
+    expect(server.bodies).toHaveLength(1)
+    expect(server.bodies[0]).not.toHaveProperty('response_format')
+    expect(server.bodies[0]!.messages[0]!.content).toBe(`${JUDGE_SYSTEM}\n只输出 JSON。`)
+  })
+  it('keeps Ollama guard-rewrite array instructions through one malformed-JSON repair', async () => {
+    const server = await serve((_, res, __, count) =>
+      reply(res, count === 1 ? '请稍候' : '["温暖日常"]'),
+    )
+    const result = await provider(server.baseUrl, 'ollama').generateJSON({
+      ...request,
+      stage: 'guard-rewrite',
+      system: REWRITE_SYSTEM,
+      prompt: JSON.stringify({ items: ['全城第一'], problems: ['ad_law_absolute'], facts: [] }),
+      schema: z.array(z.string()),
+      temperature: 0,
+    })
+    expect(result.data).toEqual(['温暖日常'])
+    expect(server.bodies).toHaveLength(2)
+    for (const body of server.bodies) {
+      expect(body).not.toHaveProperty('response_format')
+      expect(body.messages[0]!.content).toBe(`${REWRITE_SYSTEM}\n只输出 JSON。`)
+    }
+    expect(server.bodies[1]!.messages[3]!.content).not.toContain('JSON 对象')
+    expect(result.usage.inputTokens).toBe(2400)
+  })
+  it('extracts a bare JSON object after Chinese prose with Ollama without a repair', async () => {
+    const server = await serve((_, res) => reply(res, '好的，我先思考一下。\n{"answer":"x"}'))
+    const result = await provider(server.baseUrl, 'ollama').generateJSON(request)
+    expect(result.data).toEqual({ answer: 'x' })
+    expect(server.bodies).toHaveLength(1)
+    expect(server.bodies[0]).not.toHaveProperty('response_format')
+    expect(result.usage.inputTokens).toBe(1200)
+  })
+  it('does not retry an Ollama response_format rejection when format was never sent', async () => {
+    const server = await serve((_, res) => {
+      res.statusCode = 400
+      res.end('response_format unsupported')
+    })
+    vi.spyOn(console, 'warn').mockImplementation(() => {})
+    await expect(provider(server.baseUrl, 'ollama').generateJSON(request)).rejects.toMatchObject({
+      code: 'upstream_error',
+    })
+    expect(server.bodies).toHaveLength(1)
+    expect(server.bodies[0]).not.toHaveProperty('response_format')
+  })
   it('redacts slash-escaped image data URLs and raw base64 in non-JSON error bodies', async () => {
     const img = await image()
     await writeFile(img.path, Buffer.from([255, 255, 255, 251]))
