@@ -29,6 +29,7 @@ interface Sample {
   images: string[]
 }
 
+const IMAGE_EXT = /\.(png|jpe?g|webp)$/i
 const SAMPLES_DIR = path.join(process.cwd(), 'eval', 'samples')
 let cache: Map<string, Sample> | undefined
 
@@ -51,7 +52,13 @@ function samples(): Map<string, Sample> {
       const text = fs.readFileSync(path.join(root, 'input.txt'), 'utf8')
       const gold = JSON.parse(fs.readFileSync(path.join(root, 'gold.json'), 'utf8')) as Gold
       const imageDir = path.join(root, 'images')
-      const images = fs.existsSync(imageDir) ? fs.readdirSync(imageDir).sort() : []
+      // Same filter as `pnpm demo`, so stray files (.DS_Store) cannot shift the indexes.
+      const images = fs.existsSync(imageDir)
+        ? fs
+            .readdirSync(imageDir)
+            .filter((f) => IMAGE_EXT.test(f))
+            .sort()
+        : []
       cache.set(normalize(text), { gold, images })
     } catch {
       /* Incomplete sample directories are simply not demo fixtures. */
