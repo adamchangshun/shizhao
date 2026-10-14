@@ -8,17 +8,18 @@
 //      publishVersionTx (same link and QR code), correction → accepted.
 // Any failure puts the correction back to pending and removes the files of step 2; the public
 // page only follows the database pointer, so it keeps showing the old version.
+import { createHash } from 'node:crypto'
 import fs from 'node:fs'
 import { and, desc, eq, inArray, lt } from 'drizzle-orm'
 import { z } from 'zod'
 import { ApiError, Errors } from '../core/errors'
-import { isValidId, newId } from '../core/ids'
+import { isValidId } from '../core/ids'
 import type { FactSheet } from '../core/schemas'
 import { getDb } from '../db/client'
 import { findLatestConfirmedFactSheet } from '../db/repo/fact-sheets'
 import { findActiveProject } from '../db/repo/projects'
 import { corrections, factSheets, projects, versions, type CorrectionRow } from '../db/schema'
-import { versionHtmlPath } from '../jobs/files'
+import { stagingDir, versionHtmlPath } from '../jobs/files'
 import { rerenderWithFacts } from '../jobs/rerender'
 import { logPublication, publishVersionTx, type PublicationEvent } from '../publish'
 import { applyCorrection } from './apply'
@@ -28,16 +29,32 @@ export const PROCESSING_TIMEOUT_MS = 5 * 60_000
 
 /** Claims older than the timeout belong to an interrupted process: hand them back. */
 export function recoverStaleClaims(now: number = Date.now()): void {
-  getDb()
-    .update(corrections)
-    .set({ status: 'pending', processingAt: null })
-    .where(
-      and(
-        eq(corrections.status, 'processing'),
-        lt(corrections.processingAt, new Date(now - PROCESSING_TIMEOUT_MS).toISOString()),
-      ),
-    )
-    .run()
+  const stale = and(
+    eq(corrections.status, 'processing'),
+    lt(corrections.processingAt, new Date(now - PROCESSING_TIMEOUT_MS).toISOString()),
+  )
+  // The interrupted attempt may have left its staging directory behind; its name is derived
+  // from the claim, so it can be found and removed (a still-running attempt fails its
+  // ownership check in the final transaction and cleans up after itself anyway).
+  for (const row of getDb().select().from(corrections).where(stale).all()) {
+    try {
+      fs.rmSync(stagingDir(row.projectId, attemptKey(row.id, row.processingAt!)), {
+        recursive: true,
+        force: true,
+      })
+    } catch (err) {
+      console.error('[corrections] could not remove an abandoned staging directory', err)
+    }
+  }
+  getDb().update(corrections).set({ status: 'pending', processingAt: null }).where(stale).run()
+}
+
+/** Staging key of one claim: unique per (correction, claim time), shaped like a newId(). */
+export function attemptKey(correctionId: string, claimedAt: string): string {
+  return createHash('sha256')
+    .update(`${correctionId}\u0000${claimedAt}`)
+    .digest('base64url')
+    .slice(0, 12)
 }
 
 export interface CorrectionView {
@@ -187,8 +204,8 @@ export async function acceptCorrection(
       source,
       factSheet,
       correctedPath: row.field,
-      // Fresh per attempt: a claim that expired while its render still runs never shares files.
-      stagingKey: newId(),
+      // Unique per claim: a claim that expired while its render still runs never shares files.
+      stagingKey: attemptKey(id, at),
       render: opts.render,
     })
     const done = staged

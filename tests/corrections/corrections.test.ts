@@ -10,12 +10,12 @@ import { DELETE as deleteProject } from '@/app/api/projects/[id]/route'
 import { computeCopyRefs } from '@/lib/copy'
 import { newId } from '@/lib/core/ids'
 import type { CopyDraft, FactSheet } from '@/lib/core/schemas'
-import { acceptCorrection, PROCESSING_TIMEOUT_MS } from '@/lib/corrections/merchant'
+import { acceptCorrection, attemptKey, PROCESSING_TIMEOUT_MS } from '@/lib/corrections/merchant'
 import { getDb, runMigrations } from '@/lib/db/client'
 import { appendFactSheet, findLatestFactSheet } from '@/lib/db/repo/fact-sheets'
 import { insertProject, findActiveProject } from '@/lib/db/repo/projects'
 import { corrections, usageRecords, versions } from '@/lib/db/schema'
-import { versionDir, versionHtmlPath } from '@/lib/jobs/files'
+import { stagingDir, versionDir, versionHtmlPath } from '@/lib/jobs/files'
 import { rerenderWithFacts } from '@/lib/jobs/rerender'
 import { publishVersion, unpublishProject } from '@/lib/publish'
 import { generateProjectQr } from '@/lib/publish/qr'
@@ -406,11 +406,15 @@ describe('merging is atomic and idempotent', () => {
       .set({ status: 'processing', processingAt: new Date(claimedAt).toISOString() })
       .where(eq(corrections.id, id))
       .run()
+    // ...and left a half-written staging directory behind.
+    const abandoned = stagingDir(p.projectId, attemptKey(id, new Date(claimedAt).toISOString()))
+    fs.mkdirSync(abandoned, { recursive: true })
     await expect(acceptCorrection(id, {}, { now: claimedAt + 1000 })).rejects.toMatchObject({
       status: 409,
     })
     const done = await acceptCorrection(id, {}, { now: claimedAt + PROCESSING_TIMEOUT_MS + 1000 })
     expect(done).toEqual({ status: 'accepted', resultRevision: 2 })
+    expect(fs.existsSync(abandoned)).toBe(false)
   })
 
   it('reject is idempotent and cannot undo an accepted report', async () => {

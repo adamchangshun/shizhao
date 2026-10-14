@@ -18,9 +18,16 @@ const LANDLINE = /(?<!\d)0\d{2,3}\d{7,8}(?!\d)/
 const ID_CARD = /(?<!\d)(?:\d{17}[\dx]|\d{15})(?![\dx])/i
 const EMAIL = /[a-z0-9._%+-]+@[a-z0-9-]+(?:\.[a-z0-9-]+)+/i
 // A WeChat id is only recognisable next to a cue word; bare words would catch dish names.
-// Up to four non-alphanumeric characters (号、是、：、空格…) may sit between cue and id.
-const WECHAT =
-  /(?:微信|威信|薇信|徽信|weixin|wechat|vx|wx|v信|加v|加微)[^a-z0-9]{0,4}[a-z][-_a-z0-9]{5,19}/i
+// WeChat ids are only recognisable next to a cue word: either the id follows the cue directly
+// ("微信号：abc123"), or the text names WeChat and also carries an id-shaped token, i.e.
+// 6–20 characters starting with a letter and containing a digit, "_" or "-" ("我的微信号是这个
+// abc12345"). Plain words ("微信上把 Americano 改成 Latte") are not ids.
+const WECHAT_CUE = /微信|威信|薇信|徽信|weixin|wechat|vx|wx|v信|加v|加微/i
+const WECHAT_DIRECT = new RegExp(
+  `(?:${WECHAT_CUE.source})(?:号|id|账号)?[\\s:：=是为]{0,3}[a-z][-_a-z0-9]{5,19}`,
+  'i',
+)
+const ID_TOKEN = /(?<![a-z0-9_-])(?=[a-z][-_a-z0-9]{5,19}(?![a-z0-9_-]))[a-z]*[-_0-9][-_a-z0-9]*/i
 
 /** True when the text carries a phone number, e-mail, WeChat id or ID card number. */
 export function containsPersonalInfo(text: string): boolean {
@@ -35,7 +42,8 @@ export function containsPersonalInfo(text: string): boolean {
     LANDLINE.test(digits) ||
     ID_CARD.test(digits) ||
     EMAIL.test(compact) ||
-    WECHAT.test(n)
+    WECHAT_DIRECT.test(n) ||
+    (WECHAT_CUE.test(n) && ID_TOKEN.test(n))
   )
 }
 
