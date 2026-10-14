@@ -6,11 +6,16 @@ import designs from './mock-fixtures/design.json'
 import copy from './mock-fixtures/copy.json'
 import judge from './mock-fixtures/guard-judge.json'
 import rewrite from './mock-fixtures/guard-rewrite.json'
+import { sampleExtractDraft } from './mock-samples'
 
 /** Fixed demo data, never an inference engine. Schemas remain caller-owned. */
 export class MockProvider implements LLMProvider {
   readonly name = 'mock'
-  constructor(private readonly options: { delay?: boolean } = {}) {}
+  /**
+   * `sampleFacts`: answer `extract` with a bundled eval sample's facts when the merchant text is
+   * exactly that sample's text (see mock-samples.ts). Only the app enables it, for `pnpm demo`.
+   */
+  constructor(private readonly options: { delay?: boolean; sampleFacts?: boolean } = {}) {}
 
   async generateJSON<T>(req: GenerateJSONRequest<T>) {
     const started = performance.now()
@@ -49,6 +54,10 @@ export class MockProvider implements LLMProvider {
             input.itemIds.map((id) => [id, copy.itemBlurbs['mock-latte']]),
           ),
         }
+      }
+      if (req.stage === 'extract' && this.options.sampleFacts) {
+        const draft = sampleExtractDraft(req.prompt)
+        if (draft) fixtures.extract = draft
       }
       if (req.stage === 'guard-judge' && Array.isArray(input.sentences)) {
         fixtures['guard-judge'] = input.sentences.map(() => ({ ...judge[0] }))

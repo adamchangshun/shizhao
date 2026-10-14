@@ -201,21 +201,27 @@ async function run(token: string): Promise<void> {
   })
   console.info(`      已建项目「${title}」 id=${project.id}`)
 
-  const form = new FormData()
-  for (const file of sample.images)
-    form.append(
-      'images',
-      await fs.openAsBlob(file, { type: IMAGE_TYPES[path.extname(file).toLowerCase()] }),
-      path.basename(file),
+  // One request per image, in file-name order: assets uploaded together share a timestamp and
+  // would be listed in id order, which would scramble the image order the mock relies on.
+  let uploaded = 0
+  for (const file of [...sample.images, null]) {
+    const form = new FormData()
+    if (file)
+      form.append(
+        'images',
+        await fs.openAsBlob(file, { type: IMAGE_TYPES[path.extname(file).toLowerCase()] }),
+        path.basename(file),
+      )
+    else form.append('text', sample.text)
+    const res = await api<{ assets: unknown[] }>(
+      token,
+      'POST',
+      `/api/projects/${project.id}/assets`,
+      form,
     )
-  form.append('text', sample.text)
-  const uploaded = await api<{ assets: unknown[] }>(
-    token,
-    'POST',
-    `/api/projects/${project.id}/assets`,
-    form,
-  )
-  console.info(`[2/6] 已上传 ${uploaded.assets.length} 份素材`)
+    uploaded += res.assets.length
+  }
+  console.info(`[2/6] 已上传 ${uploaded} 份素材`)
 
   const { factSheet } = await api<{ factSheet: FactSheetView }>(
     token,
