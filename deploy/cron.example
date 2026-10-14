@@ -1,0 +1,6 @@
+# 实招 Shizhao daily backup. Install as root (deploy/README.md step 11):
+#   sudo install -m 644 /opt/shizhao/deploy/cron.example /etc/cron.d/shizhao-backup
+# Runs at 03:30 server time; the log holds only paths and sizes, never data.
+SHELL=/bin/bash
+PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
+30 3 * * * root /opt/shizhao/deploy/backup.sh >> /var/log/shizhao-backup.log 2>&1

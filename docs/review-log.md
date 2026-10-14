@@ -393,3 +393,26 @@ Claude 核实后认为 4 条 CRITICAL 都是真实的加固点，但影响面达
 | MEDIUM | 读取样本图片目录时没有过滤扩展名，`.DS_Store` 等文件会打乱序号 | 已修复：与 demo 使用相同的扩展名过滤 |
 
 实测：全量测试 801 个用例通过；`pnpm demo` 抽取结果为「麦香小铺｜黄油可颂」，生成的页面包含店名、商品、规格、营业时间和地址。
+||||||| 9baa05c
+
+## 17 部署配置（Claude 实现，Codex 审查）
+
+只做不需要服务器的部分：`deploy/` 下的 Caddyfile、`docker-compose.prod.yml`、备份脚本与 cron 示例、微信预检静态页、从新服务器到扫码可用的 README；真机验收 6 项留表待填。审查命令：`cdx-review --path deploy --security`，1 轮。
+
+### 第 1 轮（a324d5d）：2 HIGH，4 MEDIUM
+
+| 级别 | 问题 | 处理 |
+|---|---|---|
+| HIGH | 备份先序列化数据库、再归档文件，期间删除项目会让备份里的数据库引用已不在归档中的文件 | 已修复：打包期间暂停（冻结）应用容器，数据库与文件来自同一时刻，`trap` 保证一定恢复；本机实测暂停、恢复与归档内容 |
+| HIGH | Caddy 只限制请求体大小，没有读取超时，慢速请求可长期占用连接 | 已修复：全局设置 `read_header 10s`、`read_body 120s`、`write 120s`、`idle 2m`；80 端口改为显式跳转站点，使超时同样生效。实测 80 与 443 上未写完请求头的连接都在 10.0 秒被断开 |
+| MEDIUM | `ADMIN_TOKEN` 为空时镜像会生成口令并打印到容器日志 | 已修复：compose 中 `${ADMIN_TOKEN:?}` 失败关闭（实测为空时拒绝启动） |
+| MEDIUM | `DOMAIN` 与 `PUBLIC_BASE_URL` 分别填写，可能不一致，二维码指向别的域名 | 已修复：compose 固定 `PUBLIC_BASE_URL=https://${DOMAIN}`，模板中删去该项 |
+| MEDIUM | 备份与数据在同一台服务器，不防整机故障 | 记录：README 要求正式运营时加密复制到异地并定期恢复演练 |
+| MEDIUM | Caddy 容器内仍以 root 运行 | 记录：官方镜像无非 root 用户；已丢弃除 `NET_BIND_SERVICE` 外的全部 capabilities 并禁止提权，README 写明 |
+
+观察（不阻塞）：备份暂停期间健康检查超时，恢复后 Docker 会短暂显示 `unhealthy`，下一次检查（30 秒周期）恢复为 `healthy`，流量不受影响。
+
+本机实测（现有 `shizhao:local` 镜像 + Caddy 内部证书）：应用容器 uid 1000、`CapEff` 全 0；HTTP 308 跳转 HTTPS；`/api/health` 正常、带 HSTS、无 `Server` 头；`/api/guard` 200KB 请求返回 413；6688 未发布；备份目录 700、归档 600，只保留最新 7 份。
+
+审查结论：HIGH 已修复，按项目负责人「审 1 轮、修 CRITICAL/HIGH 后合并」的安排合并到 main。真机验收待有服务器和域名后进行。
+

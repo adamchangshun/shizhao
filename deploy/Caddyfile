@@ -1,0 +1,56 @@
+# 实招 Shizhao — production reverse proxy (see deploy/README.md).
+# DOMAIN and ACME_EMAIL come from deploy/.env through docker-compose.prod.yml.
+#
+# - HTTPS certificates are obtained and renewed automatically (Let's Encrypt / ZeroSSL).
+# - Port 80 only answers ACME challenges and redirects every request to https:// (Caddy default).
+# - The app container publishes no port; it is reachable only through this proxy.
+# - No `log` directive: Caddy keeps no access log, so visitor IPs and URLs are not written to disk.
+{
+	email {$ACME_EMAIL}
+	# Nothing on the server needs Caddy's admin API.
+	admin off
+
+	# Explicit limits against slow clients holding connections open (do not rely on version
+	# defaults). read_body allows a 100 MB photo upload over a slow mobile link.
+	servers {
+		timeouts {
+			read_header 10s
+			read_body 120s
+			write 120s
+			idle 2m
+		}
+	}
+}
+
+# Declared explicitly (instead of Caddy's implicit redirect server) so the timeouts above also
+# apply on port 80. ACME HTTP challenges are still answered here automatically.
+http://{$DOMAIN} {
+	redir https://{host}{uri} 308
+}
+
+{$DOMAIN} {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000"
+		X-Content-Type-Options "nosniff"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		-Server
+	}
+
+	# Body limits in front of the app: the public copy-check API takes small JSON only;
+	# everything else stays within the app's 100 MB upload limit (lib/assets/limits.ts).
+	@guard path /api/guard /api/guard/*
+	request_body @guard {
+		max_size 100KB
+	}
+	request_body {
+		max_size 101MB
+	}
+
+	reverse_proxy shizhao:6688 {
+		# The app trusts X-Real-IP only behind this proxy (TRACK_TRUST_PROXY / GUARD_TRUST_PROXY).
+		# Overwrite it with the real peer address so a client-supplied value never reaches the app.
+		header_up X-Real-IP {remote_host}
+	}
+}
