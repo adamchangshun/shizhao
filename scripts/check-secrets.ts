@@ -2,6 +2,7 @@ import { execFileSync } from 'node:child_process'
 import { lstatSync, readFileSync, readlinkSync } from 'node:fs'
 import path from 'node:path'
 import { isUtf8 } from 'node:buffer'
+import ts from 'typescript'
 
 function optionalLines(file: string): Set<string> {
   try {
@@ -15,6 +16,38 @@ function optionalLines(file: string): Set<string> {
     if ((error as NodeJS.ErrnoException).code === 'ENOENT') return new Set()
     throw error
   }
+}
+
+// Named constant entries use file:const:NAME, so moving the fixture does not
+// invalidate its exemption. Only the generic hex/base64 rule is exempted;
+// explicit API keys, Bearer tokens and private-key headers still get checked.
+function constantRanges(file: string, text: string, ignored: Set<string>): [number, number][] {
+  const prefix = `${file}:const:`
+  const names = new Set(
+    [...ignored]
+      .filter((entry) => entry.startsWith(prefix))
+      .map((entry) => entry.slice(prefix.length)),
+  )
+  if (!names.size) return []
+  const source = ts.createSourceFile(file, text, ts.ScriptTarget.Latest, true)
+  const ranges: [number, number][] = []
+  for (const statement of source.statements) {
+    if (
+      !ts.isVariableStatement(statement) ||
+      !(statement.declarationList.flags & ts.NodeFlags.Const)
+    )
+      continue
+    for (const declaration of statement.declarationList.declarations) {
+      if (
+        ts.isIdentifier(declaration.name) &&
+        names.has(declaration.name.text) &&
+        declaration.initializer
+      ) {
+        ranges.push([declaration.initializer.getStart(source), declaration.initializer.end])
+      }
+    }
+  }
+  return ranges
 }
 
 function main(): void {
@@ -53,7 +86,13 @@ function main(): void {
     }
     if (bytes.includes(0) || !isUtf8(bytes)) continue
     scanned++
-    for (const [index, line] of bytes.toString('utf8').split(/\r?\n/).entries()) {
+    const text = bytes.toString('utf8')
+    const ranges = constantRanges(file, text, ignored)
+    let offset = 0
+    for (const [index, rawLine] of text.split('\n').entries()) {
+      const lineStart = offset
+      offset += rawLine.length + 1
+      const line = rawLine.replace(/\r$/, '')
       const location = `${file}:${index + 1}`
       if (ignored.has(location)) continue
       const matches: { kind: string; token: string }[] = []
@@ -68,9 +107,21 @@ function main(): void {
       const hashField =
         /\b(?:sha(?:1|224|256|384|512)|integrity|checksum|hash)\b["']?\s*[:=]/i.test(line)
       if (!hashField) {
+        const urls = [...line.matchAll(/https?:\/\/[^\s<>"']+/gi)].map((match) => [
+          match.index!,
+          match.index! + match[0].length,
+        ])
         for (const match of line.matchAll(
           /(?<![A-Za-z0-9+/])[A-Za-z0-9+/]{32,}={0,2}(?![A-Za-z0-9+/=])/g,
         )) {
+          const start = match.index!
+          const end = start + match[0].length
+          // CSP/SRI digests have a hash algorithm prefix rather than a field assignment.
+          if (/sha(?:1|224|256|384|512)-$/i.test(line.slice(0, start))) continue
+          // Slash-delimited paths are not generic base64 candidates. URL exclusion
+          // also handles long query fragments. Explicit secret rules above still apply.
+          if (match[0].includes('/') || urls.some(([a, b]) => start >= a! && end <= b!)) continue
+          if (ranges.some(([a, b]) => lineStart + start >= a && lineStart + end <= b)) continue
           if (!matches.some((m) => m.token.includes(match[0])))
             matches.push({ kind: 'hex/base64', token: match[0] })
         }

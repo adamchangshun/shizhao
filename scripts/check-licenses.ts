@@ -76,11 +76,12 @@ function main(): void {
 
   let allowed = new Set<string>()
   try {
-    // Exact name or name@version per line; no glob or license-wide exemptions.
+    // Exact name/name@version, or a package-name prefix ending in *.
+    // A # comment records the manually approved reason; no license-wide exemptions.
     allowed = new Set(
       readFileSync(path.join(root, '.licenseallow'), 'utf8')
         .split(/\r?\n/)
-        .map((line) => line.trim())
+        .map((line) => line.split('#', 1)[0]!.trim())
         .filter((line) => line && !line.startsWith('#')),
     )
   } catch (error) {
@@ -146,7 +147,13 @@ function main(): void {
       const unknown = /UNKNOWN|UNLICENSED|UNDEFINED|SEE LICENSE|Custom:|https?:|\*/i.test(license)
       if (forbidden || unknown) {
         const entry = `${id}: ${license}`
-        if (allowed.has(id) || allowed.has(pkg.name)) exempted.push(entry)
+        const prefixAllowed = [...allowed].some(
+          (pattern) =>
+            pattern.endsWith('*') &&
+            pattern.length > 1 &&
+            pkg.name.startsWith(pattern.slice(0, -1)),
+        )
+        if (allowed.has(id) || allowed.has(pkg.name) || prefixAllowed) exempted.push(entry)
         else blocked.push(entry)
       }
     }
