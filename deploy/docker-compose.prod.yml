@@ -17,6 +17,11 @@ services:
     env_file: ./.env
     environment:
       DATA_DIR: /app/data
+      # Fail closed: never start in production with an empty token (the image would otherwise
+      # generate one and print it to the container log).
+      ADMIN_TOKEN: ${ADMIN_TOKEN:?set ADMIN_TOKEN in deploy/.env}
+      # Derived from DOMAIN so QR codes and public links always point at the served domain.
+      PUBLIC_BASE_URL: https://${DOMAIN:?set DOMAIN in deploy/.env}
       # Only Caddy can reach the app, and Caddy overwrites X-Real-IP (see Caddyfile).
       TRACK_TRUST_PROXY: 'true'
       GUARD_TRUST_PROXY: 'true'

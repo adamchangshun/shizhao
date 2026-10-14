@@ -139,13 +139,14 @@ nano .env
 |---|---|
 | `DOMAIN` | `shop.example.com` |
 | `ACME_EMAIL` | 你的邮箱（证书到期提醒） |
-| `PUBLIC_BASE_URL` | `https://shop.example.com`，必须和 `DOMAIN` 一致，二维码内容由它生成 |
-| `ADMIN_TOKEN` | 上面生成的随机串（至少 12 个字符），只保存在这个文件里 |
+| `ADMIN_TOKEN` | 上面生成的随机串（至少 12 个字符），只保存在这个文件里；留空时应用拒绝启动 |
 | `PROVIDER` 与 `LLM_*` | 演示可保持 `mock`；接真实模型见仓库根目录 README 的「接入真实模型」 |
 
 ```bash
 ls -l .env      # 确认是 -rw------- root root
 ```
+
+`PUBLIC_BASE_URL`（二维码和公开链接用的地址）不需要填，compose 固定设为 `https://${DOMAIN}`，避免两处写得不一致。
 
 `.env` 不进 git，也不进镜像（`.gitignore` 和 `.dockerignore` 都排除了 `.env*`）。另外在你自己的密码管理器里保存一份，备份脚本不备份它。
 
@@ -196,7 +197,7 @@ docker image prune -f                                                  # 清理�
 
 ## 11. 每日备份
 
-`backup.sh` 每次把 `data/` 打成一个 `tar.gz`（数据库通过运行中的容器取一致性快照），保存到 `/var/backups/shizhao`，只保留最新 7 份。备份里有数据库、上传的照片、生成的页面和 `session.key`（登录会话签名密钥），和服务器本身一样敏感：备份目录权限 700，每个文件 600。
+`backup.sh` 每次把 `data/` 打成一个 `tar.gz`：打包期间把应用容器**暂停**（冻结，不重启），让数据库和照片、页面文件来自同一时刻，打包完立即恢复，期间到达的请求会稍等后正常处理；保存到 `/var/backups/shizhao`，只保留最新 7 份。备份里有数据库、上传的照片、生成的页面和 `session.key`（登录会话签名密钥），和服务器本身一样敏感：备份目录权限 700，每个文件 600。
 
 ```bash
 chmod 700 /opt/shizhao/deploy/backup.sh
@@ -227,7 +228,10 @@ docker compose -f docker-compose.prod.yml start shizhao
 - 应用容器以 uid 1000 运行，丢弃全部 Linux capabilities，禁止提权；Caddy 也丢弃全部 capabilities，只保留绑定 80/443 所需的 `NET_BIND_SERVICE`。
 - Caddy 用真实对端地址覆盖 `X-Real-IP`，所以 compose 中开启了 `TRACK_TRUST_PROXY` 和 `GUARD_TRUST_PROXY`，访问统计和文案检查 API 能按访客限流。这个前提是应用端口不对外开放，不要给 `shizhao` 服务加 `ports`。
 - Caddy 不写访问日志，应用也不记录请求体，服务器上不留访客 IP。
-- 管理口令只在 `deploy/.env` 里，权限 600；Caddy 容器只拿到 `DOMAIN` 和 `ACME_EMAIL` 两个变量。
+- 管理口令只在 `deploy/.env` 里，权限 600；口令为空时 compose 直接报错，不会退回到「随机生成并打印到日志」。Caddy 容器只拿到 `DOMAIN` 和 `ACME_EMAIL` 两个变量。
+- Caddy 显式设置了读取请求头 10 秒、读取请求体 120 秒、空闲 2 分钟的超时，防止慢速连接长期占用。
+- 备份默认和数据在同一台服务器上，只防误删、不防整机故障；正式运营请把归档定期复制到你自己控制的异地存储（加密保存，密钥不放在这台服务器上），并定期做一次恢复演练。
+- Caddy 容器内仍以 root 运行（官方镜像没有非 root 用户），已丢弃除绑定端口外的全部 capabilities 并禁止提权；对外暴露面只有 80/443。
 
 ## 真机验收（待填）
 

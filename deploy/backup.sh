@@ -4,6 +4,11 @@
 # restore — db.sqlite, session.key, uploads and pages — so it is as sensitive as the server:
 # the backup directory is 700 and every archive 600.
 #
+# Consistency: the app container is paused (frozen, not stopped) while data/ is copied, so the
+# database files and the uploaded/generated files all come from the same instant. SQLite treats
+# such a copy like a power cut and recovers it from the WAL on open. Requests arriving during the
+# copy wait and are served after it; the container is always resumed, even on failure.
+#
 #   sudo /opt/shizhao/deploy/backup.sh
 #   BACKUP_DIR=/srv/backups KEEP=14 sudo -E /opt/shizhao/deploy/backup.sh
 set -euo pipefail
@@ -25,28 +30,29 @@ chmod 700 "$BACKUP_DIR" # also tightens a directory that already existed
 
 stamp="$(date -u +%Y%m%dT%H%M%SZ)"
 work="$(mktemp -d "$BACKUP_DIR/.work-XXXXXX")"
-trap 'rm -rf "$work"' EXIT
+paused=0
+finish() {
+  if ((paused)); then "${COMPOSE[@]}" unpause shizhao >/dev/null || log "WARNING: could not resume the app container"; fi
+  rm -rf "$work"
+}
+trap finish EXIT
 
-# A consistent database snapshot taken by the running app container (SQLite read transaction),
-# instead of copying db.sqlite while it may be mid-write. The app must be running.
-"${COMPOSE[@]}" exec -T shizhao node -e \
-  "process.stdout.write(require('better-sqlite3')('/app/data/db.sqlite', { readonly: true }).serialize())" \
-  >"$work/db.sqlite"
-[[ -s "$work/db.sqlite" ]] || { log "database snapshot is empty"; exit 1; }
+# Refuse to back up a stopped app: a paused-and-copied running app is the consistent case we test.
+running="$("${COMPOSE[@]}" ps --status running --services)"
+grep -qx shizhao <<<"$running" || { log "app container is not running"; exit 1; }
 
-archive="$BACKUP_DIR/shizhao-$stamp.tar.gz"
-# Live database files are replaced by the snapshot; temp files of half-finished uploads are skipped.
-# Two steps so the excludes never apply to the snapshot (GNU and BSD tar differ on `./` matching).
-tar -cf "$work/archive.tar" \
-  -C "$DATA_DIR" \
-  --exclude=./db.sqlite --exclude=./db.sqlite-wal --exclude=./db.sqlite-shm \
-  --exclude='./tmp' \
-  .
-tar -rf "$work/archive.tar" -C "$work" db.sqlite
-gzip -9 "$work/archive.tar"
+"${COMPOSE[@]}" pause shizhao >/dev/null
+paused=1
+# Half-finished upload temp files are skipped; everything else, database files included.
+tar -czf "$work/archive.tar.gz" -C "$DATA_DIR" --exclude='./tmp' .
+"${COMPOSE[@]}" unpause shizhao >/dev/null
+paused=0
+
 # List first, then match: `tar | grep -q` under pipefail fails when grep exits early.
 listing="$(tar -tzf "$work/archive.tar.gz")"
 grep -qxE '(\./)?db\.sqlite' <<<"$listing" || { log "archive check failed: no db.sqlite"; exit 1; }
+
+archive="$BACKUP_DIR/shizhao-$stamp.tar.gz"
 chmod 600 "$work/archive.tar.gz"
 mv "$work/archive.tar.gz" "$archive"
 

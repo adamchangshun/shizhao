@@ -9,6 +9,23 @@
 	email {$ACME_EMAIL}
 	# Nothing on the server needs Caddy's admin API.
 	admin off
+
+	# Explicit limits against slow clients holding connections open (do not rely on version
+	# defaults). read_body allows a 100 MB photo upload over a slow mobile link.
+	servers {
+		timeouts {
+			read_header 10s
+			read_body 120s
+			write 120s
+			idle 2m
+		}
+	}
+}
+
+# Declared explicitly (instead of Caddy's implicit redirect server) so the timeouts above also
+# apply on port 80. ACME HTTP challenges are still answered here automatically.
+http://{$DOMAIN} {
+	redir https://{host}{uri} 308
 }
 
 {$DOMAIN} {
