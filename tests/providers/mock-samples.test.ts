@@ -1,6 +1,7 @@
 import fs from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { MockProvider } from '@/lib/providers'
+import { MockProvider, getProvider } from '@/lib/providers'
+import { MockPageProvider } from '@/eval/lib/group-a'
 import { buildExtractPrompt } from '@/lib/extract/prompt'
 import { ModelDraft } from '@/lib/extract/schema'
 
@@ -56,5 +57,29 @@ describe('MockProvider sample facts (pnpm demo)', () => {
   it('is off unless enabled, so mock eval runs never see gold answers', async () => {
     const draft = await extract(new MockProvider({ delay: false }), text('bakery-croissant-single'))
     expect(draft.shop?.name).toBe('午后小店')
+  })
+})
+
+describe('which MockProvider the app and the eval get', () => {
+  it('the app provider (PROVIDER=mock) answers samples with their facts', async () => {
+    const provider = getProvider()
+    const prompt = buildExtractPrompt(text('bakery-croissant-single'), [])
+    const res = await provider.generateJSON({
+      stage: 'extract',
+      system: '',
+      prompt,
+      schema: ModelDraft,
+    })
+    expect(res.data.shop?.name).toBe('麦香小铺')
+  })
+  it('the eval provider keeps the generic fixture for the same sample', async () => {
+    const prompt = buildExtractPrompt(text('bakery-croissant-single'), [])
+    const res = await new MockPageProvider().generateJSON({
+      stage: 'extract',
+      system: '',
+      prompt,
+      schema: ModelDraft,
+    })
+    expect(res.data.shop?.name).toBe('午后小店')
   })
 })

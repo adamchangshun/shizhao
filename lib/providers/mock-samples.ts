@@ -22,7 +22,10 @@ interface Gold {
 }
 interface Sample {
   gold: Gold
-  /** Image file names in upload order (sorted, as `pnpm demo` uploads them). */
+  /**
+   * Image file names in upload order: sorted, one request per file, as `pnpm demo` uploads them.
+   * (Images sent in one request share a timestamp and are listed by random asset id.)
+   */
   images: string[]
 }
 
@@ -33,9 +36,15 @@ const normalize = (text: string) => text.replace(/\r\n?/g, '\n').trim()
 
 function samples(): Map<string, Sample> {
   if (cache) return cache
+  let dirs: fs.Dirent[]
+  try {
+    dirs = fs.readdirSync(SAMPLES_DIR, { withFileTypes: true })
+  } catch {
+    // No samples shipped (or unreadable right now): generic fixture, and retry on the next call.
+    return new Map()
+  }
   cache = new Map()
-  if (!fs.existsSync(SAMPLES_DIR)) return cache
-  for (const dir of fs.readdirSync(SAMPLES_DIR, { withFileTypes: true })) {
+  for (const dir of dirs) {
     if (!dir.isDirectory()) continue
     const root = path.join(SAMPLES_DIR, dir.name)
     try {
