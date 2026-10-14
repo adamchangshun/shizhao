@@ -69,7 +69,7 @@ cd shizhao
 docker compose up
 ```
 
-- 首次运行会在本机构建镜像，镜像约 1.8 GB。
+- 首次运行会在本机构建镜像：冷构建约 7.5 分钟，镜像约 1.8 GB。需要在容器内使用 Playwright Chromium 时，可在 `.env` 中设置 `WITH_QA=true` 后执行 `docker compose build`。
 - 没有设置 `ADMIN_TOKEN` 时，容器首次启动会随机生成管理口令，打印在日志中，并保存在 `data/admin-token`。
 - 数据（数据库、上传的素材、生成的页面）保存在挂载的 `./data` 目录。
 - 想跑一遍完整演示，另开一个终端执行 `docker compose exec shizhao pnpm demo`。
@@ -88,9 +88,15 @@ pnpm bootstrap   # 从 .env.example 生成 .env（已存在则跳过），随机
 pnpm demo        # 用第一组评测样本走完全流程，打印公开页链接、管理口令和终端二维码
 ```
 
-`pnpm demo` 发现 6688 端口没有运行中的服务时，会自动启动开发服务器并在演示结束后保持运行，按 Ctrl+C 停止。以后日常开发直接运行 `pnpm dev` 即可。
+在依赖已缓存的机器上，从全新 clone 到 `pnpm demo` 结束约 16 秒。`pnpm demo` 用 `eval/samples/` 的第一组样本，全程通过 HTTP 接口完成「建项目 → 上传 → 抽取 → 确认 → 生成 → 发布」，最后打印公开页链接、管理预览链接（需要口令）、生成页面的本地文件路径、管理口令和终端二维码。
 
-`pnpm bootstrap` 生成的是 `.env`（权限 600）。如果你另有 `.env.local`，本地运行时它的优先级高于 `.env`，但 `docker compose` 只读取 `.env`。
+6688 端口已有服务时 `pnpm demo` 直接使用它；没有时会自动启动开发服务器并在演示结束后保持运行，按 Ctrl+C 停止。要连接别的地址，可设置 `DEMO_API_BASE`（只允许本机 http 地址或 https 地址）。以后日常开发直接运行 `pnpm dev` 即可。
+
+二维码内容取自 `.env` 中的 `PUBLIC_BASE_URL`（默认 `http://localhost:6688`）。想用手机扫码打开，把它改成电脑的局域网地址（例如 `http://192.168.1.10:6688`），手机和电脑连同一个网络，再重新启动服务。
+
+`pnpm bootstrap` 生成的是 `.env`（权限 600）。环境变量的优先级与 Next.js 相同：命令行环境变量 > `.env.local` > `.env`；`.env.local` 里如果有空的 `ADMIN_TOKEN=`，bootstrap 会报错退出。`docker compose` 只读取 `.env`。
+
+也可以不用 bootstrap 手动准备：`cp .env.example .env.local`，在其中把 `ADMIN_TOKEN` 设为至少 12 位的随机字符串（例如 `openssl rand -hex 16` 的输出），再执行 `pnpm db:migrate` 和 `pnpm dev`。
 
 ### 启动后可以访问
 

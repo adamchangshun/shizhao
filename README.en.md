@@ -71,7 +71,7 @@ cd shizhao
 docker compose up
 ```
 
-- The first run builds the image locally; the image is about 1.8 GB.
+- The first run builds the image locally: a cold build takes about 7.5 minutes and the image is about 1.8 GB. To include Playwright Chromium in the image, set `WITH_QA=true` in `.env` and run `docker compose build`.
 - Without `ADMIN_TOKEN`, the container generates a random admin token on first start, prints it in the log and keeps it in `data/admin-token`.
 - Data (database, uploads, generated pages) lives in the mounted `./data` directory.
 - To run the full demo, open another terminal and run `docker compose exec shizhao pnpm demo`.
@@ -90,9 +90,15 @@ pnpm bootstrap   # creates .env from .env.example (skipped if present), generate
 pnpm demo        # walks the first evaluation sample through the whole flow, prints the public URL, admin token and a terminal QR code
 ```
 
-If nothing is listening on port 6688, `pnpm demo` starts the dev server and keeps it running after the demo; press Ctrl+C to stop it. For everyday development, just run `pnpm dev`.
+With dependencies already cached, a fresh clone gets through `pnpm demo` in about 16 seconds. `pnpm demo` takes the first sample in `eval/samples/` through "create project → upload → extract → confirm → generate → publish" entirely over the HTTP API, then prints the public URL, an admin preview URL (token required), the local path of the generated page, the admin token and a terminal QR code.
 
-`pnpm bootstrap` writes `.env` (mode 600). If you also have a `.env.local`, it takes precedence over `.env` for local runs, but `docker compose` only reads `.env`.
+If a server is already listening on port 6688, `pnpm demo` uses it; otherwise it starts the dev server and keeps it running after the demo (Ctrl+C stops it). Set `DEMO_API_BASE` to target another address (local http or https only). For everyday development, just run `pnpm dev`.
+
+The QR code points at `PUBLIC_BASE_URL` in `.env` (default `http://localhost:6688`). To scan it with a phone, set it to your computer's LAN address (e.g. `http://192.168.1.10:6688`), keep the phone on the same network, and restart the server.
+
+`pnpm bootstrap` writes `.env` (mode 600). Precedence matches Next.js: shell environment > `.env.local` > `.env`; an empty `ADMIN_TOKEN=` in `.env.local` makes bootstrap exit with an error. `docker compose` only reads `.env`.
+
+To set up by hand instead: `cp .env.example .env.local`, set `ADMIN_TOKEN` there to a random string of at least 12 characters (e.g. from `openssl rand -hex 16`), then run `pnpm db:migrate` and `pnpm dev`.
 
 ### After startup
 
