@@ -22,7 +22,7 @@ import { INLINE_SCRIPT } from './inline-script'
 import { ActionBar, CopyToast, CorrectionSlot, ShopInfo, SiteFooter } from './shared/chrome'
 import type { ImageSize, TemplateCopy, TemplateImage } from './types'
 
-export { INLINE_SCRIPT_SHA256 } from './inline-script'
+export { INLINE_SCRIPT_SHA256, SCRIPT_SRC } from './inline-script'
 export type { ImageSize } from './types'
 
 export interface RenderInput {
@@ -168,7 +168,7 @@ export async function renderPage(input: RenderInput): Promise<RenderResult> {
         <div className={`page t-${design.templateId} deco-${design.decoration}`}>
           <Component facts={facts} copy={copy} design={design} image={image} />
           <ShopInfo shop={facts.shop} />
-          <CorrectionSlot />
+          <CorrectionSlot facts={facts} api={input.trackingBase ? '/api/corrections' : ''} />
           <SiteFooter />
         </div>
         <ActionBar shop={facts.shop} nav={nav} />

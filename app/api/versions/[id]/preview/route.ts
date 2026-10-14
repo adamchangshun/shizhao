@@ -2,7 +2,7 @@ import { requireAdmin } from '@/lib/auth'
 import { Errors, toErrorResponse } from '@/lib/core/errors'
 import { isValidId } from '@/lib/core/ids'
 import { readVersionHtml } from '@/lib/jobs'
-import { INLINE_SCRIPT_SHA256 } from '@/lib/render'
+import { SCRIPT_SRC } from '@/lib/render'
 
 interface Ctx {
   params: Promise<{ id: string }>
@@ -12,7 +12,7 @@ interface Ctx {
 // (connect-src 'none' also keeps previews out of the visit statistics).
 const PREVIEW_CSP = [
   "default-src 'none'",
-  `script-src 'sha256-${INLINE_SCRIPT_SHA256}'`,
+  `script-src ${SCRIPT_SRC}`,
   "style-src 'unsafe-inline'",
   "img-src 'self' data:",
   'font-src data:',

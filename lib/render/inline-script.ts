@@ -22,7 +22,34 @@ navigator.clipboard.writeText(v).then(function(){show(true)},function(){fallback
 document.addEventListener('click',function(e){
 var el=e.target&&e.target.closest?e.target.closest('[data-act]'):null;if(!el)return;
 var a=el.getAttribute('data-act');if(a==='wechat_copy')copy(el.getAttribute('data-copy')||'');send(a)});
+var f=document.getElementById('sz-fix');if(f){var E=f.elements,F=E.field,V=document.getElementById('sz-fix-v'),M=document.getElementById('sz-fix-msg');
+function nv(){var o=F.options[F.selectedIndex];V.hidden=!!(o&&o.hasAttribute('data-nv'))}
+function say(i){M.hidden=false;for(var k=0;k<M.children.length;k++)M.children[k].hidden=k!==i}
+F.addEventListener('change',nv);nv();
+f.addEventListener('submit',function(e){e.preventDefault();var a=f.getAttribute('data-api');if(!a)return say(1);
+var p={slug:d.slug,versionId:d.version,field:F.value},v=E.sv.value.trim(),n=E.note.value.trim(),B=f.querySelector('button');
+if(!V.hidden){if(!v)return say(3);p.suggestedValue=v}if(n)p.note=n;B.disabled=true;
+fetch(a,{method:'POST',body:JSON.stringify(p),headers:{'Content-Type':'application/json'}}).then(function(r){
+if(r.ok){f.reset();nv();return say(0)}return r.json().then(function(j){var c=j&&j.error&&j.error.code;say(c==='personal_info'?2:c==='value_required'?3:1)})
+}).catch(function(){say(1)}).then(function(){B.disabled=false})})}
 send('view')})();`
 
 /** Base64 SHA-256 of INLINE_SCRIPT; CSP source expression is `'sha256-<this>'`. */
-export const INLINE_SCRIPT_SHA256 = createHash('sha256').update(INLINE_SCRIPT, 'utf8').digest('base64')
+export const INLINE_SCRIPT_SHA256 = createHash('sha256')
+  .update(INLINE_SCRIPT, 'utf8')
+  .digest('base64')
+
+/**
+ * Version directories are immutable, so pages rendered before a script change still carry the
+ * script they were built with. CSP must keep allowing those exact bytes, or their copy button
+ * and tracking stop working. Append the old hash here whenever INLINE_SCRIPT changes.
+ */
+const PREVIOUS_SCRIPT_SHA256 = [
+  // Before module 15 (no correction form handling).
+  'yKVCnk7Pm2i6c0XUJQGv9UMyPi7i+SB9VlccmghtWc4=',
+]
+
+/** CSP `script-src` sources for every script a stored version may contain. */
+export const SCRIPT_SRC = [INLINE_SCRIPT_SHA256, ...PREVIOUS_SCRIPT_SHA256]
+  .map((hash) => `'sha256-${hash}'`)
+  .join(' ')

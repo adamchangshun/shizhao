@@ -2,6 +2,7 @@ import { and, desc, eq, isNull, notInArray } from 'drizzle-orm'
 import { newId, newSlug } from '../../core/ids'
 import { getDb } from '../client'
 import {
+  corrections,
   jobs,
   projects,
   visitEvents,
@@ -91,6 +92,7 @@ export function claimProjectDeletion(id: string): DeletionClaim {
       if (!project) return 'missing'
       if (project.deletedAt !== null) {
         tx.delete(visitEvents).where(eq(visitEvents.projectId, id)).run()
+        tx.delete(corrections).where(eq(corrections.projectId, id)).run()
         return 'claimed'
       }
       const active = tx
@@ -104,6 +106,7 @@ export function claimProjectDeletion(id: string): DeletionClaim {
         .where(and(eq(projects.id, id), isNull(projects.deletedAt)))
         .run()
       tx.delete(visitEvents).where(eq(visitEvents.projectId, id)).run()
+      tx.delete(corrections).where(eq(corrections.projectId, id)).run()
       return 'claimed'
     },
     { behavior: 'immediate' },

@@ -219,7 +219,7 @@ describe('POST /api/projects/:id/jobs → full mock pipeline', () => {
 
     const preview = await getPreview(req(`/api/versions/${version.id}/preview`), ctx(version.id))
     expect(preview.status).toBe(200)
-    expect(preview.headers.get('content-security-policy')).toMatch(/script-src 'sha256-[^']+'(;|$)/)
+    expect(preview.headers.get('content-security-policy')).toMatch(/script-src( 'sha256-[^']+')+(;|$)/)
     const html = await preview.text()
     expect(html).toContain('data-fact="items.' + itemId + '.price">¥20<')
     expect(html).toContain(`src="media/${imageId}-display.webp"`)

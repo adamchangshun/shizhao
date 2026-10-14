@@ -2,7 +2,7 @@ import { createHash } from 'node:crypto'
 import { parse, type HTMLElement } from 'node-html-parser'
 import { describe, expect, expectTypeOf, it } from 'vitest'
 import type { CopyDraft, FactSheet, TemplateId } from '@/lib/core/schemas'
-import { INLINE_SCRIPT_SHA256, renderPage, type RenderInput } from '@/lib/render'
+import { INLINE_SCRIPT_SHA256, renderPage, SCRIPT_SRC, type RenderInput } from '@/lib/render'
 import { INLINE_SCRIPT } from '@/lib/render/inline-script'
 import type { TemplateCopy, TemplateProps } from '@/lib/render/types'
 import { TEMPLATES } from '@/templates'
@@ -196,7 +196,13 @@ describe('renderPage shared behavior', () => {
     const script = parse(html).querySelector('script')?.textContent ?? ''
     expect(script).toBe(INLINE_SCRIPT)
     expect(createHash('sha256').update(script, 'utf8').digest('base64')).toBe(INLINE_SCRIPT_SHA256)
-    expect(Buffer.byteLength(script, 'utf8')).toBeLessThanOrEqual(2048)
+    expect(Buffer.byteLength(script, 'utf8')).toBeLessThanOrEqual(4096)
+  })
+
+  it('keeps allowing the script of pages rendered before module 15', () => {
+    // Hash of the script on main before the correction form (immutable versions still carry it).
+    expect(SCRIPT_SRC).toContain("'sha256-yKVCnk7Pm2i6c0XUJQGv9UMyPi7i+SB9VlccmghtWc4='")
+    expect(SCRIPT_SRC).toContain(`'sha256-${INLINE_SCRIPT_SHA256}'`)
   })
 
   it('puts tracking configuration in body data attributes', async () => {

@@ -5,11 +5,17 @@ import { usePathname, useSearchParams } from 'next/navigation'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import useSWR from 'swr'
 import { ClientError, messageOf } from '../../_lib/api'
-import type { AssetEntry, ExtractResponse, ProjectDetail, VersionSummary } from '../../_lib/types'
+import type {
+  AssetEntry,
+  CorrectionList,
+  ExtractResponse,
+  ProjectDetail,
+  VersionSummary,
+} from '../../_lib/types'
 import { StateBadge } from '../../state-badge'
 import s from '../../shell.module.css'
 import w from './wizard.module.css'
-import { CorrectionsTab } from './corrections-tab'
+import { CorrectionsTab, correctionsKey } from './corrections-tab'
 import { FactsStep } from './facts-step'
 import { GenerateStep } from './generate-step'
 import { PreviewStep } from './preview-step'
@@ -51,6 +57,8 @@ export function Workspace({ projectId, publicBase }: { projectId: string; public
   const project = useSWR<ProjectDetail>(base)
   const assets = useSWR<{ assets: AssetEntry[] }>(`${base}/assets`)
   const versions = useSWR<{ versions: VersionSummary[] }>(`${base}/versions`)
+  const pendingCorrections =
+    useSWR<CorrectionList>(correctionsKey(projectId)).data?.pendingCount ?? 0
   // Extraction details (conflicts) only come with the extract response; they live for this visit.
   const [extract, setExtract] = useState<ExtractResponse | null>(null)
   const [materialChanged, setMaterialChanged] = useState(false)
@@ -152,6 +160,12 @@ export function Workspace({ projectId, publicBase }: { projectId: string; public
             aria-current={tab === 'corrections' ? 'page' : undefined}
           >
             顾客纠错
+            {pendingCorrections > 0 && (
+              <span className={w.tabBadge}>
+                {pendingCorrections}
+                <span className={s.srOnly}> 条待处理</span>
+              </span>
+            )}
           </Link>
           <Link
             href={`/projects/${projectId}?tab=settings`}
@@ -178,7 +192,15 @@ export function Workspace({ projectId, publicBase }: { projectId: string; public
           </button>
         </p>
       )}
-      {tab === 'corrections' && <CorrectionsTab />}
+      {tab === 'corrections' && (
+        <CorrectionsTab
+          projectId={projectId}
+          onAccepted={() => {
+            void project.mutate()
+            void versions.mutate()
+          }}
+        />
+      )}
       {tab === 'settings' && (
         <SettingsTab
           project={detail}

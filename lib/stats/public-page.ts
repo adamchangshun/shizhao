@@ -2,11 +2,11 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { MEDIA_FILE } from '../jobs/files'
 import { getPublishedHtmlPath } from '../publish'
-import { INLINE_SCRIPT_SHA256 } from '../render/inline-script'
+import { SCRIPT_SRC } from '../render/inline-script'
 
 export const PUBLIC_CSP = [
   "default-src 'none'",
-  `script-src 'sha256-${INLINE_SCRIPT_SHA256}'`,
+  `script-src ${SCRIPT_SRC}`,
   "style-src 'unsafe-inline'",
   "img-src 'self' data:",
   "font-src 'self' data:",

@@ -17,7 +17,11 @@ export default defineConfig({
     trace: 'retain-on-failure',
   },
   projects: [
-    { name: 'mobile-chrome', use: { ...devices['Pixel 7'] }, testIgnore: /merchant\.spec\.ts$/ },
+    {
+      name: 'mobile-chrome',
+      use: { ...devices['Pixel 7'] },
+      testIgnore: /(merchant|corrections)\.spec\.ts$/,
+    },
     {
       name: 'merchant-mobile',
       testMatch: /merchant\.spec\.ts$/,
@@ -32,6 +36,11 @@ export default defineConfig({
       testMatch: /merchant\.spec\.ts$/,
       grep: /corrected price/,
       use: { ...devices['Pixel 7'], viewport: { width: 360, height: 780 } },
+    },
+    {
+      name: 'corrections-mobile',
+      testMatch: /corrections\.spec\.ts$/,
+      use: { ...devices['Pixel 7'], viewport: { width: 375, height: 812 } },
     },
     {
       name: 'merchant-desktop',

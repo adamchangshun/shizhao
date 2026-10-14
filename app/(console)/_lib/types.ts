@@ -27,6 +27,14 @@ export interface FactsResponse {
   confirmed: boolean
 }
 
+export type { CorrectionView } from '@/lib/corrections/merchant'
+import type { CorrectionView } from '@/lib/corrections/merchant'
+
+export interface CorrectionList {
+  corrections: CorrectionView[]
+  pendingCount: number
+}
+
 export type ActionCounts = Record<'view' | 'call' | 'wechat_copy' | 'navigate', number>
 
 /** GET /api/projects/:id/stats?days=7 (module 10). */
