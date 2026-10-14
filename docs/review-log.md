@@ -151,6 +151,27 @@
 
 审查结论：没有 CRITICAL、HIGH 或 MEDIUM，第 2 轮修复合并到 main。
 
+### Ollama 适配修复 · 第 3 轮（Claude 只读审查，报告：提示词目录 `审查报告/02-第3轮.md`）：1 HIGH，1 MEDIUM，3 LOW
+
+分支 `fix/02-ollama` 做了三处改动：Ollama 的 WebP 图片转成 PNG；新增 jsonMode 能力开关，ollama 下不发 `response_format`；Mock 回显商家文字。全量测试 812 个用例，全部通过；另外在本机 Ollama（`qwen3-vl:8b`）上实测。
+
+| 级别 | 问题 | 处理 |
+|---|---|---|
+| HIGH | ollama 的 system 后缀改成「只输出一个 JSON 对象」，与 guard-judge / guard-rewrite 要求输出数组冲突；实测在 temperature 0 下，guard-rewrite 回复 `{"revised_items":[…]}`，用掉了唯一一次修正机会 | 第 4 轮确认已修复（`0b1ca49`）：所有 profile 的后缀都恢复为「只输出 JSON。」；jsonMode 关闭时，修正提示也不再限定类型；补了 ollama 下判定、改写两个数组 schema 的测试 |
+| MEDIUM | 缺少「模型先输出一段说明或思考，再给 JSON」的测试；`extractJSON` 会选中 `<think>` 里的花括号，也会把被文字包裹的数组截成首个对象 | 已补「中文说明 + 裸对象，不消耗修正机会」的测试；两个解析缺陷属于原有 `json.ts`，暂缓，原因写在 `lib/providers/README.md` |
+| LOW ×3 | Mock 回显会把描述性首行当店名；一行里出现指令类词会连带丢掉真实价格；`facts.test.ts` 少测了一个场景 | Mock 回显被 main 已有的 `mock-samples.ts` 取代，已从分支整体移除，这三条随之消失 |
+
+### Ollama 适配修复 · 第 4 轮（Claude 只读审查，报告：提示词目录 `审查报告/02-第4轮.md`）：0 HIGH，0 MEDIUM，2 LOW
+
+复核 `0b1ca49`（已 rebase 到 main）：全量测试 857 个用例，全部通过。在本机 Ollama 上重跑 guard-rewrite 的后缀对照：「只输出 JSON。」3/3 返回正确数组，「只输出一个 JSON 对象。」3/3 返回被对象包装的结果。用分支代码端到端调用 2 次，都是一次请求成功，不需要修正。分支上的 `mock.ts` 和测试与 main 一致，与 `mock-samples.ts` 没有重复。
+
+| 级别 | 问题 | 处理 |
+|---|---|---|
+| LOW | `extractJSON` 的 `<think>` 花括号和被文字包裹的数组两个边界 | 暂缓，已写入 README，以后单独修复 |
+| LOW | 本机 8B 模型单次调用 guard-rewrite 要 56–72 秒，超过默认的 45 秒超时 | 不在本次范围内；是否单独放宽 ollama 的超时由项目负责人决定 |
+
+审查结论：没有 CRITICAL、HIGH 或 MEDIUM，`fix/02-ollama` 合并到 main。
+
 ## 04 事实抽取与确认
 
 ### 第 1 轮（`cdx-review`，gpt-5.6-terra）：2 HIGH，1 MEDIUM
