@@ -338,7 +338,6 @@ Claude 核实后认为 4 条 CRITICAL 都是真实的加固点，但影响面达
 | HIGH | demo 中途失败或被 Ctrl+C 时，自动启动的 `next dev` 可能残留 | 已修复：子进程放在独立进程组；启动前就安装 SIGINT/SIGTERM 处理；失败或中断时终止整个进程组，等待退出，10 秒后强制结束。已实测启动中 Ctrl+C、运行中 Ctrl+C、生成失败三种情况，都没有残留进程 |
 
 按项目负责人的安排只审 1 轮；修复后的行为由实测验证：全量测试 795 个用例通过；全新 clone 后 `docker compose up` 加容器内 `pnpm demo`，公开页返回 200；全新 clone 后 `pnpm i && pnpm bootstrap && pnpm demo`，公开页返回 200。
-||||||| f49c80b
 
 ## 11 商家界面（Claude 实现，Codex 审查）
 

@@ -20,16 +20,10 @@ Among the open-source projects we searched on GitHub and Gitee, we found none th
 
 | Metric | Result | Source |
 |---|---|---|
-| Time to generate one page | To be filled in after rerunning with a real model | `eval/reports/` |
-| Block rate / false-positive rate (rules + model judge) | To be filled in after rerunning with a real model | `eval/reports/` |
-| Comparison: AI writes the whole page vs Shizhao | To be filled in after rerunning with a real model | `eval/reports/` |
-| Automated tests | 791 tests, all passing (2026-10-14, commit `f49c80b`) | `pnpm test` |
-
-The report currently in `eval/reports/2026-10-13/` was produced with the mock model to verify the pipeline. Its numbers are meaningless and are not quoted.
-
-**Independent holdout set (rule layer only)**: 80 cases, 52 that should be blocked and 28 that should pass. Cases were written from the functional spec by someone who never saw the implementation, frozen and hashed before the run, and run exactly once against a fixed commit without any rule or case changes. No model was called. Block rate 63.5% (33/52, 95% CI 49.9%–75.2%); false-positive rate 21.4% (6/28, 95% CI 10.2%–39.5%). Misses were mostly paraphrased ingredient, origin, efficacy and implied-ranking claims; false positives came mostly from Chinese idioms containing numbers.
-
-The rule layer only recognizes listed words and patterns, so paraphrases can slip through; the optional model judge layer is there to catch them. Combined results will come from the real-model evaluation report.
+| Time to generate one page | To be filled in after the 2026-10-14 rerun | [Evaluation and validation](#evaluation-and-validation) |
+| Comparison: AI writes the whole page vs Shizhao | To be filled in after the 2026-10-14 rerun | [Evaluation and validation](#evaluation-and-validation) |
+| Rule-layer holdout block rate / false-positive rate | 63.5% / 21.4% (80 cases, rule layer only) | [Evaluation and validation](#evaluation-and-validation) |
+| Automated tests | 795 tests, all passing (2026-10-14, commit `50c5639`) | `pnpm test` |
 
 ## Pipeline
 
@@ -59,30 +53,52 @@ flowchart LR
 |---|---|
 | Scaffold and auth, model adapters, uploads, fact extraction and confirmation | Done |
 | Style generation, rendering with 3 templates, fact guard and copy, job orchestration | Done |
-| Publishing and QR codes, public page and visit stats, evaluation suite, copy-check page and API | Done |
-| Merchant UI, customer corrections | In progress |
-| Docker one-click run, `pnpm demo`, CI | In progress |
-
-The full "create project → upload → extract → confirm → generate → publish" flow currently works through the HTTP API (routes in section 6 and revision R1 of [docs/CONTRACT.md](docs/CONTRACT.md)).
+| Publishing and QR codes, public page and visit stats, merchant console | Done |
+| Evaluation suite, copy-check page and API, Docker one-click run and `pnpm demo` | Done |
+| Customer corrections, CI, public deployment guide | To do |
 
 ## Quick start
 
-Requires Node.js 24 and pnpm (verified with Node 24.14 and pnpm 12.11). Without any model key, the built-in mock model (fixed demo data, no network) is used and the whole flow still runs.
+With no model key configured, the built-in mock model (fixed demo data, no network) is used, so the whole "create project → upload → extract → confirm → generate → publish" flow runs with **zero configuration**. The mock model only returns fixed demo data and does not actually read your uploads; to process real material, [use a real model](#using-a-real-model).
+
+### Option 1: Docker (recommended)
+
+Requires Docker and Docker Compose.
 
 ```bash
 git clone https://github.com/adamchangshun/shizhao.git   # or https://gitee.com/sheng-changshun/shizhao.git
 cd shizhao
-pnpm i
-cp .env.example .env.local
-# Edit .env.local and set ADMIN_TOKEN to a random string of at least 12 characters, e.g. `openssl rand -hex 16`
-pnpm db:migrate
-pnpm dev
+docker compose up
 ```
 
-Then open:
+- The first run builds the image locally; the image is about 1.8 GB.
+- Without `ADMIN_TOKEN`, the container generates a random admin token on first start, prints it in the log and keeps it in `data/admin-token`.
+- Data (database, uploads, generated pages) lives in the mounted `./data` directory.
+- To run the full demo, open another terminal and run `docker compose exec shizhao pnpm demo`.
 
+So far this has only been verified with Docker Desktop on macOS (Apple silicon); Docker on Linux and Windows is untested, and issues are welcome.
+
+### Option 2: local pnpm
+
+Requires Node.js 24 and pnpm (verified with Node 24.14 and pnpm 12.11).
+
+```bash
+git clone https://github.com/adamchangshun/shizhao.git
+cd shizhao
+pnpm i
+pnpm bootstrap   # creates .env from .env.example (skipped if present), generates and prints an admin token, runs migrations
+pnpm demo        # walks the first evaluation sample through the whole flow, prints the public URL, admin token and a terminal QR code
+```
+
+If nothing is listening on port 6688, `pnpm demo` starts the dev server and keeps it running after the demo; press Ctrl+C to stop it. For everyday development, just run `pnpm dev`.
+
+`pnpm bootstrap` writes `.env` (mode 600). If you also have a `.env.local`, it takes precedence over `.env` for local runs, but `docker compose` only reads `.env`.
+
+### After startup
+
+- `http://localhost:6688/`: merchant console; sign in with the admin token to create projects, upload, confirm facts, generate, preview and publish.
+- `http://localhost:6688/p/<code>/`: the public page customers see; `pnpm demo` prints the actual URL.
 - `http://localhost:6688/check`: copy-check page, no login needed.
-- `http://localhost:6688/login`: sign in with `ADMIN_TOKEN` for the merchant API.
 - `http://localhost:6688/api/health`: health check.
 
 Or call the copy-check API directly:
@@ -95,21 +111,13 @@ curl -X POST http://localhost:6688/api/guard \
 
 "全城销量第一" (best-selling in town) is blocked as an unsupported sales claim and an absolute claim; "当天现烤" (baked today) is backed by a fact and kept.
 
-To preview what generated pages look like:
-
-```bash
-pnpm render:demo
-```
-
-This renders all 3 templates with fixed single-item and menu data into `data/demo/<template>-<dataset>/index.html`. Before the first run, install the headless browser once with `pnpm exec playwright install --only-shell chromium` (`pnpm test` does this automatically).
+To see all templates at once, run `pnpm render:demo`: it renders the 3 templates with fixed single-item and menu data into `data/demo/<template>-<dataset>/index.html`. Before the first run, install the headless browser once with `pnpm exec playwright install --only-shell chromium` (`pnpm test` does this automatically).
 
 Everyday commands: `pnpm typecheck`, `pnpm lint`, `pnpm test`.
 
-> Docker (`docker compose up`) and the setup scripts (`pnpm bootstrap`, `pnpm demo`) are in progress and will be documented here when ready.
-
 ## Using a real model
 
-Set `PROVIDER=openai-compatible` in `.env.local` and fill in the variables below. The repository ships no keys and no model names; use models your service actually offers.
+Set `PROVIDER=openai-compatible` in `.env` and fill in the variables below (both Docker and local runs read `.env`), then restart. The repository ships no keys and no model names; use models your service actually offers.
 
 | Service | `LLM_PROFILE` | `LLM_BASE_URL` | Images |
 |---|---|---|---|
@@ -129,6 +137,8 @@ LLM_MODEL_VISION=<vision model>
 LLM_PRICE_INPUT_PER_1K=0        # CNY per 1K tokens, for cost tracking only
 LLM_PRICE_OUTPUT_PER_1K=0
 ```
+
+Under Docker, `localhost` inside the container is the container itself; to reach Ollama on the host, use `http://host.docker.internal:11434/v1` (provided by Docker Desktop).
 
 Fact extraction reads photos, so the full flow needs at least one image-capable profile (`qwen`, `glm`, or `ollama` with a vision model). Protocol details: [lib/providers/README.md](lib/providers/README.md).
 
@@ -156,9 +166,50 @@ Fact extraction reads photos, so the full flow needs at least one image-capable 
 
 `packages/fact-guard` is a TypeScript library with zero runtime dependencies. It does not depend on Next.js or the database and can check marketing copy anywhere. See [packages/fact-guard/README.md](packages/fact-guard/README.md).
 
-## Evaluation
+## Evaluation and validation
 
-Scripts, sample format and how to add samples: [eval/README.md](eval/README.md). With a real model configured:
+Scripts, sample format and how to add samples: [eval/README.md](eval/README.md).
+
+### Fact guard rule layer
+
+| Test set | Size | Block rate | False-positive rate | Nature |
+|---|---|---|---|---|
+| A1 adversarial set | 47 to block, 23 to pass | 93.6% (44/47) | 0% (0/23) | **In-sample**: A1 was consulted during development to tune rules, so it is only a regression set; without the A1-derived word lists it scores 78.7% (37/47) |
+| A1b independent holdout | 52 to block, 28 to pass | 63.5% (33/52) | 21.4% (6/28) | Independent: written without seeing the implementation, unseen by the implementer before the test, run exactly once |
+
+About the A1b holdout: cases were written from the functional spec by someone who never saw the implementation, frozen and hashed before the run, and run exactly once against a fixed commit without any rule or case changes. No model was called. Block rate 63.5% (33/52, 95% CI 49.9%–75.2%); false-positive rate 21.4% (6/28, 95% CI 10.2%–39.5%). Misses were mostly paraphrased ingredient, origin, efficacy and implied-ranking claims; false positives came mostly from Chinese idioms containing numbers.
+
+The rule layer only recognizes listed words and patterns, so paraphrases can slip through; the optional model judge layer is there to catch them. See experiment 3 below for the combined result.
+
+### Real-model experiments
+
+> The three tables below will be filled in after the 2026-10-14 rerun with a real model, with model name, version, date, runId and commit. The report currently in `eval/reports/2026-10-13/` was produced with the mock model to verify the pipeline; **its numbers are meaningless and must not be quoted**.
+
+**Experiment 1: fact extraction accuracy**
+
+| Field | Labeled | Extracted | Correct | Precision | Recall |
+|---|---:|---:|---:|---:|---:|
+| Product name | TBD | TBD | TBD | TBD | TBD |
+| Price | TBD | TBD | TBD | TBD | TBD |
+| Spec | TBD | TBD | TBD | TBD | TBD |
+| Shop phone | TBD | TBD | TBD | TBD | TBD |
+| Shop address | TBD | TBD | TBD | TBD | TBD |
+
+**Experiment 2: AI writes the whole page (group A) vs Shizhao (group B)**
+
+| Group | Input | Pages | Fact errors per page | Of which price and name | Unsupported claims per page | Avg cost (CNY/run) | Avg model time (s/run) |
+|---|---|---:|---:|---:|---:|---:|---:|
+| A: AI writes the whole page | Raw photos and text | TBD | TBD | TBD | TBD | TBD | TBD |
+| B: Shizhao (end to end) | Raw photos and text → extract → merchant changes nothing → generate | TBD | TBD | TBD | TBD | TBD | TBD |
+
+**Experiment 3: guard block rate and false-positive rate**
+
+| Judging | Judge model | To block | Blocked | Block rate | To pass | False positives | FP rate |
+|---|---|---:|---:|---:|---:|---:|---:|
+| Rule layer only | None | TBD | TBD | TBD | TBD | TBD | TBD |
+| Rules + model judge | TBD | TBD | TBD | TBD | TBD | TBD | TBD |
+
+With a real model configured, rerun all experiments (reports go to `eval/reports/<date>/`):
 
 ```bash
 pnpm eval:extract && pnpm eval:compare && pnpm eval:guard && pnpm eval:report
@@ -166,7 +217,7 @@ pnpm eval:extract && pnpm eval:compare && pnpm eval:guard && pnpm eval:report
 
 ## How it was built
 
-Two models, Claude and Codex, split the work: each module was written by one and reviewed read-only by the other, with fixes and re-reviews whenever a HIGH issue was found. All reviews are public in [docs/review-log.md](docs/review-log.md). As of 2026-10-14 it records 27 review rounds across 11 modules; the round reports total 63 HIGH, 38 MEDIUM and 23 LOW findings (an issue reported in several rounds is counted each time). Of the 107 issues listed in its tables, 63 are fixed and every other one states why it was declined or deferred.
+Two models, Claude and Codex, split the work: each module was written by one and reviewed read-only by the other, with fixes and re-reviews whenever a HIGH issue was found. All reviews are public in [docs/review-log.md](docs/review-log.md). As of 2026-10-14 it records 30 review rounds across 13 modules; the round reports total 4 CRITICAL, 76 HIGH, 45 MEDIUM and 23 LOW findings (an issue reported in several rounds is counted each time). Of the 138 issues listed in its tables, 82 are fixed and the rest state why they were declined, deferred or only recorded.
 
 ## Contributing
 

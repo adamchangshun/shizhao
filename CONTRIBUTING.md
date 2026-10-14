@@ -7,7 +7,7 @@
 ## 开发环境
 
 - Node.js 24、pnpm（已在 pnpm 12.11 上验证）。
-- 按 [README 的快速开始](README.md#快速开始)安装依赖、复制 `.env.example` 为 `.env.local` 并设置 `ADMIN_TOKEN`。
+- 按 [README 的快速开始](README.md#快速开始)运行 `pnpm i` 和 `pnpm bootstrap`（生成 `.env`、管理口令并迁移数据库），之后用 `pnpm dev` 启动。
 - 默认 `PROVIDER=mock`，不需要任何模型密钥；所有测试都在 Mock 下运行，不访问网络。
 - `pnpm test` 运行前会自动安装 Playwright 的无界面 Chromium（渲染相关测试需要）。
 
