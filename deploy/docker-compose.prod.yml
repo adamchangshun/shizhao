@@ -1,0 +1,63 @@
+# 实招 Shizhao — production stack: the app (module 14 image) behind Caddy. See deploy/README.md.
+#   cd /opt/shizhao/deploy && docker compose -f docker-compose.prod.yml up -d --build
+# Settings live in deploy/.env (mode 600, never committed; template: deploy/.env.example).
+name: shizhao
+
+services:
+  shizhao:
+    build:
+      context: ..
+      args:
+        # true adds Playwright Chromium for long images (needs more memory; see README).
+        WITH_QA: ${WITH_QA:-false}
+    image: shizhao:prod
+    # Non-root from the first process: the node user of node:24-slim (uid/gid 1000).
+    # The host data directory must be owned by 1000:1000 (README step 7).
+    user: '1000:1000'
+    env_file: ./.env
+    environment:
+      DATA_DIR: /app/data
+      # Only Caddy can reach the app, and Caddy overwrites X-Real-IP (see Caddyfile).
+      TRACK_TRUST_PROXY: 'true'
+      GUARD_TRUST_PROXY: 'true'
+    volumes:
+      - ../data:/app/data
+    # No `ports`: 6688 is reachable only from the caddy service on the compose network.
+    expose:
+      - '6688'
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+
+  caddy:
+    image: caddy:2.10-alpine
+    depends_on:
+      shizhao:
+        condition: service_healthy
+    # Caddy gets only these two values, not the app's secrets in .env.
+    environment:
+      DOMAIN: ${DOMAIN:?set DOMAIN in deploy/.env}
+      ACME_EMAIL: ${ACME_EMAIL:?set ACME_EMAIL in deploy/.env}
+    ports:
+      # 80: ACME challenge + redirect to https only. 443/udp: HTTP/3.
+      - '80:80'
+      - '443:443'
+      - '443:443/udp'
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+
+volumes:
+  # Certificates; also used by the static WeChat precheck (README step 5), so they carry over.
+  caddy_data:
+  caddy_config:

@@ -1,0 +1,12 @@
+# WeChat precheck (deploy/README.md step 5): serve one static page on the real domain with real
+# HTTPS before deploying the app, to find out early whether WeChat blocks the domain.
+{
+	email {$ACME_EMAIL}
+	admin off
+}
+
+{$DOMAIN} {
+	root * /srv
+	file_server
+	header -Server
+}
