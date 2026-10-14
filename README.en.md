@@ -59,7 +59,7 @@ flowchart LR
 
 ## Quick start
 
-With no model key configured, the built-in mock model (fixed demo data, no network) is used, so the whole "create project → upload → extract → confirm → generate → publish" flow runs with **zero configuration**. The mock model only returns fixed demo data and does not actually read your uploads; to process real material, [use a real model](#using-a-real-model).
+With no model key configured, the built-in mock model (no network) is used, so the whole "create project → upload → extract → confirm → generate → publish" flow runs with **zero configuration**. The mock model does not read images: if the uploaded text exactly matches the text of a sample in `eval/samples/`, it returns that sample's hand-checked facts; any other input gets fixed demo data. So `pnpm demo` produces a page for the sample shop "麦香小铺", while your own uploads are not really recognized under the mock; to process real material, [use a real model](#using-a-real-model). The evaluation scripts do not use this echo under the mock, so they never score themselves against the answer key.
 
 ### Option 1: Docker (recommended)
 
@@ -152,7 +152,7 @@ Fact extraction reads photos, so the full flow needs at least one image-capable 
 
 | Service | Purpose | Required | Where to get it | Cost | If not configured |
 |---|---|---|---|---|---|
-| LLM API (Qwen, GLM, DeepSeek, MoArk, ...) | Extraction, style, copy, copy judging | No | [Model Studio](https://bailian.console.aliyun.com/), [Zhipu](https://open.bigmodel.cn/), [DeepSeek](https://platform.deepseek.com/), [MoArk](https://ai.gitee.com/) | Pay per use | Mock data is used |
+| LLM API (Qwen, GLM, DeepSeek, MoArk, ...) | Extraction, style, copy, copy judging | No | [Model Studio](https://bailian.console.aliyun.com/), [Zhipu](https://open.bigmodel.cn/), [DeepSeek](https://platform.deepseek.com/), [MoArk](https://ai.gitee.com/) | Pay per use | The mock model is used (sample or fixed demo data) |
 | Ollama | Run open models locally | No | [ollama.com](https://ollama.com/) | Free, uses local compute | Same as above |
 | Playwright Chromium | Tests, `pnpm render:demo` | Development only | Installed by `pnpm test` | Free | Tests and demo rendering cannot run; the app is unaffected |
 | Domain and HTTPS certificate | Let customers scan the QR code on their phones | For public deployment | A domain registrar; servers in mainland China also need ICP filing | Domain is paid; certificates can be free | Local or LAN access only (public `http://` URLs are rejected at startup) |
