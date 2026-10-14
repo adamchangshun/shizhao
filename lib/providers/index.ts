@@ -16,7 +16,7 @@ export { recordUsage } from './usage'
 
 /** Stateless providers: no singleton retaining stale env, keys or cancellation state. */
 export function getProvider(env: Env = getEnv()): LLMProvider {
-  if (env.PROVIDER === 'mock') return new MockProvider()
+  if (env.PROVIDER === 'mock') return new MockProvider({ sampleFacts: true })
   if (!env.LLM_BASE_URL || !env.LLM_MODEL_TEXT || !env.LLM_MODEL_VISION)
     throw new ProviderError('bad_response')
   return new OpenAICompatibleProvider({
