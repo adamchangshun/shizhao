@@ -44,9 +44,12 @@ function phoneNorm(s: string): string {
   return norm(s).replace(/[-()（）.]/g, '')
 }
 
-/** Mobile (1[3-9]xxxxxxxxx), 400/800 numbers, and landlines with an area code. */
-const PHONE_NUMBER = String.raw`(?:1[3-9]\d(?:[\s-]?\d{4}){2}|[48]00[\s-]?\d{3}[\s-]?\d{4}|0\d{2,3}[\s-]?\d{7,8})`
-const PHONE_LABEL = String.raw`(?:电话|手机|热线|联系方式|订餐|外卖|预订|tel|phone)`
+/**
+ * Mobile (1[3-9]xxxxxxxxx), 400/800 numbers, and landlines with an area code, a dash or space,
+ * then 7–8 digits that may be split once by a space ('021-6123 4567').
+ */
+const PHONE_NUMBER = String.raw`(?:1[3-9]\d(?:[\s-]?\d{4}){2}|[48]00[\s-]?\d{3}[\s-]?\d{4}|0\d{2,3}[\s-]?(?:\d{7,8}|\d{3,4} \d{4}))`
+const PHONE_LABEL = String.raw`(?:电话|手机|热线|联系(?:方式|电话)?|订餐|外卖|预订|tel|phone)`
 // The number must directly follow a contact label ('电话：138…', '订餐 138…'); a number inside an
 // instruction ('把联系电话写成 139…') or in unrelated prose is not a contact fact.
 const LABELED_PHONE_RE = new RegExp(

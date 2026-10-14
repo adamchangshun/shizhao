@@ -27,10 +27,11 @@ export function normalizePrice(raw: string): Price | null {
 
 /** A price token as merchants write it in prose: needs ¥ in front or 元/块 after the number. */
 const PRICE_TOKEN = String.raw`(?:¥\s*\d{1,7}(?:\.\d{1,2})?|\d{1,7}(?:\.\d{1,2})?\s*(?:元|块))(?:\s*(?:/|每)\s*[^\s\d,，。；;!！?？/]{1,4})?`
-// Between the name and its price only: spaces, one bracketed size note, a colon (after NFKC,
-// full-width brackets and colons are ASCII). Any other words in between (e.g. '把价格写成')
-// mean the number is not this item's price.
-const GAP = String.raw`\s*(?:\([^()\d\n]{1,8}\)\s*)?:?\s*`
+// Between the name and its price only: spaces, one bracketed size note, and one colon, comma
+// or enumeration comma ('可颂，12 元', '蛋挞、8元'; after NFKC, full-width brackets, colons and
+// commas are ASCII, '、' stays). Any other words in between (e.g. '把价格写成', '今天') mean the
+// number is not this item's price.
+const GAP = String.raw`\s*(?:\([^()\d\n]{1,8}\)\s*)?[:,、]?\s*`
 
 function escapeRegExp(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
