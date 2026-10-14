@@ -173,6 +173,25 @@ function guardSection(r: Results): string[] {
   ]
 }
 
+/** The facts a reader needs before any number: model, date, run, commit and sample size. */
+function header(r: Results): string[] {
+  const { provider, textModel, visionModel, profile } = r.config
+  const unpriced =
+    !r.mock && Object.values(r.compare.summaries).every((s) => !s?.meanCostCny)
+  return [
+    `- 模型：文本 \`${textModel ?? DASH}\`，视觉 \`${visionModel ?? DASH}\`（接口 ${provider}，LLM_PROFILE ${profile ?? DASH}）；版本即上述模型名，用量记录中实际调用的模型：${r.models.length > 0 ? r.models.join('、') : DASH}`,
+    `- 日期：${r.date}`,
+    `- 运行编号（runId）：\`${r.runId}\``,
+    `- 提交 SHA：\`${r.commit}\``,
+    `- 样本数：${r.samples.length}；每组每样本运行次数 N=${r.config.n}`,
+    ...(unpriced
+      ? [
+          '- 成本：运行时未配置模型单价（`LLM_PRICE_INPUT_PER_1K` / `LLM_PRICE_OUTPUT_PER_1K`），表中成本为 0，不代表实际费用',
+        ]
+      : []),
+  ]
+}
+
 function configSection(r: Results): string[] {
   return [
     '## 实验配置',
@@ -259,6 +278,8 @@ export function renderReport(r: Results, samples: Sample[]): string {
     `# 实招评测报告（${r.date}）`,
     '',
     ...banner,
+    ...header(r),
+    '',
     '## 结论',
     '',
     conclusion(r),
