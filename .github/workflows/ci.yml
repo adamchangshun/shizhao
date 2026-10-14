@@ -28,15 +28,17 @@ jobs:
       - run: pnpm test
       - run: pnpm check:secrets
       - run: pnpm check:licenses
+      - run: pnpm build
+        env:
+          PROVIDER: mock
+          ADMIN_TOKEN: ci-token-e2e-2026
+          PUBLIC_BASE_URL: http://localhost:6688
 
   e2e:
     runs-on: ubuntu-latest
     timeout-minutes: 25
     env:
       CI: 'true'
-      PROVIDER: mock
-      ADMIN_TOKEN: ci-token-e2e-2026
-      PUBLIC_BASE_URL: http://localhost:6688
       PLAYWRIGHT_HTML_OPEN: never
     steps:
       - uses: actions/checkout@v4
@@ -49,8 +51,7 @@ jobs:
           cache: pnpm
       - run: pnpm i --frozen-lockfile
       - run: pnpm exec playwright install --with-deps chromium
-      # Playwright owns the isolated mock server, credentials, data and default port.
-      - run: pnpm build
+      # This fresh job has no production .next output; Playwright owns the dev server.
       - run: pnpm test:e2e --reporter=list,html
       - uses: actions/upload-artifact@v4
         if: failure()

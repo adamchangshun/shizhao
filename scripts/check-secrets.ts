@@ -64,7 +64,7 @@ function main(): void {
   let findings = 0
   let failed = false
   for (const file of files) {
-    if (file === 'pnpm-lock.yaml' || ignored.has(file)) continue
+    if (file === 'pnpm-lock.yaml') continue
     const absolute = path.join(root, file)
     let bytes: Buffer
     try {
@@ -94,19 +94,29 @@ function main(): void {
       offset += rawLine.length + 1
       const line = rawLine.replace(/\r$/, '')
       const location = `${file}:${index + 1}`
-      if (ignored.has(location)) continue
+      // File/line exemptions apply only to generic hex/base64 candidates.
+      // Explicit credentials are scanned even on an exempted line.
+      const genericIgnored = ignored.has(file) || ignored.has(location)
       const matches: { kind: string; token: string }[] = []
       for (const match of line.matchAll(/sk-[A-Za-z0-9_-]{17,}/g))
         matches.push({ kind: 'API key', token: match[0] })
       // "Long" means at least 20 token characters; dots cover JWTs.
-      for (const match of line.matchAll(/Bearer[ \t]+([A-Za-z0-9._~+/-]{20,}=*)/gi))
-        matches.push({ kind: 'Bearer token', token: match[1]! })
+      for (const match of line.matchAll(/Bearer[ \t]+([A-Za-z0-9._~+/-]{20,}=*)/gi)) {
+        const token = match[1]!
+        // Only these two reviewed literals in test files are fake credentials.
+        // A real token containing words such as "test" is not automatically exempt.
+        const testFixture =
+          file.startsWith('tests/') &&
+          file.endsWith('.test.ts') &&
+          (token === 'test-admin-token-0123' || token === 'test-key-placeholder')
+        if (!testFixture) matches.push({ kind: 'Bearer token', token })
+      }
       for (const match of line.matchAll(/-----BEGIN (?:[A-Z0-9]+ )*PRIVATE KEY-----/g))
         matches.push({ kind: 'private key', token: match[0] })
       // Only the generic rule excludes hash fields; explicit keys are still caught.
       const hashField =
         /\b(?:sha(?:1|224|256|384|512)|integrity|checksum|hash)\b["']?\s*[:=]/i.test(line)
-      if (!hashField) {
+      if (!hashField && !genericIgnored) {
         const urls = [...line.matchAll(/https?:\/\/[^\s<>"']+/gi)].map((match) => [
           match.index!,
           match.index! + match[0].length,
@@ -118,9 +128,9 @@ function main(): void {
           const end = start + match[0].length
           // CSP/SRI digests have a hash algorithm prefix rather than a field assignment.
           if (/sha(?:1|224|256|384|512)-$/i.test(line.slice(0, start))) continue
-          // Slash-delimited paths are not generic base64 candidates. URL exclusion
-          // also handles long query fragments. Explicit secret rules above still apply.
-          if (match[0].includes('/') || urls.some(([a, b]) => start >= a! && end <= b!)) continue
+          // Exclude only candidates contained in URLs, not arbitrary slash-bearing base64.
+          // Explicit credential rules above still inspect URLs.
+          if (urls.some(([a, b]) => start >= a! && end <= b!)) continue
           if (ranges.some(([a, b]) => lineStart + start >= a && lineStart + end <= b)) continue
           if (!matches.some((m) => m.token.includes(match[0])))
             matches.push({ kind: 'hex/base64', token: match[0] })

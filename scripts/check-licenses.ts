@@ -74,16 +74,20 @@ function main(): void {
   if (!inventory.size)
     throw new Error('No installed production dependencies found; run pnpm i --frozen-lockfile')
 
-  let allowed = new Set<string>()
+  let allowed: { pattern: string; license: string }[] = []
   try {
-    // Exact name/name@version, or a package-name prefix ending in *.
-    // A # comment records the manually approved reason; no license-wide exemptions.
-    allowed = new Set(
-      readFileSync(path.join(root, '.licenseallow'), 'utf8')
-        .split(/\r?\n/)
-        .map((line) => line.split('#', 1)[0]!.trim())
-        .filter((line) => line && !line.startsWith('#')),
-    )
+    // Each entry binds a package name/name@version (or trailing-* prefix)
+    // to an exact license expression. License changes require renewed approval.
+    allowed = readFileSync(path.join(root, '.licenseallow'), 'utf8')
+      .split(/\r?\n/)
+      .map((line) => line.split('#', 1)[0]!.trim())
+      .filter(Boolean)
+      .map((line) => {
+        const entry = /^(\S+)\s+(.+)$/.exec(line)
+        if (!entry || entry[1] === '*')
+          throw new Error('Each .licenseallow entry requires a package pattern and license')
+        return { pattern: entry[1]!, license: entry[2]!.trim() }
+      })
   } catch (error) {
     if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error
   }
@@ -147,13 +151,16 @@ function main(): void {
       const unknown = /UNKNOWN|UNLICENSED|UNDEFINED|SEE LICENSE|Custom:|https?:|\*/i.test(license)
       if (forbidden || unknown) {
         const entry = `${id}: ${license}`
-        const prefixAllowed = [...allowed].some(
-          (pattern) =>
-            pattern.endsWith('*') &&
-            pattern.length > 1 &&
-            pkg.name.startsWith(pattern.slice(0, -1)),
-        )
-        if (allowed.has(id) || allowed.has(pkg.name) || prefixAllowed) exempted.push(entry)
+        const explicitlyAllowed = allowed.some((rule) => {
+          const nameMatches =
+            rule.pattern === id ||
+            rule.pattern === pkg.name ||
+            (rule.pattern.endsWith('*') &&
+              rule.pattern.length > 1 &&
+              pkg.name.startsWith(rule.pattern.slice(0, -1)))
+          return nameMatches && rule.license === license
+        })
+        if (explicitlyAllowed) exempted.push(entry)
         else blocked.push(entry)
       }
     }
