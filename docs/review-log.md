@@ -372,3 +372,24 @@ Claude 核实后认为 4 条 CRITICAL 都是真实的加固点，但影响面达
 | MEDIUM | 任务不存在等 4xx 错误时仍每 1.5 秒轮询 | 已修：不可重试的 4xx 停止轮询，提供「回到核对信息」 |
 
 审查结论：按约定最多 2 轮；剩余 1 条 HIGH 属 09 号范围、无利用路径，记录在案后合并。测试：typecheck、lint 通过；`pnpm test` 791 通过；`pnpm test:e2e` 9 通过（375×812、360×780、1280×800 三个视口，含 axe 浅色 / 深色扫描与生成失败重试）。
+
+## Mock 按样本回显抽取结果（Claude 实现，Codex 审查）
+
+`PROVIDER=mock` 时，应用里的 MockProvider 在商家文字与 `eval/samples/` 中某个样本的 `input.txt` 完全一致时，`extract` 阶段返回该样本 `gold.json` 中的事实，让 `pnpm demo` 展示真实上传的店铺。这是按全文精确查表，不解析文字；其他输入仍返回原来的固定数据。评测使用的 `MockPageProvider` 不开启这个功能，所以 Mock 模式的评测报告不会拿标准答案给自己打分（有测试覆盖）。
+
+### 第 1 轮（`cdx-review --base main`）：1 HIGH，2 MEDIUM
+
+| 级别 | 问题 | 处理 |
+|---|---|---|
+| HIGH | 同一请求上传的多张图片共用一个时间戳，会按随机资产 id 排序，样本的图片映射可能错位 | 已修复：`pnpm demo` 改为按文件名顺序每张图片单独上传 |
+| MEDIUM | `eval/samples` 不可读时，错误会变成 `bad_response`，而不是回退到通用 fixture | 已修复：读取失败时返回通用 fixture，且不缓存这次失败 |
+| MEDIUM | 测试没有覆盖应用的 `getProvider()` 和评测的 `MockPageProvider` 这两条实际构造路径 | 已修复：补了两条测试 |
+
+### 第 2 轮：1 HIGH，1 MEDIUM
+
+| 级别 | 问题 | 处理 |
+|---|---|---|
+| HIGH | 多图样本中，gold 标注为「没有图片」的商品，经过 `groundDraft` 后会按商品序号被自动配上图片（例如 bakery-dessert-menu 的提拉米苏会配上 menu.png） | 不在本次修复：这是 04 号 `groundDraft` 对空 `imageAssetIds` 的既有处理（按位置补图），接入真实模型时行为相同，修改它属于 04 号模块的范围。`pnpm demo` 只使用第一组单图样本，不受影响。是否调整这个规则由项目负责人决定 |
+| MEDIUM | 读取样本图片目录时没有过滤扩展名，`.DS_Store` 等文件会打乱序号 | 已修复：与 demo 使用相同的扩展名过滤 |
+
+实测：全量测试 801 个用例通过；`pnpm demo` 抽取结果为「麦香小铺｜黄油可颂」，生成的页面包含店名、商品、规格、营业时间和地址。
