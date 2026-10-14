@@ -40,6 +40,9 @@ export function applyCorrection(sheet: FactSheet, path: string, rawValue: string
   if (parsed.kind === 'shop') {
     if (parsed.field === 'phone' && !PHONE.test(value)) throw invalid('电话格式不对，请只填写号码')
     next = { ...sheet, shop: { ...sheet.shop, [parsed.field]: value } }
+    // A map link pinned to the old address would send customers there; without it the page
+    // falls back to a map search for the new address.
+    if (parsed.field === 'address') delete next.shop.mapUrl
   } else {
     const index = sheet.items.findIndex((i) => i.id === parsed.itemId)
     const item = sheet.items[index]

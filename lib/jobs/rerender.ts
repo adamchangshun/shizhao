@@ -38,7 +38,7 @@ export interface RerenderInput {
   factSheet: FactSheet
   /** Fact path the correction changed, e.g. `items.<id>.price`. */
   correctedPath: string
-  /** Unique key for the staging directory (the correction id). */
+  /** Staging directory key; must be fresh for every attempt (a newId()). */
   stagingKey: string
   /** Renderer; tests wrap it. */
   render?: typeof renderPage
@@ -77,7 +77,10 @@ export function correctedCopy(
   factSheet: FactSheet,
   correctedPath: string,
 ): Pick<VersionContent, 'copy' | 'copyRefs' | 'guard'> {
-  const pruned = pruneCopy(source.copy, source.copyRefs, correctedPath)
+  const cut = pruneCopy(source.copy, source.copyRefs, correctedPath)
+  // A headline that only quoted the corrected fact is now empty, which CopyDraft does not allow;
+  // fall back to the (new) shop name, which the rule check below still examines.
+  const pruned = cut.headline ? cut : { ...cut, headline: factSheet.shop.name.slice(0, 20) }
   const checked = guardWithRulesOnly(pruned, buildFactCorpus(factSheet))
   const guard = {
     copy: checked.copy,
@@ -119,7 +122,9 @@ export async function rerenderWithFacts(input: RerenderInput): Promise<StagedVer
       )
     }
     await fsp.writeFile(path.join(staging, 'index.html'), result.html, 'utf8')
-    await checkPage(result.html, factSheet, path.join(staging, 'media'), result.media)
+    // Check the bytes that will be published, not the in-memory string.
+    const written = await fsp.readFile(path.join(staging, 'index.html'), 'utf8')
+    await checkPage(written, factSheet, path.join(staging, 'media'), result.media)
   } catch (err) {
     await fsp.rm(staging, { recursive: true, force: true }).catch(() => {})
     console.error(`[corrections] rerender of project ${projectId} failed`, err)

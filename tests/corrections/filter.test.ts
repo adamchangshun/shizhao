@@ -12,6 +12,10 @@ describe('personal information', () => {
     'vx abc12345',
     '加v Lily2024',
     '身份证 31010119900307123X',
+    '电话（021）64881234',
+    '手机号 138/0013/8000',
+    '微信号是：tianxin_88',
+    'someone @ example . com',
   ])('refuses %s', (text) => {
     expect(containsPersonalInfo(text)).toBe(true)
   })
@@ -20,6 +24,8 @@ describe('personal information', () => {
     '138元',
     '¥12.50/个',
     '营业到 21:30',
+    '营业 8:00-20:00',
+    '10-15 个',
     '约 450g，8 寸',
     'Americano 改成 Latte',
     '一百三十八',

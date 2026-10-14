@@ -34,10 +34,6 @@ const personalInfo = () => new ApiError(400, 'personal_info', '请勿填写个�
 
 export async function submitCorrection(request: Request, now: number = Date.now()): Promise<void> {
   const body = SubmitBody.parse(await readJsonLimited(request, MAX_BODY_BYTES))
-  // Every well-formed attempt counts, so the limit also caps probing of the filters.
-  if (perSource.take(`${clientHash(request)}:${body.slug}`, now) === null) {
-    throw new ApiError(429, 'too_many_requests', '提交太频繁了，请稍后再试')
-  }
 
   const project = getDb()
     .select()
@@ -72,6 +68,12 @@ export async function submitCorrection(request: Request, now: number = Date.now(
   }
   if (containsPersonalInfo(value) || containsPersonalInfo(note)) throw personalInfo()
 
+  // Only valid reports count, keyed by the real project: made-up slugs or rejected requests
+  // cannot fill the limiter or use up a page's budget. (Without a trusted proxy every visitor
+  // shares one source bucket per page; see docs/PRIVACY.md.)
+  if (perSource.take(`${clientHash(request)}:${project.id}`, now) === null) {
+    throw new ApiError(429, 'too_many_requests', '提交太频繁了，请稍后再试')
+  }
   if (perProject.take(project.id, now) === null) {
     throw new ApiError(429, 'too_many_requests', '今天收到的纠错太多了，请明天再试')
   }

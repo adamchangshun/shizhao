@@ -269,6 +269,28 @@ describe('customer correction → merchant merge', () => {
     expect((await submit(body)).status).toBe(429)
   })
 
+  it('does not let invalid requests or made-up pages use up a page budget', async () => {
+    const p = await published()
+    const bad = {
+      slug: p.slug,
+      versionId: p.versionId,
+      field: 'items.nope.price',
+      suggestedValue: '1',
+    }
+    for (let i = 0; i < 5; i++) expect((await submit(bad)).status).toBe(400)
+    for (let i = 0; i < 5; i++) {
+      const ghost = { ...bad, slug: 'zzzzz' + 'abcdefghjk'[i] }
+      expect((await submit(ghost)).status).toBe(404)
+    }
+    const good = {
+      slug: p.slug,
+      versionId: p.versionId,
+      field: 'items.tart02.price',
+      suggestedValue: '9元',
+    }
+    expect((await submit(good)).status).toBe(201)
+  })
+
   it('stores links as spam and keeps them out of the merchant list', async () => {
     const p = await published()
     expect(
@@ -432,6 +454,77 @@ describe('copy after a correction', () => {
     expect(JSON.stringify(version.copy)).not.toContain('新西兰黄油')
     expect(version.copy.itemBlurbs.tart02).toBe('')
     expect(await factText(p.slug, 'items.tart02.price')).toBe('¥9')
+  })
+})
+
+describe('other corrected facts', () => {
+  it('a new address drops the map link pinned to the old one', async () => {
+    const p = await published()
+    const sheet = findLatestFactSheet(p.projectId)!.json
+    // The merchant had given an address and a map link.
+    const withMap: FactSheet = {
+      ...sheet,
+      revision: 2,
+      shop: {
+        ...sheet.shop,
+        address: '漕溪北路 88 号',
+        mapUrl: 'https://uri.amap.com/marker?position=1,2',
+      },
+    }
+    appendFactSheet(p.projectId, () => withMap)
+    const pinned = await rerenderWithFacts({
+      projectId: p.projectId,
+      slug: p.slug,
+      source: { designSpec: designFor('menu-board'), copy: COPY, copyRefs: {} },
+      factSheet: withMap,
+      correctedPath: 'none',
+      stagingKey: newId(),
+    })
+    fs.renameSync(pinned.staging, pinned.finalDir)
+    getDb()
+      .insert(versions)
+      .values({
+        id: pinned.versionId,
+        projectId: p.projectId,
+        jobId: null,
+        origin: 'correction',
+        ...pinned.content,
+        htmlPath: versionHtmlPath(p.projectId, pinned.versionId),
+        qa: null,
+        createdAt: new Date().toISOString(),
+      })
+      .run()
+    publishVersion(p.projectId, pinned.versionId)
+    expect((await publicPage(p.slug)).html).toContain('uri.amap.com/marker')
+
+    const res = await submit({
+      slug: p.slug,
+      versionId: pinned.versionId,
+      field: 'shop.address',
+      suggestedValue: '漕溪北路 99 号',
+    })
+    expect(res.status).toBe(201)
+    const id = (await pending(p.projectId)).corrections[0]!.id
+    expect((await accept(id)).status).toBe(200)
+    const after = await publicPage(p.slug)
+    expect(findLatestFactSheet(p.projectId)!.json.shop.mapUrl).toBeUndefined()
+    expect(after.html).not.toContain('uri.amap.com/marker')
+    expect(after.root.querySelector('[data-act="navigate"]')?.getAttribute('href')).toContain(
+      encodeURIComponent('漕溪北路 99 号'),
+    )
+  })
+
+  it('a shop name the headline only quoted falls back to the new name', async () => {
+    const p = await published()
+    const id = await reportAndGetId(p, 'shop.name', '甜心烘焙坊')
+    expect((await accept(id)).status).toBe(200)
+    const live = findActiveProject(p.projectId)!
+    const version = getDb()
+      .select()
+      .from(versions)
+      .where(eq(versions.id, live.publishedVersionId!))
+      .get()!
+    expect(version.copy.headline).toBe('甜心烘焙坊')
   })
 })
 

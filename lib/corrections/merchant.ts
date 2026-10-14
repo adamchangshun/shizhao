@@ -12,7 +12,7 @@ import fs from 'node:fs'
 import { and, desc, eq, inArray, lt } from 'drizzle-orm'
 import { z } from 'zod'
 import { ApiError, Errors } from '../core/errors'
-import { isValidId } from '../core/ids'
+import { isValidId, newId } from '../core/ids'
 import type { FactSheet } from '../core/schemas'
 import { getDb } from '../db/client'
 import { findLatestConfirmedFactSheet } from '../db/repo/fact-sheets'
@@ -187,7 +187,8 @@ export async function acceptCorrection(
       source,
       factSheet,
       correctedPath: row.field,
-      stagingKey: id,
+      // Fresh per attempt: a claim that expired while its render still runs never shares files.
+      stagingKey: newId(),
       render: opts.render,
     })
     const done = staged

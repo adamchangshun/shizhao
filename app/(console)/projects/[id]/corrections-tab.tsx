@@ -35,7 +35,8 @@ export function CorrectionsTab({ projectId, onAccepted }: CorrectionsTabProps) {
         顾客纠错
       </h2>
       <p className={s.muted}>
-        顾客在宣传页上点「信息有误？告诉老板」提交的建议。采纳后页面立即更新，链接和二维码不变；文案只会删减，不会重新生成。
+        顾客在宣传页上点「信息有误？告诉老板」提交的建议。采纳后立即发布新页面，链接和二维码不变；顾客手机上已打开或缓存的页面约
+        1 分钟内刷新可见。文案只会删减，不会重新生成。
       </p>
       <p role="status" aria-live="polite" className={notice ? s.success : s.srOnly}>
         {notice}

@@ -35,4 +35,21 @@ if(r.ok){f.reset();nv();return say(0)}return r.json().then(function(j){var c=j&&
 send('view')})();`
 
 /** Base64 SHA-256 of INLINE_SCRIPT; CSP source expression is `'sha256-<this>'`. */
-export const INLINE_SCRIPT_SHA256 = createHash('sha256').update(INLINE_SCRIPT, 'utf8').digest('base64')
+export const INLINE_SCRIPT_SHA256 = createHash('sha256')
+  .update(INLINE_SCRIPT, 'utf8')
+  .digest('base64')
+
+/**
+ * Version directories are immutable, so pages rendered before a script change still carry the
+ * script they were built with. CSP must keep allowing those exact bytes, or their copy button
+ * and tracking stop working. Append the old hash here whenever INLINE_SCRIPT changes.
+ */
+const PREVIOUS_SCRIPT_SHA256 = [
+  // Before module 15 (no correction form handling).
+  'yKVCnk7Pm2i6c0XUJQGv9UMyPi7i+SB9VlccmghtWc4=',
+]
+
+/** CSP `script-src` sources for every script a stored version may contain. */
+export const SCRIPT_SRC = [INLINE_SCRIPT_SHA256, ...PREVIOUS_SCRIPT_SHA256]
+  .map((hash) => `'sha256-${hash}'`)
+  .join(' ')

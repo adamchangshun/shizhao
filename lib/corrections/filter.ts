@@ -18,19 +18,23 @@ const LANDLINE = /(?<!\d)0\d{2,3}\d{7,8}(?!\d)/
 const ID_CARD = /(?<!\d)(?:\d{17}[\dx]|\d{15})(?![\dx])/i
 const EMAIL = /[a-z0-9._%+-]+@[a-z0-9-]+(?:\.[a-z0-9-]+)+/i
 // A WeChat id is only recognisable next to a cue word; bare words would catch dish names.
+// Up to four non-alphanumeric characters (号、是、：、空格…) may sit between cue and id.
 const WECHAT =
-  /(?:微信|威信|薇信|徽信|weixin|wechat|vx|wx|v信|加v|加微)\s*(?:号|id)?\s*[:：是为]?\s*[a-z][-_a-z0-9]{5,19}/i
+  /(?:微信|威信|薇信|徽信|weixin|wechat|vx|wx|v信|加v|加微)[^a-z0-9]{0,4}[a-z][-_a-z0-9]{5,19}/i
 
 /** True when the text carries a phone number, e-mail, WeChat id or ID card number. */
 export function containsPersonalInfo(text: string): boolean {
   const n = text.normalize('NFKC')
-  // Digits split by spaces, dashes or dots ("138 0013 8000") still count.
-  const digits = n.replace(/(?<=\d)[\s.\-–—]+(?=\d)/g, '')
+  // Digits split by up to three separators that are neither letters nor digits
+  // ("138 0013 8000", "138/0013/8000", "(021)64881234") still count.
+  const digits = n.replace(/(?<=\d)[^\p{L}\p{N}]{1,3}(?=\d)/gu, '')
+  // "someone @ example . com"
+  const compact = n.replace(/\s*([@.])\s*/g, '$1')
   return (
     MOBILE.test(digits) ||
     LANDLINE.test(digits) ||
     ID_CARD.test(digits) ||
-    EMAIL.test(n) ||
+    EMAIL.test(compact) ||
     WECHAT.test(n)
   )
 }
