@@ -353,7 +353,7 @@ export default function Checker() {
           <code>{`curl -X POST http://localhost:6690/api/guard \\\n  -H 'Content-Type: application/json' \\\n  -d '{"text":"零糖配方，全网销量第一","facts":[]}'`}</code>
         </pre>
         <p className={styles.hint}>
-          调用规范见项目文档 docs/API.md；参赛版本不包含计费或密钥自助申请。
+          调用规范见项目文档 docs/API.md；当前版本不包含计费或密钥自助申请。
         </p>
       </footer>
     </main>
