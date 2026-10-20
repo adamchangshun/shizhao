@@ -48,7 +48,7 @@ async function noHorizontalScroll(page: Page) {
   )
 }
 
-async function createAndUpload(page: Page, shopName: string) {
+async function createAndUpload(page: Page, shopName: string, notes = NOTES) {
   await page.getByRole('button', { name: '新建宣传页' }).click()
   await page.getByText('菜单 / 多个商品').click()
   await page.getByLabel('店名').fill(shopName)
@@ -62,7 +62,7 @@ async function createAndUpload(page: Page, shopName: string) {
   await expect(page.getByRole('list', { name: '已上传的图片' }).getByRole('listitem')).toHaveCount(
     2,
   )
-  await page.getByLabel('文字说明').fill(NOTES)
+  await page.getByLabel('文字说明').fill(notes)
 }
 
 async function toFacts(page: Page) {
@@ -152,6 +152,21 @@ test('upload → check → generate → restyle → publish, with corrected pric
   await expect(pub.getByText(/¥\s*18/).first()).toBeVisible()
   expect(await pub.locator('body').innerText()).not.toMatch(/¥\s*20(?!\d)/)
   await customer.close()
+})
+
+test('a price written without a unit gets none; the merchant can type one in', async ({ page }) => {
+  await login(page)
+  await createAndUpload(page, `无单位小店${Date.now() % 100000}`, '拿铁 22 元，热拿铁。电话 13800138000')
+  await toFacts(page)
+  const unit = page.getByLabel('单位').first()
+  await expect(page.getByLabel('价格（元）').first()).toHaveValue('22')
+  await expect(unit).toHaveValue('')
+  await unit.fill('杯')
+  await page.getByRole('button', { name: '确认无误，开始生成' }).click()
+  await waitForPreview(page)
+  await page.getByRole('button', { name: '用这一版发布' }).click()
+  await expect(page.getByRole('heading', { name: '发布前最后核对' })).toBeVisible()
+  await expect(page.getByText('22 元 / 杯')).toBeVisible()
 })
 
 test('a failed generation shows the reason in Chinese and succeeds on retry', async ({ page }) => {

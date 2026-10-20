@@ -57,7 +57,7 @@ function toDraft(sheet: FactSheet): Draft {
       base: item,
       name: item.name,
       amount: item.price ? String(item.price.amount) : '',
-      unit: item.price?.unit ?? '份',
+      unit: item.price?.unit ?? '',
       spec: item.spec ?? '',
       description: item.description ?? '',
     })),
@@ -77,6 +77,7 @@ function toEdit(draft: Draft): FactsEdit {
     shop: { ...shop, name: draft.shop.name.trim() },
     items: draft.items.map((d) => {
       const amount = d.amount.trim()
+      const unit = opt(d.unit)
       const { id, tags, imageAssetIds, sources } = d.base
       return {
         id,
@@ -89,7 +90,7 @@ function toEdit(draft: Draft): FactsEdit {
               price: {
                 amount: Number(amount),
                 currency: 'CNY' as const,
-                unit: d.unit.trim() || '份',
+                ...(unit ? { unit } : {}),
               },
             }
           : {}),
@@ -196,7 +197,7 @@ export function FactsForm({ sheet, lowConfidence, onSubmit }: FactsFormProps) {
           base: { id, name: '', tags: [], imageAssetIds: [], sources: {} },
           name: '',
           amount: '',
-          unit: '份',
+          unit: '',
           spec: '',
           description: '',
         },
@@ -372,7 +373,7 @@ export function FactsForm({ sheet, lowConfidence, onSubmit }: FactsFormProps) {
                       maxLength={8}
                       value={item.unit}
                       onChange={(e) => setItem(i, { unit: e.target.value })}
-                      placeholder="份 / 杯 / 6 寸"
+                      placeholder="可不填，如 杯 / 个"
                     />
                   </div>
                   <Flagged on={flag('spec')} id={fid('spec')}>

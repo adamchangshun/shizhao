@@ -54,7 +54,7 @@ function sheetFor(projectId: string): FactSheet {
       {
         id: 'tart02',
         name: '蛋挞',
-        price: { amount: 8, currency: 'CNY', unit: '个' },
+        price: { amount: 8, currency: 'CNY' }, // merchant wrote「蛋挞 8 元」, no unit
         tags: [],
         imageAssetIds: [],
         sources: {},
@@ -462,6 +462,36 @@ describe('copy after a correction', () => {
 })
 
 describe('other corrected facts', () => {
+  it('a price without a unit is shown, corrected and re-rendered without one', async () => {
+    const p = await published()
+    const page = await publicPage(p.slug)
+    expect(page.root.querySelector('[data-fact="items.tart02.price"]')?.text).toBe('¥8')
+    expect(page.root.querySelector('[data-fact="items.tart02.price.unit"]')).toBeNull()
+
+    const id = await reportAndGetId(p, 'items.tart02.price', '9')
+    const item = (await pending(p.projectId)).corrections.find((c) => c.id === id)!
+    expect(item.currentValue).toBe('¥8')
+    expect((await accept(id)).status).toBe(200)
+    expect(findLatestFactSheet(p.projectId)!.json.items[1]!.price).toStrictEqual({
+      amount: 9,
+      currency: 'CNY',
+    })
+    const after = await publicPage(p.slug)
+    expect(after.root.querySelector('[data-fact="items.tart02.price"]')?.text).toBe('¥9')
+    expect(after.html).not.toContain('undefined')
+  })
+
+  it('a correction that writes a unit adds it; one without keeps the current unit', async () => {
+    const p = await published()
+    const tart = await reportAndGetId(p, 'items.tart02.price', '9元/个')
+    expect((await accept(tart)).status).toBe(200)
+    const cake = await reportAndGetId(p, 'items.cake01.price', '138')
+    expect((await accept(cake)).status).toBe(200)
+    const items = findLatestFactSheet(p.projectId)!.json.items
+    expect(items[1]!.price).toStrictEqual({ amount: 9, currency: 'CNY', unit: '个' })
+    expect(items[0]!.price).toStrictEqual({ amount: 138, currency: 'CNY', unit: '个' })
+  })
+
   it('a new address drops the map link pinned to the old one', async () => {
     const p = await published()
     const sheet = findLatestFactSheet(p.projectId)!.json

@@ -2,7 +2,7 @@
 // marked as the merchant's own edit (the merchant is the one accepting it).
 import { ApiError } from '../core/errors'
 import { FactSheet, type FactItem, type Price } from '../core/schemas'
-import { DEFAULT_UNIT, normalizePrice } from '../extract/price'
+import { normalizePrice } from '../extract/price'
 import { parsePath } from './options'
 
 const invalid = (message: string) => new ApiError(400, 'invalid_value', message)
@@ -12,10 +12,9 @@ const PHONE = /^[0-9+\-\s()（）]{5,20}$/
 function price(value: string, current: Price | undefined): Price {
   const parsed = normalizePrice(value)
   if (!parsed) throw invalid('价格格式不对，请填写数字，例如 138 或 138元/个')
-  // "138" or "138元" keeps the unit the page already shows; only an explicit "/个" changes it.
-  const explicitUnit = /[/／每]/.test(value)
-  if (!explicitUnit && parsed.unit === DEFAULT_UNIT && current)
-    return { ...parsed, unit: current.unit }
+  // "138" or "138元" keeps the unit the page already shows (if any); only a written unit
+  // ("/个", "每份", "一个") changes it.
+  if (!parsed.unit && current?.unit) return { ...parsed, unit: current.unit }
   return parsed
 }
 

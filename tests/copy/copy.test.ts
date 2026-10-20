@@ -270,6 +270,13 @@ describe('copy generation and guard integration', () => {
       closing: [],
     })
   })
+  it('a price without a unit adds only its two amount aliases to the corpus', () => {
+    const base = facts()
+    const sheet = { ...base, items: [{ ...base.items[0]!, price: { amount: 28, currency: 'CNY' as const } }] }
+    const corpus = copyApi.buildFactCorpus(sheet)
+    const priceTexts = corpus.facts.filter((_, i) => corpus.paths?.[i] === 'items.cake.price')
+    expect(priceTexts).toEqual(['28元', '¥28'])
+  })
   it('offers a rules-only correction path, with no database or model calls', async () => {
     const sheet = facts()
     const result = copyApi.guardWithRulesOnly(

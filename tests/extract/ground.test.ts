@@ -24,11 +24,35 @@ describe('groundDraft: prices', () => {
       draft({ items: [{ name: '拿铁', price: '20元/杯' }] }),
       ctx('拿铁 18 元'),
     )
-    expect(out.items[0]!.price).toEqual({ amount: 18, currency: 'CNY', unit: '份' })
+    expect(out.items[0]!.price).toStrictEqual({ amount: 18, currency: 'CNY' })
     expect(out.items[0]!.sources).toMatchObject({ name: 'merchant_text', price: 'merchant_text' })
     expect(out.conflicts).toEqual([
-      { path: 'items[0].price', textValue: '18元/份', imageValue: '20元/杯' },
+      { path: 'items[0].price', textValue: '18元', imageValue: '20元/杯' },
     ])
+  })
+
+  it('does not add a unit the merchant text lacks, even when the model gives one', () => {
+    const out = groundDraft(
+      draft({ items: [{ name: '拿铁', price: { amount: 22, unit: '杯' } }] }),
+      ctx('拿铁（中杯）22 元'),
+    )
+    expect(out.items[0]!.price).toStrictEqual({ amount: 22, currency: 'CNY' })
+  })
+
+  it('keeps the unit the merchant wrote: 12 元一个 and 18元/杯', () => {
+    const out = groundDraft(
+      draft({ items: [{ name: '招牌黄油可颂' }, { name: '美式' }] }),
+      ctx('招牌黄油可颂，12 元一个\n美式 18元/杯'),
+    )
+    expect(out.items.map((i) => i.price)).toStrictEqual([
+      { amount: 12, currency: 'CNY', unit: '个' },
+      { amount: 18, currency: 'CNY', unit: '杯' },
+    ])
+  })
+
+  it('an image-read price without a unit gets none', () => {
+    const out = groundDraft(draft({ items: [{ name: '拿铁', price: { amount: 20 } }] }), ctx('拿铁'))
+    expect(out.items[0]!.price).toStrictEqual({ amount: 20, currency: 'CNY' })
   })
 
   it('ignores an injected instruction: a price never comes from an unrelated sentence', () => {
@@ -227,6 +251,6 @@ describe('findTextPhones: landlines', () => {
       ctx('麦香小铺\n招牌黄油可颂，12 元一个。\n电话：021-6123 4567', []),
     )
     expect(out.shop.phone).toBe('021-6123 4567')
-    expect(out.items[0]?.price).toEqual({ amount: 12, currency: 'CNY', unit: '份' })
+    expect(out.items[0]?.price).toStrictEqual({ amount: 12, currency: 'CNY', unit: '个' })
   })
 })

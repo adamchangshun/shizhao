@@ -1,7 +1,7 @@
 import { ApiError } from '../core/errors'
 import { newId } from '../core/ids'
 import { FactItem, Price, Shop, type FactSource } from '../core/schemas'
-import { findTextPrice, normalizePrice, DEFAULT_UNIT } from './price'
+import { findTextPrice, normalizePrice } from './price'
 import type { ModelDraft, ModelPrice } from './schema'
 
 export interface FactConflict {
@@ -126,16 +126,17 @@ function toPrice(raw: ModelPrice | null | undefined): Price | null {
   if (typeof raw === 'number') return normalizePrice(String(raw))
   const amount = String(raw.amount)
   if (!EXACT_AMOUNT.test(amount)) return null
+  const unit = raw.unit?.trim()
   const parsed = Price.safeParse({
     amount: Number(amount),
     currency: 'CNY',
-    unit: raw.unit?.trim() || DEFAULT_UNIT,
+    ...(unit ? { unit } : {}),
   })
   return parsed.success ? parsed.data : null
 }
 
 function formatPrice(p: Price): string {
-  return `${p.amount}元/${p.unit}`
+  return p.unit ? `${p.amount}元/${p.unit}` : `${p.amount}元`
 }
 
 /**

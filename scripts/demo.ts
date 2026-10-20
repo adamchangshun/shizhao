@@ -178,7 +178,7 @@ function firstSample(): { dir: string; type: 'single' | 'menu'; text: string; im
 interface FactSheetView {
   revision: number
   shop: { name: string }
-  items: Array<{ name: string; price?: { amount: number; unit: string } }>
+  items: Array<{ name: string; price?: { amount: number; unit?: string } }>
 }
 interface JobView {
   status: string
@@ -229,7 +229,10 @@ async function run(token: string): Promise<void> {
     `/api/projects/${project.id}/extract`,
   )
   const items = factSheet.items
-    .map((i) => `${i.name}${i.price ? ` ${i.price.amount} 元/${i.price.unit}` : ''}`)
+    .map((i) => {
+      const unit = i.price?.unit ? `/${i.price.unit}` : ''
+      return `${i.name}${i.price ? ` ${i.price.amount} 元${unit}` : ''}`
+    })
     .join('、')
   console.info(`[3/6] 抽取完成（第 ${factSheet.revision} 版）：${factSheet.shop.name}｜${items}`)
 

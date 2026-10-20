@@ -21,11 +21,8 @@ export function buildFactCorpus(input: FactSheet): CopyCorpus {
     if (item.description) entries.push([`${prefix}.description`, item.description])
     if (item.price) {
       const amount = String(item.price.amount)
-      entries.push(
-        [`${prefix}.price`, `${amount}元`],
-        [`${prefix}.price`, `¥${amount}`],
-        [`${prefix}.price`, item.price.unit],
-      )
+      entries.push([`${prefix}.price`, `${amount}元`], [`${prefix}.price`, `¥${amount}`])
+      if (item.price.unit) entries.push([`${prefix}.price`, item.price.unit])
     }
     for (const [i, tag] of item.tags.entries()) if (tag) entries.push([`${prefix}.tags.${i}`, tag])
   }

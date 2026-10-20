@@ -114,13 +114,13 @@ describe('POST /api/projects/:id/extract (MockProvider)', () => {
   it('takes the merchant text over the image: 拿铁 18 元 vs image 20 → 18 with one conflict', async () => {
     const id = await newProjectWith('拿铁 18 元')
     const { body } = await extract(id)
-    expect(body.factSheet.items[0]!.price).toEqual({ amount: 18, currency: 'CNY', unit: '份' })
+    expect(body.factSheet.items[0]!.price).toStrictEqual({ amount: 18, currency: 'CNY' })
     expect(body.factSheet.items[0]!.sources).toMatchObject({
       name: 'merchant_text',
       price: 'merchant_text',
     })
     expect(body.conflicts).toEqual([
-      { path: 'items[0].price', textValue: '18元/份', imageValue: '20元/杯' },
+      { path: 'items[0].price', textValue: '18元', imageValue: '20元/杯' },
     ])
   })
 

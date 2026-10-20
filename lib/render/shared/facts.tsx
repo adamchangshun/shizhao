@@ -40,9 +40,11 @@ export function ItemPrice({ item, className }: { item: FactItem; className?: str
   return (
     <span className={className ? `price ${className}` : 'price'}>
       <span data-fact={`items.${item.id}.price`}>{formatPriceAmount(item.price)}</span>
-      <span className="price-unit" data-fact={`items.${item.id}.price.unit`}>
-        {item.price.unit}
-      </span>
+      {item.price.unit && (
+        <span className="price-unit" data-fact={`items.${item.id}.price.unit`}>
+          {item.price.unit}
+        </span>
+      )}
     </span>
   )
 }
