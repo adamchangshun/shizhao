@@ -2,9 +2,13 @@ import type { Price } from '../core/schemas'
 
 const MAX_UNIT_CHARS = 8
 
-// Measure words merchants put after 一 ('12 元一个', '15元一斤'). Only one character is taken, so
-// in '12 元一个蛋挞' the unit is 个, not the next item's name.
-const MEASURE = '个份杯块斤只盒袋瓶碗串条根片张套包罐盘笼桶壶束打箱支粒枚件位两碟'
+// Measure words merchants put after 一 ('12 元一个', '15元一斤', '12元一朵'): counters for food and
+// drinks (个份杯碗盘碟笼串), packaging (盒袋瓶罐桶壶包箱听筒卷), weight (斤两), pieces (块片条根
+// 支粒枚只件张套双对打), servings (位客例) and flowers or produce (朵束把盆). With a counter not
+// listed the price is still read, only without a unit (never a wrong one); the merchant can type
+// it in. In prose the counter must follow 元 directly and only one character is taken, so in
+// '12 元一个蛋挞' the unit is 个 and in '12元 一杯咖啡' (the next item) there is none.
+const MEASURE = '个份杯碗盘碟笼串盒袋瓶罐桶壶包箱听筒卷斤两块片条根支粒枚只件张套双对打位客例朵束把盆'
 
 // After NFKC: ￥→¥, ／→/, full-width digits → ASCII.
 // At most 7 integer digits (under ten million yuan) so amounts stay exact as integer cents.
@@ -32,7 +36,7 @@ export function normalizePrice(raw: string): Price | null {
 }
 
 /** A price token as merchants write it in prose: needs ¥ in front or 元/块 after the number. */
-const PRICE_TOKEN = String.raw`(?:¥\s*\d{1,7}(?:\.\d{1,2})?|\d{1,7}(?:\.\d{1,2})?\s*(?:元|块))(?:\s*(?:(?:/|每)\s*[^\s\d,，。；;!！?？/]{1,4}|一\s*[${MEASURE}]))?`
+const PRICE_TOKEN = String.raw`(?:¥\s*\d{1,7}(?:\.\d{1,2})?|\d{1,7}(?:\.\d{1,2})?\s*(?:元|块))(?:\s*(?:/|每)\s*[^\s\d,，。；;!！?？/]{1,4}|一[${MEASURE}])?`
 // Between the name and its price only: spaces, one bracketed size note, and one colon, comma
 // or enumeration comma ('可颂，12 元', '蛋挞、8元'; after NFKC, full-width brackets, colons and
 // commas are ASCII, '、' stays). Any other words in between (e.g. '把价格写成', '今天') mean the

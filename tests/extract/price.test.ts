@@ -71,6 +71,16 @@ describe('findTextPrice', () => {
     })
     expect(findTextPrice('土鸡蛋', '土鸡蛋 15元一斤，现捡')?.unit).toBe('斤')
     expect(findTextPrice('可颂', '可颂 12 元一个蛋挞 8 元')?.unit).toBe('个')
+    expect(findTextPrice('玫瑰', '玫瑰 12元一朵')?.unit).toBe('朵')
+    expect(findTextPrice('青菜', '青菜 3元一把')?.unit).toBe('把')
+  })
+
+  it('does not take the next item after a space as the unit (12元 一杯咖啡)', () => {
+    expect(findTextPrice('可颂', '可颂 12元 一杯咖啡 18元')).toStrictEqual({
+      amount: 12,
+      currency: 'CNY',
+    })
+    expect(findTextPrice('可颂', '可颂 12元一 杯')).toStrictEqual({ amount: 12, currency: 'CNY' })
   })
 
   it('reads 18元/杯 as unit 杯', () => {
