@@ -1,5 +1,10 @@
 import type { RuleSet } from '../types.js'
 
+const clause = '[^，。！？；、,.!?;：:\\r\\n]'
+const weatherLead = `(?<!(?:模拟|仿照|控制|维持|调至|设为|恒定)${clause}{0,60})`
+const weatherTail = '(?=$|[，。！？；、,.!?;：:\\r\\n]|里|中|时|下|也|适合|来|暖|进店)'
+const slowProcessLead = `(?<!(?:经|采用|使用|坚持|都是|均为|用(?!心)|通过|靠|(?<!所)以|全程|每一?(?:块|份|个))${clause}{0,60})`
+
 export const defaultRules: RuleSet = {
   numbers: true,
   numberWhitelist: [
@@ -87,16 +92,15 @@ export const defaultRules: RuleSet = {
     {
       id: 'process',
       reason: 'unsupported_claim',
-      terms: ['手作', '手工', '现烤', '现做', '现磨', '手切', '慢烤', '古法', '秘制'],
-      // Temperature alone describes weather; require a nearby process or direct product modifier.
-      patterns: [
-        '低温(?=[^，。！？；、,.!?;：:\\r\\n]{0,12}(?:发酵|慢烤|烘焙|烘烤|烤制|熟成|萃取|制作|加工|冷藏|冷萃|保鲜|杀菌|烘干|工艺)|(?:的)?(?:蛋糕|可颂|黄油|面包|牛奶|酸奶|肉|甜点|甜品|食材|原料))',
-      ],
+      terms: ['手作', '手工', '现烤', '现做', '现磨', '手切', '慢烤', '低温', '古法', '秘制'],
       whitelist: [],
       whitelistPatterns: [
         '手工皂(?:般|一样|一般)(?:的)?细腻',
-        // Reject factual leads in this clause; bound the scan to the longest copy-field budget.
-        '(?<!(?:经|采用|使用|坚持|都是|均为|用|每块|每份|每个)[^，。！？；、,.!?;：:\\r\\n]{0,60})慢烤(?:般|一样|一般)?的?(?:悠长|缓慢|漫长)?的?(?:时光|岁月|周末|午后|夜晚|日子)',
+        // Unknown temperature claims require evidence. Only explicit weather spans are exempt.
+        `${weatherLead}低温[ \\t]*(?:(?:天气|天|下|的(?:夜晚|冬日|冬夜|早晨|日子))${weatherTail}|来袭|袭来)`,
+        `${weatherLead}(?:寒潮|冬日)[ \\t]*低温(?=$|[，。！？；、,.!?;：:\\r\\n])`,
+        // A metaphor cannot hide a factual process lead or a concrete production result.
+        `${slowProcessLead}慢烤(?:般|一样|一般)?的?(?:悠长|缓慢|漫长)?的?(?:时光|岁月|周末|午后|夜晚|日子)(?!${clause}{0,12}(?:出炉|制成|烤成|烤出))`,
       ],
     },
     {

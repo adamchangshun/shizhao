@@ -1,6 +1,6 @@
 import { extractNumbers } from './cn-number.js'
 import { displayFactRanges, numberEvidence } from './grounding.js'
-import { normalizeText, originalSpan } from './normalize.js'
+import { normalizeText, originalSpan, type NormalizedText } from './normalize.js'
 import { defaultRules } from './rules/index.js'
 import type { FactCorpus, RuleHit, RuleSet } from './types.js'
 
@@ -25,10 +25,27 @@ function ranges(text: string, words: string[]): Array<[number, number]> {
 function covered(start: number, end: number, allow: Array<[number, number]>): boolean {
   return allow.some(([left, right]) => start >= left && end <= right)
 }
-function patternRanges(text: string, patterns: string[]): Array<[number, number]> {
+function patternRanges(
+  sentence: string,
+  normalized: NormalizedText,
+  patterns: string[],
+): Array<[number, number]> {
   return patterns.flatMap((source) =>
-    [...text.matchAll(new RegExp(source, 'gu'))]
-      .filter((match) => match[0].length > 0)
+    [...normalized.text.matchAll(new RegExp(source, 'gu'))]
+      .filter((match) => {
+        if (!match[0]) return false
+        const span = originalSpan(normalized, match.index, match.index + match[0].length)
+        if (span.end - span.start === match[0].length) return true
+        // Context must pass on the normalized sentence first. Then allow horizontal spaces
+        // only if the same pattern explicitly matches the original, character-folded span.
+        const literal = [...sentence.slice(span.start, span.end)]
+          .map((char) => normalizeText(char).text)
+          .join('')
+        return (
+          literal.replace(/[ \t]/gu, '') === match[0].replace(/[ \t]/gu, '') &&
+          new RegExp(`^(?:${source})$`, 'u').test(literal)
+        )
+      })
       .map((match) => [match.index, match.index + match[0].length] as [number, number]),
   )
 }
@@ -86,13 +103,13 @@ export function checkSentence(
   }
   for (const rule of rules.rules) {
     const allowed = [
-      ...ranges(normalized.text, rule.whitelist ?? []),
-      ...patternRanges(normalized.text, rule.whitelistPatterns ?? []),
-    ].filter(([start, end]) => {
-      const span = originalSpan(normalized, start, end)
-      // Normalization may reveal a violation, but must not manufacture an exemption.
-      return span.end - span.start === end - start
-    })
+      ...ranges(normalized.text, rule.whitelist ?? []).filter(([start, end]) => {
+        const span = originalSpan(normalized, start, end)
+        // Literal exemptions never inherit interference removal.
+        return span.end - span.start === end - start
+      }),
+      ...patternRanges(sentence, normalized, rule.whitelistPatterns ?? []),
+    ]
     const matches = ranges(normalized.text, rule.terms ?? [])
     for (const source of rule.patterns ?? [])
       for (const match of normalized.text.matchAll(new RegExp(source, 'gu'))) {
