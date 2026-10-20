@@ -91,19 +91,11 @@ function overlaps(start: number, end: number, spans: ClockSpan[]): boolean {
   return spans.some((span) => start < span.end && end > span.start)
 }
 
-/** Ground only covered numbers; a clock range is evidence as a whole, never a bag of digits. */
-export function numberEvidence(sentence: string, facts: string[]) {
+/** Complete display-equivalent facts, mapped to original sentence offsets. */
+export function displayFactRanges(sentence: string, facts: string[]): Range[] {
   const normalized = displayText(sentence)
-  const times = clockSpans(normalized)
-  const evidence = facts.map((fact) => {
+  return facts.flatMap((fact) => {
     const display = displayText(fact)
-    return { fact, display, times: clockSpans(display) }
-  })
-  const timeKeys = new Set(evidence.flatMap((entry) => entry.times.map((time) => time.key)))
-  const groundedTimes: Range[] = times
-    .filter((time) => timeKeys.has(time.key))
-    .map((time) => [time.start, time.end])
-  const groundedFacts: Range[] = evidence.flatMap(({ display }) => {
     if (!display.text) return []
     const result: Range[] = []
     let index = normalized.text.indexOf(display.text)
@@ -121,8 +113,25 @@ export function numberEvidence(sentence: string, facts: string[]) {
     }
     return result
   })
+}
+
+/** Range endpoints support single clocks, but sentence ranges must match a complete range. */
+export function numberEvidence(sentence: string, facts: string[], spanFacts: string[] = []) {
+  const times = clockSpans(displayText(sentence))
+  const evidence = facts.map((fact) => ({
+    fact,
+    times: clockSpans(displayText(fact)),
+  }))
+  const factTimes = [
+    ...evidence.flatMap((entry) => entry.times),
+    ...spanFacts.flatMap((fact) => clockSpans(displayText(fact))),
+  ]
+  const timeKeys = new Set(factTimes.flatMap((time) => [time.key, ...time.key.split('-')]))
+  const groundedTimes: Range[] = times
+    .filter((time) => timeKeys.has(time.key))
+    .map((time) => [time.start, time.end])
   return {
-    groundedFacts,
+    groundedFacts: displayFactRanges(sentence, [...facts, ...spanFacts]),
     groundedTimes,
     inTime: (start: number, end: number) => overlaps(start, end, times),
     factNumbers: evidence.flatMap(({ fact, times }) =>

@@ -79,13 +79,15 @@ describe('copy generation and guard integration', () => {
     sheet.shop.hours = '每天7:30-19:00'
     sheet.shop.address = '杭州市西湖区文三路100号'
     const corpus = copyApi.buildFactCorpus(sheet)
-    expect(corpus.facts).toContain(sheet.shop.hours)
-    expect(corpus.facts).toContain(sheet.shop.address)
-    expect(corpus.paths?.[corpus.facts.indexOf(sheet.shop.hours)]).toBe('shop.hours')
-    expect(corpus.paths?.[corpus.facts.indexOf(sheet.shop.address)]).toBe('shop.address')
+    expect(corpus.facts).not.toContain(sheet.shop.hours)
+    expect(corpus.facts).not.toContain(sheet.shop.address)
+    expect(corpus.spanFacts).toContain(sheet.shop.hours)
+    expect(corpus.spanFacts).toContain(sheet.shop.address)
+    expect(corpus.spanPaths?.[corpus.spanFacts!.indexOf(sheet.shop.hours)]).toBe('shop.hours')
+    expect(corpus.spanPaths?.[corpus.spanFacts!.indexOf(sheet.shop.address)]).toBe('shop.address')
     expect(checkSentence('每天 7:30 — 19:00', corpus)).toEqual([])
     expect(checkSentence('每天７点３０分至１９点', corpus)).toEqual([])
-    expect(checkSentence('杭州 · 西湖区文三路 100 号', corpus)).toEqual([])
+    expect(checkSentence('杭州市西湖区文三路 100 号', corpus)).toEqual([])
     expect(checkSentence('每天7:00-19:30', corpus)).toContainEqual(
       expect.objectContaining({ reason: 'unsupported_number' }),
     )
@@ -98,7 +100,7 @@ describe('copy generation and guard integration', () => {
       if (field === 'extraClaims') sheet.extraClaims = ['手作招牌爆款黄油可颂']
       else sheet.items[0]![field] = '手作招牌爆款黄油可颂'
       const corpus = copyApi.buildFactCorpus(sheet)
-      expect(checkSentence('手作招牌爆款，香气扑鼻。', corpus)).toEqual([])
+      expect(checkSentence('手作招牌爆款黄油可颂，香气扑鼻。', corpus)).toEqual([])
       expect(checkSentence('秘制热销', corpus).map((hit) => hit.ruleId)).toEqual([
         'process',
         'positioning',

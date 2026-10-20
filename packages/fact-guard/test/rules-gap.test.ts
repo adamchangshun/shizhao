@@ -15,7 +15,7 @@ const vocabulary = [
   ['positioning', '招牌'],
   ['positioning', '热销'],
   ['positioning', '人气'],
-  ['positioning', '爆款'],
+  ['ranking', '爆款'],
   ['positioning', '必点'],
   ['positioning', '限量'],
   ['positioning', '限定'],
@@ -30,12 +30,11 @@ describe('A2 rules gap: base process and positioning claims', () => {
     )
   })
 
-  it.each(vocabulary)('grounds %s: %s from a longer merchant fact', (_ruleId, term) => {
+  it.each(vocabulary)('grounds %s: %s with the required scope', (ruleId, term) => {
     const corpus = { facts: [`${term}黄油可颂`] }
-    expect(checkSentence(`尝尝${term}的暖香`, corpus)).toEqual([])
-    expect(
-      checkSentence(`尝尝${term}的暖香`, corpus, mergeRules(defaultRules, rulePacks.food)),
-    ).toEqual([])
+    const sentence = ruleId === 'ranking' ? `尝尝${term}黄油可颂` : `尝尝${term}的暖香`
+    expect(checkSentence(sentence, corpus)).toEqual([])
+    expect(checkSentence(sentence, corpus, mergeRules(defaultRules, rulePacks.food))).toEqual([])
   })
 
   it.each(['不是手作', '并非招牌', '没有现烤', '非爆款'])(
