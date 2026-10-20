@@ -55,7 +55,7 @@ export const FactSource = z.enum(['merchant_text', 'image_ocr', 'merchant_edit']
 export const Price = z.object({
   amount: z.number().nonnegative().multipleOf(0.01),
   currency: z.literal('CNY'),
-  unit: z.string().min(1).max(8),            // 例如「个」「6 寸」「份」「杯」
+  unit: z.string().min(1).max(8).optional(), // 例如「个」「6 寸」「份」「杯」；只取商家原文，原文没写时留空
 })
 
 export const FactItem = z.object({

@@ -42,7 +42,10 @@ export function describeFacts(gold: GoldSheet): string {
   lines.push('商品：')
   gold.items.forEach((item, i) => {
     const parts = [item.name]
-    if (item.price) parts.push(`${yuan(item.price.amount)} 元/${item.price.unit}`)
+    if (item.price) {
+      const unit = item.price.unit ? `/${item.price.unit}` : ''
+      parts.push(`${yuan(item.price.amount)} 元${unit}`)
+    }
     if (item.spec) parts.push(`规格：${item.spec}`)
     if (item.description) parts.push(`介绍：${item.description}`)
     if (item.tags.length > 0) parts.push(`标签：${item.tags.join('、')}`)

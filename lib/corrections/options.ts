@@ -73,7 +73,9 @@ export function parsePath(path: string): ParsedPath | null {
 
 function itemValue(item: FactItem, field: ItemField): string | undefined {
   if (field === 'price') {
-    return item.price ? `${formatPriceAmount(item.price)}/${item.price.unit}` : undefined
+    if (!item.price) return undefined
+    const amount = formatPriceAmount(item.price)
+    return item.price.unit ? `${amount}/${item.price.unit}` : amount
   }
   return item[field]
 }

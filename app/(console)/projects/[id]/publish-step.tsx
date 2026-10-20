@@ -120,7 +120,7 @@ export function PublishStep({
                   {item.name}
                   <span className={w.recapPrice}>
                     {item.price
-                      ? `${formatPrice(item.price.amount)} 元 / ${item.price.unit}`
+                      ? `${formatPrice(item.price.amount)} 元${item.price.unit ? ` / ${item.price.unit}` : ''}`
                       : '未标价'}
                   </span>
                 </dd>

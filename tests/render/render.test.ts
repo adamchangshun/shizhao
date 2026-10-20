@@ -42,7 +42,7 @@ function expectedFacts(facts: FactSheet): Array<[string, string]> {
       const text = PRICE_TEXT[item.price.amount]
       if (!text) throw new Error(`no hand-written price for ${item.price.amount}`)
       out.push([`items.${item.id}.price`, text])
-      out.push([`items.${item.id}.price.unit`, item.price.unit])
+      if (item.price.unit) out.push([`items.${item.id}.price.unit`, item.price.unit])
     }
     if (item.spec) out.push([`items.${item.id}.spec`, item.spec])
     if (item.description) out.push([`items.${item.id}.description`, item.description])
@@ -160,6 +160,18 @@ describe.each(ALL_TEMPLATES)('template %s', templateId => {
     expect(root.querySelectorAll('script')).toHaveLength(1)
     // Shown to visitors as literal text.
     expect(root.querySelector('body')?.text).toContain('<script>alert(1)</script>')
+  })
+
+  it('prints a price without a unit as just ¥18', async () => {
+    const item = { ...singleFacts.items[0]!, price: { amount: 18, currency: 'CNY' as const } }
+    const facts = { ...singleFacts, items: [item] }
+    const { html } = await renderPage(input(templateId, facts, singleCopy))
+    const root = parse(html)
+    const prices = root.querySelectorAll('.price')
+    expect(prices.length).toBeGreaterThan(0)
+    for (const p of prices) expect(p.text).toBe('¥18')
+    expect(root.querySelector('.price-unit')).toBeNull()
+    expect(root.querySelector('body')?.text).not.toContain('undefined')
   })
 
   it('omits the WeChat button when there is no wechat', async () => {

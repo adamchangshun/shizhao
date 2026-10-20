@@ -28,7 +28,7 @@ export function expectedFactTexts(facts: FactSheet): Map<string, string> {
     out.set(`${p}.name`, item.name)
     if (item.price) {
       out.set(`${p}.price`, formatPriceAmount(item.price))
-      out.set(`${p}.price.unit`, item.price.unit)
+      if (item.price.unit) out.set(`${p}.price.unit`, item.price.unit)
     }
     if (item.spec) out.set(`${p}.spec`, item.spec)
     if (item.description) out.set(`${p}.description`, item.description)

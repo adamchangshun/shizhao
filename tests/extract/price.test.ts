@@ -3,24 +3,29 @@ import { findTextPrice, normalizePrice } from '@/lib/extract/price'
 
 describe('normalizePrice', () => {
   it.each([
-    // [raw, amount, unit] from the module spec, then edge cases worked out by hand
-    ['￥28', 28, '份'],
+    // [raw, amount, unit] from the module spec, then edge cases worked out by hand; no unit
+    // written means no unit (2026-10-20 revision: the old default '份' was not the merchant's)
+    ['￥28', 28, undefined],
     ['28元/个', 28, '个'],
-    ['¥ 12.50', 12.5, '份'],
-    ['28元', 28, '份'],
-    ['28.0', 28, '份'],
-    ['28', 28, '份'],
+    ['¥ 12.50', 12.5, undefined],
+    ['28元', 28, undefined],
+    ['28.0', 28, undefined],
+    ['28', 28, undefined],
     [' 18 元 / 杯 ', 18, '杯'],
     ['２８元／杯', 28, '杯'], // full-width digits and slash
-    ['15块', 15, '份'],
-    ['RMB 9.9', 9.9, '份'],
-    ['0元', 0, '份'],
+    ['15块', 15, undefined],
+    ['RMB 9.9', 9.9, undefined],
+    ['0元', 0, undefined],
     ['32元/6寸', 32, '6寸'],
     ['12元每份', 12, '份'],
-    ['9999999.99元', 9999999.99, '份'], // largest accepted amount, exact
-    ['0.07元', 0.07, '份'],
+    ['12 元一个', 12, '个'],
+    ['¥8一杯', 8, '杯'],
+    ['9999999.99元', 9999999.99, undefined], // largest accepted amount, exact
+    ['0.07元', 0.07, undefined],
   ])('%j → %d %s', (raw, amount, unit) => {
-    expect(normalizePrice(raw)).toEqual({ amount, currency: 'CNY', unit })
+    expect(normalizePrice(raw)).toStrictEqual(
+      unit === undefined ? { amount, currency: 'CNY' } : { amount, currency: 'CNY', unit },
+    )
   })
 
   it.each([
@@ -37,19 +42,43 @@ describe('normalizePrice', () => {
     '28 30元',
     '90071992547409.91', // beyond the exact range: refused, not silently changed
     '10000000元',
+    '12元一', // 一 with no unit after it
+    '12元一2',
   ])('%j → null', (raw) => {
     expect(normalizePrice(raw)).toBeNull()
   })
 })
 
 describe('findTextPrice', () => {
+  it('leaves the unit empty when the merchant wrote none', () => {
+    const price = findTextPrice('拿铁', '拿铁 22 元')
+    expect(price).toStrictEqual({ amount: 22, currency: 'CNY' })
+  })
+
   it('finds the price written right after the item name', () => {
-    expect(findTextPrice('拿铁', '今日推荐：拿铁 18 元，美式 15 元')).toEqual({
+    expect(findTextPrice('拿铁', '今日推荐：拿铁 18 元，美式 15 元')).toStrictEqual({
       amount: 18,
       currency: 'CNY',
-      unit: '份',
     })
     expect(findTextPrice('美式', '今日推荐：拿铁 18 元，美式 15 元')?.amount).toBe(15)
+  })
+
+  it('takes the unit from「一个」written after the price', () => {
+    expect(findTextPrice('招牌黄油可颂', '招牌黄油可颂，12 元一个')).toStrictEqual({
+      amount: 12,
+      currency: 'CNY',
+      unit: '个',
+    })
+    expect(findTextPrice('土鸡蛋', '土鸡蛋 15元一斤，现捡')?.unit).toBe('斤')
+    expect(findTextPrice('可颂', '可颂 12 元一个蛋挞 8 元')?.unit).toBe('个')
+  })
+
+  it('reads 18元/杯 as unit 杯', () => {
+    expect(findTextPrice('美式', '美式 18元/杯')).toStrictEqual({
+      amount: 18,
+      currency: 'CNY',
+      unit: '杯',
+    })
   })
 
   it('accepts a colon between name and price', () => {
