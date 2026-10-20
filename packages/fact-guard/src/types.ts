@@ -45,6 +45,11 @@ export type Judge = (input: {
   /** Present only with GuardOptions.corpusFor: fact paths, parallel to facts and spanFacts. */
   paths?: string[]
   spanPaths?: string[]
+  /**
+   * Present only with GuardOptions.corpusFor, parallel to sentences: the only evidence that
+   * sentence may rest on, or null when its field uses the whole document corpus.
+   */
+  evidence?: Array<FactCorpus | null>
 }) => Promise<Array<{ unsupported: boolean; reason?: string }>>
 export type Rewriter = (input: {
   items: Array<{ sentence: string; problems: string[] }>

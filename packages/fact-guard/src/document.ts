@@ -38,6 +38,15 @@ export function computeDocumentRefs(fields: Record<string, string>, corpus: Fact
   )
 }
 
+function copyCorpus(corpus: FactCorpus): FactCorpus {
+  return {
+    facts: [...corpus.facts],
+    ...(corpus.paths ? { paths: [...corpus.paths] } : {}),
+    ...(corpus.spanFacts ? { spanFacts: [...corpus.spanFacts] } : {}),
+    ...(corpus.spanPaths ? { spanPaths: [...corpus.spanPaths] } : {}),
+  }
+}
+
 interface Entry {
   field: string
   sentence: string
@@ -81,6 +90,10 @@ export async function guardDocument(
             fields: entriesToJudge.map((entry) => entry.field),
             ...(corpus.paths ? { paths: [...corpus.paths] } : {}),
             ...(corpus.spanPaths ? { spanPaths: [...corpus.spanPaths] } : {}),
+            evidence: entriesToJudge.map((entry) => {
+              const scoped = opts.corpusFor!(entry.field)
+              return scoped === corpus ? null : copyCorpus(scoped)
+            }),
           }
         : {}),
     })

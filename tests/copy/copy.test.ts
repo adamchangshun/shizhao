@@ -461,6 +461,53 @@ describe('item blurbs rest only on their own item facts (A4 H2)', () => {
       paths = judge.input.paths as string[]
     expect(paths[facts.indexOf('28元')]).toBe('items.latte.price')
     expect(paths[facts.indexOf('约300ml')]).toBe('items.americano.spec')
-    expect(judge.system).toMatch(/itemBlurbs\.<id> 的句子只能以路径为 items\.<id>\.\*/)
+    const evidence = judge.input.evidence as Array<{ facts: string[]; paths: string[] } | null>
+    expect(evidence.map((e) => e && e.paths[1])).toEqual([
+      null,
+      null,
+      'items.latte.name',
+      'items.latte.name',
+      'items.americano.name',
+    ])
+    expect(evidence[4]).toMatchObject({
+      facts: ['午后小店', '美式', '约300ml', '18元', '¥18'],
+      paths: [
+        'shop.name',
+        'items.americano.name',
+        'items.americano.spec',
+        'items.americano.price',
+        'items.americano.price',
+      ],
+    })
+    expect(judge.system).toMatch(/evidence\[i\] 中的 facts 和 spanFacts 为依据/)
+  })
+
+  it("does not hand the judge a dotted-prefix item's description as evidence", async () => {
+    const base = twoItems()
+    const sheet = {
+      ...base,
+      items: [
+        { ...base.items[0]!, id: 'a', description: undefined },
+        { ...base.items[1]!, id: 'a.b', description: '云南小粒咖啡' },
+      ],
+    }
+    const provider = new ScriptedProvider((stage, input) =>
+      sentencesIn(input).map(() => ({ unsupported: false })),
+    )
+    await copyApi.guardCopy(
+      {
+        copy: {
+          headline: '午后',
+          subhead: '',
+          itemBlurbs: { a: '慢慢喝。', 'a.b': '' },
+          closing: '',
+        },
+        factSheet: sheet,
+      },
+      { provider },
+    )
+    const evidence = provider.requests[0]!.input.evidence as Array<{ facts: string[] } | null>
+    expect(evidence[0]).toBeNull()
+    expect(evidence[1]!.facts).toEqual(['午后小店', '拿铁', '约450ml', '28元', '¥28'])
   })
 })

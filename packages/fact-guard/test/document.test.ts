@@ -177,6 +177,7 @@ describe('document cleaning', () => {
         facts: ['28元', '18元'],
         fields: ['a'],
         paths: ['items.a.price', 'items.b.price'],
+        evidence: [null],
       },
     ])
   })
