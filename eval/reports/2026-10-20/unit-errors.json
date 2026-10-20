@@ -1,0 +1,36 @@
+{
+  "goldSha256": {
+    "bakery-croissant-single": "751f2d841d54bc89199897b11eac0e1756aaed8449f00e150741355a8d550d17",
+    "bakery-dessert-menu": "2c7f009dff9a40e1da7c65850101fc254b070ebfe2ee1a620adaf83765449ecd",
+    "drink-cafe-menu": "0f43bb251b371ee7e117689ec086b7dfe2b9203f4aae49eaf8149aa944168e89"
+  },
+  "pagesByGroup": {
+    "A-gold": 9,
+    "A-raw": 7,
+    "B-gold": 8,
+    "B-e2e": 9
+  },
+  "errorsByGroup": {
+    "A-gold": 0,
+    "A-raw": 0,
+    "B-gold": 0,
+    "B-e2e": 0
+  },
+  "total": 0,
+  "errors": [],
+  "ambiguous": [],
+  "unrecognized": [
+    {
+      "page": "bakery-croissant-single/A-raw/1",
+      "text": "12 元 / 80g"
+    },
+    {
+      "page": "bakery-dessert-menu/A-raw/2",
+      "text": "128 元/6 寸"
+    },
+    {
+      "page": "bakery-dessert-menu/A-raw/3",
+      "text": "¥128\n/6寸"
+    }
+  ]
+}

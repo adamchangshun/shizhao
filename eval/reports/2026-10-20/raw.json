@@ -1,0 +1,1476 @@
+{
+  "runId": "openai-compatible-qwen-plus-1020",
+  "config": {
+    "runId": "openai-compatible-qwen-plus-1020",
+    "provider": "openai-compatible",
+    "textModel": "qwen-plus",
+    "visionModel": "qwen3-vl-plus",
+    "endpoint": "https://dashscope.aliyuncs.com/compatible-mode/v1",
+    "profile": "qwen",
+    "codeHash": "2d84acb81cfa1126",
+    "n": 3,
+    "temperature": 0.6
+  },
+  "date": "2026-10-20",
+  "commit": "dafb379",
+  "samples": [
+    {
+      "id": "bakery-croissant-single",
+      "items": 1,
+      "images": 1
+    },
+    {
+      "id": "bakery-dessert-menu",
+      "items": 3,
+      "images": 2
+    },
+    {
+      "id": "drink-cafe-menu",
+      "items": 3,
+      "images": 1
+    }
+  ],
+  "models": [
+    "openai-compatible/qwen-plus",
+    "openai-compatible/qwen3-vl-plus"
+  ],
+  "mock": false,
+  "extraction": {
+    "completed": 3,
+    "failed": [],
+    "scores": {
+      "name": {
+        "gold": 7,
+        "predicted": 7,
+        "correct": 5,
+        "precision": 0.7142857142857143,
+        "recall": 0.7142857142857143
+      },
+      "price": {
+        "gold": 7,
+        "predicted": 5,
+        "correct": 4,
+        "precision": 0.8,
+        "recall": 0.5714285714285714
+      },
+      "spec": {
+        "gold": 3,
+        "predicted": 2,
+        "correct": 1,
+        "precision": 0.5,
+        "recall": 0.3333333333333333
+      },
+      "phone": {
+        "gold": 2,
+        "predicted": 2,
+        "correct": 2,
+        "precision": 1,
+        "recall": 1
+      },
+      "address": {
+        "gold": 2,
+        "predicted": 2,
+        "correct": 2,
+        "precision": 1,
+        "recall": 1
+      }
+    },
+    "diffs": [
+      {
+        "sampleId": "bakery-croissant-single",
+        "field": "name",
+        "gold": "黄油可颂",
+        "predicted": null
+      },
+      {
+        "sampleId": "bakery-croissant-single",
+        "field": "name",
+        "gold": null,
+        "predicted": "BUTTER CROISSANT"
+      },
+      {
+        "sampleId": "bakery-dessert-menu",
+        "field": "price",
+        "item": "巴斯克芝士蛋糕",
+        "gold": "128",
+        "predicted": null
+      },
+      {
+        "sampleId": "drink-cafe-menu",
+        "field": "name",
+        "gold": "拿铁",
+        "predicted": null
+      },
+      {
+        "sampleId": "drink-cafe-menu",
+        "field": "name",
+        "gold": null,
+        "predicted": "拿铁（中杯）"
+      }
+    ]
+  },
+  "compare": {
+    "pages": [
+      {
+        "sampleId": "bakery-croissant-single",
+        "group": "A-gold",
+        "n": 1,
+        "ok": true,
+        "factErrors": 0,
+        "priceNameErrors": 0,
+        "unsupported": 4,
+        "costCny": 0.0058,
+        "latencyMs": 62201,
+        "pageFile": "eval/runs/openai-compatible-qwen-plus-1020/bakery-croissant-single/A-gold/1/page.html",
+        "visibleText": "\\n\\n\n\\n\n🍞 麦香小铺\n\\n\n新鲜·温暖·每日现烤\n\\n\n\\n\\n\\n\n\\n\n\\n\n\\n \\n \\n \\n\n\\n\n\\n\n地址\n\\n\n上海市徐汇区漕溪北路 88 号\n\\n\n\\n\n\\n\\n\n\\n\n\\n \\n \\n \\n\n\\n\n\\n\n电话\n\\n\n021-6123 4567\n\\n\n\\n\n\\n\\n\n\\n\n\\n \\n \\n \\n\n\\n\n\\n\n营业时间\n\\n\n每天 7:30–19:00\n\\n\n\\n\n\\n\n\\n\\n\\n\n\\n\n\\n 🔥 热销\\n 今日主推\\n\n\\n\\n\n\\n\n\\n\n\\n \\n\n\\n\n\\n\n黄油可颂\n\\n\n¥12 / 个\n\\n\n约 80g｜外酥内软｜层次分明\n\\n\n\\n \\n \\n \\n \\n 每天早上现烤\\n \\n\n\\n\n\\n\n\\n\n\\n\n\\n\\n\\n\n\\n\n\\n \\n \\n \\n\n✨ 新鲜是我们的承诺：所有可颂均为当日清晨现烤，不添加防腐剂，建议当天享用，风味最佳。\n\\n\n\\n\n\\n\\n\\n\n\\n \\n 📞 立即致电订购\\n \\n\n\\n\\n\\n\n\\n\n\\n\n© 2024 麦香小铺 · 手工烘焙 · 温暖每一刻\n\\n\n📍 徐汇老街口 · 每日清晨 5:30 开始烘烤\n\\n\n\\n",
+        "factDetails": [],
+        "unsupportedSentences": [
+          {
+            "sentence": "\\n 🔥 热销\\n 今日主推\\n",
+            "reasons": [
+              "unsupported_claim"
+            ],
+            "evidence": [
+              "热销"
+            ]
+          },
+          {
+            "sentence": "✨ 新鲜是我们的承诺：所有可颂均为当日清晨现烤，不添加防腐剂，建议当天享用，风味最佳。",
+            "reasons": [
+              "ad_law_absolute"
+            ],
+            "evidence": [
+              "最"
+            ]
+          },
+          {
+            "sentence": "© 2024   · 手工烘焙 · 温暖每一刻",
+            "reasons": [
+              "unsupported_number",
+              "unsupported_claim"
+            ],
+            "evidence": [
+              "2024",
+              "手工"
+            ]
+          },
+          {
+            "sentence": "📍 徐汇老街口 · 每日清晨 5:30 开始烘烤",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "5",
+              "30"
+            ]
+          }
+        ]
+      },
+      {
+        "sampleId": "bakery-croissant-single",
+        "group": "A-gold",
+        "n": 2,
+        "ok": true,
+        "factErrors": 0,
+        "priceNameErrors": 0,
+        "unsupported": 3,
+        "costCny": 0.0053,
+        "latencyMs": 56224,
+        "pageFile": "eval/runs/openai-compatible-qwen-plus-1020/bakery-croissant-single/A-gold/2/page.html",
+        "visibleText": "\\n \\n\n\\n\n🍞 麦香小铺\n\\n\n清晨现烤 · 满屋麦香\n\\n\n\\n\\n \\n\n\\n\n\\n \\n\n\\n\n每日清晨 · 现烤出炉\n\\n\n酥脆外皮，柔韧内里，黄油香气扑鼻而来\n\\n\n\\n\\n \\n\n\\n\n\\n\n\\n\n\\n\n\\n 🥐\\n\n\\n\n\\n\n黄油可颂\n\\n\n约 80g / 个 · 每天早上现烤\n\\n\n\\n ¥12\\n 热销款\\n\n\\n\n\\n\n\\n\n\\n\n✨ 我们的坚持：选用进口发酵黄油，低温慢烤 35 分钟，表皮金黄酥脆，层次分明，咬一口满嘴奶香与麦香交织——真正的‘刚出炉’，不是复热，不是预制。\n\\n\n\\n\n\\n\n\\n\n\\n\\n \\n\n\\n\n📍 店铺信息\n\\n\n\\n\n\\n\n\\n \\n\n\\n\n\\n\n地址\n\\n\n上海市徐汇区漕溪北路 88 号\n\\n\n\\n\n\\n\\n\n\\n\n\\n \\n\n\\n\n\\n\n电话\n\\n\n021-6123 4567\n\\n\n\\n\n\\n\\n\n\\n\n\\n \\n\n\\n\n\\n\n营业时间\n\\n\n每天 7:30 – 19:00\n\\n\n\\n\n\\n\n\\n\n\\n\\n \\n\n\\n\n\\n\nfreshly baked every morning 🌞\n\\n\n\\n \\n 立即致电订货\\n\n\\n\n支持到店自取｜欢迎提前电话预约（建议上午10点前预订，确保新鲜）\n\\n\n\\n\n\\n",
+        "factDetails": [],
+        "unsupportedSentences": [
+          {
+            "sentence": "\\n ¥12\\n 热销款\\n",
+            "reasons": [
+              "unsupported_claim"
+            ],
+            "evidence": [
+              "热销"
+            ]
+          },
+          {
+            "sentence": "✨ 我们的坚持：选用进口发酵黄油，低温慢烤 35 分钟，表皮金黄酥脆，层次分明，咬一口满嘴奶香与麦香交织——真正的‘刚出炉’，不是复热，不是预制。",
+            "reasons": [
+              "unsupported_claim",
+              "unsupported_number"
+            ],
+            "evidence": [
+              "进口",
+              "低温",
+              "慢烤",
+              "35 分钟"
+            ]
+          },
+          {
+            "sentence": "支持到店自取｜欢迎提前电话预约（建议上午10点前预订，确保新鲜）",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "10"
+            ]
+          }
+        ]
+      },
+      {
+        "sampleId": "bakery-croissant-single",
+        "group": "A-gold",
+        "n": 3,
+        "ok": true,
+        "factErrors": 0,
+        "priceNameErrors": 0,
+        "unsupported": 3,
+        "costCny": 0.0044,
+        "latencyMs": 46774,
+        "pageFile": "eval/runs/openai-compatible-qwen-plus-1020/bakery-croissant-single/A-gold/3/page.html",
+        "visibleText": "\\n\\n\n\\n\n🍞 麦香小铺\n\\n\n清晨现烤 · 满屋麦香\n\\n\n\\n\\n\\n\n\\n\n\\n \\n\n\\n\n每日清晨 · 现烤出炉\n\\n\n酥脆外皮｜丰润黄油香｜手作温度\n\\n\n\\n\\n\\n\n\\n\n\\n\n\\n\n\\n\n\\n 🥐\\n\n\\n\n\\n\n黄油可颂\n\\n\n¥12 / 个\n\\n\n约 80g｜纯正欧洲黄油｜无添加防腐剂\n\\n\n\\n 🔥 每天早上现烤\\n\n\\n\n\\n\n\\n\n\\n\n\\n\n\\n\\n\\n\n\\n\n我们在这里等你\n\\n\n\\n\n\\n\n\\n \\n \\n \\n\n\\n\n\\n\n电话\n\\n\n021-6123 4567\n\\n\n\\n\n\\n\\n\n\\n\n\\n \\n \\n \\n\n\\n\n\\n\n地址\n\\n\n上海市徐汇区漕溪北路 88 号\n\\n\n\\n\n\\n\\n\n\\n\n\\n \\n \\n \\n\n\\n\n\\n\n营业时间\n\\n\n每天 7:30 – 19:00\n\\n\n\\n\n\\n\n\\n\n\\n\\n\\n\n\\n\n© 2024 麦香小铺 · 手作温度，从清晨开始\n\\n\n欢迎到店，也支持电话预订哦！\n\\n\n\\n",
+        "factDetails": [],
+        "unsupportedSentences": [
+          {
+            "sentence": "酥脆外皮｜丰润黄油香｜手作温度",
+            "reasons": [
+              "unsupported_claim"
+            ],
+            "evidence": [
+              "手作"
+            ]
+          },
+          {
+            "sentence": "｜纯正欧洲黄油｜无添加防腐剂",
+            "reasons": [
+              "unsupported_claim"
+            ],
+            "evidence": [
+              "无添加"
+            ]
+          },
+          {
+            "sentence": "© 2024   · 手作温度，从清晨开始",
+            "reasons": [
+              "unsupported_number",
+              "unsupported_claim"
+            ],
+            "evidence": [
+              "2024",
+              "手作"
+            ]
+          }
+        ]
+      },
+      {
+        "sampleId": "bakery-croissant-single",
+        "group": "A-raw",
+        "n": 1,
+        "ok": true,
+        "factErrors": 1,
+        "priceNameErrors": 1,
+        "unsupported": 3,
+        "costCny": 0.0043,
+        "latencyMs": 46099,
+        "pageFile": "eval/runs/openai-compatible-qwen-plus-1020/bakery-croissant-single/A-raw/1/page.html",
+        "visibleText": "麦香小铺\n现烤 · 新鲜 · 温暖\nBUTTER CROISSANT\n12 元 / 80g\n每天早上现烤，外酥内软，奶香浓郁\n地址\n上海市徐汇区漕溪北路 88 号\n电话\n021-6123 4567\n营业时间\n每天 7:30 - 19:00\n今日新鲜出炉 🥐\n现烤可颂限量供应，售完即止\n立即订购\n© 2025 麦香小铺 · 每一口都是清晨的温度",
+        "factDetails": [
+          "缺少商品名「黄油可颂」"
+        ],
+        "unsupportedSentences": [
+          {
+            "sentence": "今日新鲜出炉 🥐",
+            "reasons": [
+              "unsupported_claim"
+            ],
+            "evidence": [
+              "新鲜出炉"
+            ]
+          },
+          {
+            "sentence": "现烤可颂限量供应，售完即止",
+            "reasons": [
+              "unsupported_claim"
+            ],
+            "evidence": [
+              "限量"
+            ]
+          },
+          {
+            "sentence": "© 2025   · 每一口都是清晨的温度",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "2025"
+            ]
+          }
+        ]
+      },
+      {
+        "sampleId": "bakery-croissant-single",
+        "group": "A-raw",
+        "n": 2,
+        "ok": false,
+        "error": "provider bad_response",
+        "factErrors": null,
+        "priceNameErrors": null,
+        "unsupported": null,
+        "costCny": 0,
+        "latencyMs": 0,
+        "pageFile": null,
+        "visibleText": "",
+        "factDetails": [],
+        "unsupportedSentences": []
+      },
+      {
+        "sampleId": "bakery-croissant-single",
+        "group": "A-raw",
+        "n": 3,
+        "ok": false,
+        "error": "provider bad_response",
+        "factErrors": null,
+        "priceNameErrors": null,
+        "unsupported": null,
+        "costCny": 0,
+        "latencyMs": 0,
+        "pageFile": null,
+        "visibleText": "",
+        "factDetails": [],
+        "unsupportedSentences": []
+      },
+      {
+        "sampleId": "bakery-croissant-single",
+        "group": "B-gold",
+        "n": 1,
+        "ok": false,
+        "error": "failed: 文案事实核对服务暂时不可用，请稍后重试",
+        "factErrors": null,
+        "priceNameErrors": null,
+        "unsupported": null,
+        "costCny": 0.0013,
+        "latencyMs": 5445,
+        "pageFile": null,
+        "visibleText": "",
+        "factDetails": [],
+        "unsupportedSentences": []
+      },
+      {
+        "sampleId": "bakery-croissant-single",
+        "group": "B-gold",
+        "n": 2,
+        "ok": true,
+        "factErrors": 0,
+        "priceNameErrors": 0,
+        "unsupported": 0,
+        "costCny": 0.0021999999999999997,
+        "latencyMs": 9761,
+        "guard": {
+          "intercepted": 3,
+          "rewritten": 3,
+          "removed": 0
+        },
+        "pageFile": "eval/runs/openai-compatible-qwen-plus-1020/bakery-croissant-single/B-gold/2/page.html",
+        "visibleText": "麦香小铺\n晨光里的暖意\n酥层轻绽，黄油香漫过清晨\n黄油可颂\n¥12个\n约 80g\n刚出炉的可颂，酥皮微卷，暖香浮动。\n每天早上现烤\n麦香小铺晨起现烤\n营业时间\n每天 7:30-19:00\n地址\n上海市徐汇区漕溪北路 88 号\n电话\n021-6123 4567\n信息有误？告诉老板\n哪一项有误黄油可颂 · 名称黄油可颂 · 价格黄油可颂 · 规格店名电话联系不上或有误地址营业时间其他正确的是补充说明（选填）\n请勿填写你的手机号等个人信息\n提交\n本页由 AI 辅助设计，商品信息由商家提供\n由 实招 Shizhao 生成\n一键拨号地图导航",
+        "factDetails": [],
+        "unsupportedSentences": []
+      },
+      {
+        "sampleId": "bakery-croissant-single",
+        "group": "B-gold",
+        "n": 3,
+        "ok": true,
+        "factErrors": 0,
+        "priceNameErrors": 0,
+        "unsupported": 0,
+        "costCny": 0.0024000000000000002,
+        "latencyMs": 10908,
+        "guard": {
+          "intercepted": 4,
+          "rewritten": 4,
+          "removed": 0
+        },
+        "pageFile": "eval/runs/openai-compatible-qwen-plus-1020/bakery-croissant-single/B-gold/3/page.html",
+        "visibleText": "麦香小铺\n晨光里的暖香\n刚出炉的黄油可颂\n黄油可颂\n¥12个\n约 80g\n面团在晨光中舒展\n每天早上现烤\n一口酥脆，满心柔软\n营业时间\n每天 7:30-19:00\n地址\n上海市徐汇区漕溪北路 88 号\n电话\n021-6123 4567\n信息有误？告诉老板\n哪一项有误黄油可颂 · 名称黄油可颂 · 价格黄油可颂 · 规格店名电话联系不上或有误地址营业时间其他正确的是补充说明（选填）\n请勿填写你的手机号等个人信息\n提交\n本页由 AI 辅助设计，商品信息由商家提供\n由 实招 Shizhao 生成\n一键拨号地图导航",
+        "factDetails": [],
+        "unsupportedSentences": []
+      },
+      {
+        "sampleId": "bakery-croissant-single",
+        "group": "B-e2e",
+        "n": 1,
+        "ok": true,
+        "factErrors": 0,
+        "priceNameErrors": 0,
+        "unsupported": 1,
+        "costCny": 0.0033,
+        "latencyMs": 14107,
+        "guard": {
+          "intercepted": 2,
+          "rewritten": 2,
+          "removed": 0
+        },
+        "pageFile": "eval/runs/openai-compatible-qwen-plus-1020/bakery-croissant-single/B-e2e/1/page.html",
+        "visibleText": "麦香小铺\n暖香浮在空气里，像清晨窗边的光\n质朴面香在指尖与炉火间缓缓苏醒\nBUTTER CROISSANT\n约 80g\n招牌黄油可颂，12 元一个，约 80g，每天早上现烤。\n牛角包酥层轻颤，麦香暖意浮动\n每天早上现烤\n慢一点，让香气落进日常的缝隙\n营业时间\n每天 7:30-19:00\n地址\n上海市徐汇区漕溪北路 88 号\n电话\n021-6123 4567\n信息有误？告诉老板\n哪一项有误BUTTER CROISSANT · 名称BUTTER CROISSANT · 规格BUTTER CROISSANT · 介绍店名电话联系不上或有误地址营业时间其他正确的是补充说明（选填）\n请勿填写你的手机号等个人信息\n提交\n本页由 AI 辅助设计，商品信息由商家提供\n由 实招 Shizhao 生成\n一键拨号地图导航",
+        "factDetails": [],
+        "unsupportedSentences": [
+          {
+            "sentence": "招牌 ，12 元一个， ， 。",
+            "reasons": [
+              "unsupported_claim"
+            ],
+            "evidence": [
+              "招牌"
+            ]
+          }
+        ]
+      },
+      {
+        "sampleId": "bakery-croissant-single",
+        "group": "B-e2e",
+        "n": 2,
+        "ok": true,
+        "factErrors": 0,
+        "priceNameErrors": 0,
+        "unsupported": 1,
+        "costCny": 0.0037000000000000006,
+        "latencyMs": 18433,
+        "guard": {
+          "intercepted": 4,
+          "rewritten": 4,
+          "removed": 0
+        },
+        "pageFile": "eval/runs/openai-compatible-qwen-plus-1020/bakery-croissant-single/B-e2e/2/page.html",
+        "visibleText": "麦香小铺\n暖香初醒\n面香在炉火间苏醒\nBUTTER CROISSANT\n约 80g\n招牌黄油可颂，12 元一个，约 80g，每天早上现烤。\n刚出炉的牛角包，酥层轻颤，暖香漫溢\n每天早上现烤\n麦香小铺的黄油可颂\n营业时间\n每天 7:30-19:00\n地址\n上海市徐汇区漕溪北路 88 号\n电话\n021-6123 4567\n信息有误？告诉老板\n哪一项有误BUTTER CROISSANT · 名称BUTTER CROISSANT · 规格BUTTER CROISSANT · 介绍店名电话联系不上或有误地址营业时间其他正确的是补充说明（选填）\n请勿填写你的手机号等个人信息\n提交\n本页由 AI 辅助设计，商品信息由商家提供\n由 实招 Shizhao 生成\n一键拨号地图导航",
+        "factDetails": [],
+        "unsupportedSentences": [
+          {
+            "sentence": "招牌 ，12 元一个， ， 。",
+            "reasons": [
+              "unsupported_claim"
+            ],
+            "evidence": [
+              "招牌"
+            ]
+          }
+        ]
+      },
+      {
+        "sampleId": "bakery-croissant-single",
+        "group": "B-e2e",
+        "n": 3,
+        "ok": true,
+        "factErrors": 0,
+        "priceNameErrors": 0,
+        "unsupported": 2,
+        "costCny": 0.0034000000000000002,
+        "latencyMs": 16843,
+        "guard": {
+          "intercepted": 4,
+          "rewritten": 4,
+          "removed": 0
+        },
+        "pageFile": "eval/runs/openai-compatible-qwen-plus-1020/bakery-croissant-single/B-e2e/3/page.html",
+        "visibleText": "麦香小铺\n麦香小铺的晨光暖香\n质朴面团裹着黄油，现烤出炉\nBUTTER CROISSANT\n约 80g\n招牌黄油可颂，12 元一个，约 80g，每天早上现烤。\n招牌黄油可颂，每天早上现烤\n每天早上现烤\n麦香小铺，暖香满溢\n营业时间\n每天 7:30-19:00\n地址\n上海市徐汇区漕溪北路 88 号\n电话\n021-6123 4567\n信息有误？告诉老板\n哪一项有误BUTTER CROISSANT · 名称BUTTER CROISSANT · 规格BUTTER CROISSANT · 介绍店名电话联系不上或有误地址营业时间其他正确的是补充说明（选填）\n请勿填写你的手机号等个人信息\n提交\n本页由 AI 辅助设计，商品信息由商家提供\n由 实招 Shizhao 生成\n一键拨号地图导航",
+        "factDetails": [],
+        "unsupportedSentences": [
+          {
+            "sentence": "招牌 ，12 元一个， ， 。",
+            "reasons": [
+              "unsupported_claim"
+            ],
+            "evidence": [
+              "招牌"
+            ]
+          },
+          {
+            "sentence": "招牌 ，",
+            "reasons": [
+              "unsupported_claim"
+            ],
+            "evidence": [
+              "招牌"
+            ]
+          }
+        ]
+      },
+      {
+        "sampleId": "bakery-dessert-menu",
+        "group": "A-gold",
+        "n": 1,
+        "ok": true,
+        "factErrors": 0,
+        "priceNameErrors": 0,
+        "unsupported": 9,
+        "costCny": 0.0077,
+        "latencyMs": 82416,
+        "pageFile": "eval/runs/openai-compatible-qwen-plus-1020/bakery-dessert-menu/A-gold/1/page.html",
+        "visibleText": "\\n \\n\n\\n\n\\n\n\\n\n🍰 甜心烘焙坊\n\\n\n手作温度 · 甜蜜交付\n\\n\n\\n\\n \\n\n\\n\n\\n \\n \\n \\n \\n 电话预约\\n \\n 139 0000 0000\\n\n\\n\n\\n \\n \\n \\n \\n 微信咨询\\n \\n tianxin_bake\\n\n\\n\n\\n\\n \\n\n\\n\n\\n \\n \\n \\n \\n 支持提前预订 · 新鲜现做 · 按时送达\\n \\n\n\\n\n\\n\\n \\n\n\\n\n\\n \\n \\n \\n 人气单品\\n\n\\n\\n \\n\n\\n\n\\n\n\\n 🥚\\n\n\\n\n\\n\n葡式蛋挞\n\\n\n酥脆外皮 · 浓郁奶香 · 每日现烤\n\\n\n\\n ¥8 / 个\\n 热销\\n\n\\n\n\\n\n\\n\n\\n\\n \\n\n\\n\n\\n\n\\n ☕\\n\n\\n\n\\n\n提拉米苏\n\\n\n经典意式 · 咖啡酒香 · 绵密顺滑\n\\n\n\\n ¥32 / 份\\n 推荐\\n\n\\n\n\\n\n\\n\n\\n\\n \\n\n\\n\n\\n\n\\n 🧀\\n\n\\n\n\\n\n巴斯克芝士蛋糕\n\\n\n浓醇流心 · 6寸整模 · 低糖轻盈\n\\n\n\\n\n\\n ¥128 / 个\\n\n（6 寸 · 适合 6–8 人）\n\\n\n\\n 限量\\n\n\\n\n\\n\n\\n\n\\n\n\\n\\n \\n\n\\n\n✨ 甜蜜不等待，现在就预订 ✨\n\\n\n微信联系或电话下单，支持同城配送与自提\n\\n\n\\n \\n \\n \\n \\n 拨打预约\\n \\n \\n \\n \\n \\n 微信咨询\\n \\n\n\\n\n\\n\\n \\n\n\\n © 2024 甜心烘焙坊 · 所有蛋糕均为当日新鲜制作 · 预订请至少提前 24 小时\\n\n\\n",
+        "factDetails": [],
+        "unsupportedSentences": [
+          {
+            "sentence": "手作温度 · 甜蜜交付",
+            "reasons": [
+              "unsupported_claim"
+            ],
+            "evidence": [
+              "手作"
+            ]
+          },
+          {
+            "sentence": "\\n \\n \\n \\n \\n 支持提前预订 · 新鲜现做 · 按时送达\\n \\n",
+            "reasons": [
+              "unsupported_claim"
+            ],
+            "evidence": [
+              "现做"
+            ]
+          },
+          {
+            "sentence": "\\n \\n \\n \\n 人气单品\\n",
+            "reasons": [
+              "unsupported_claim"
+            ],
+            "evidence": [
+              "人气"
+            ]
+          },
+          {
+            "sentence": "酥脆外皮 · 浓郁奶香 · 每日现烤",
+            "reasons": [
+              "unsupported_claim"
+            ],
+            "evidence": [
+              "现烤"
+            ]
+          },
+          {
+            "sentence": "\\n ¥8 / 个\\n 热销\\n",
+            "reasons": [
+              "unsupported_claim"
+            ],
+            "evidence": [
+              "热销"
+            ]
+          },
+          {
+            "sentence": "浓醇流心 · 6寸整模 · 低糖轻盈",
+            "reasons": [
+              "unsupported_claim"
+            ],
+            "evidence": [
+              "低糖"
+            ]
+          },
+          {
+            "sentence": "（  · 适合 6–8 人）",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "6",
+              "8 人"
+            ]
+          },
+          {
+            "sentence": "\\n 限量\\n",
+            "reasons": [
+              "unsupported_claim"
+            ],
+            "evidence": [
+              "限量"
+            ]
+          },
+          {
+            "sentence": "\\n © 2024   · 所有蛋糕均为当日新鲜制作 · 预订请至少提前 24 小时\\n",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "2024",
+              "24 小时"
+            ]
+          }
+        ]
+      },
+      {
+        "sampleId": "bakery-dessert-menu",
+        "group": "A-gold",
+        "n": 2,
+        "ok": true,
+        "factErrors": 1,
+        "priceNameErrors": 1,
+        "unsupported": 3,
+        "costCny": 0.0055,
+        "latencyMs": 58303,
+        "pageFile": "eval/runs/openai-compatible-qwen-plus-1020/bakery-dessert-menu/A-gold/2/page.html",
+        "visibleText": "\\n \\n\n\\n\n\\n\n\\n\n甜心烘焙坊\n\\n\n手作 · 新鲜 · 可预订\n\\n\n\\n\\n \\n\n\\n\n\\n\n\\n \\n \\n \\n 139 0000 0000\\n\n\\n\n\\n \\n \\n \\n tianxin_bake\\n\n\\n\n\\n\n\\n\\n \\n\n\\n ✅ 支持提前预订｜当日现烤｜满50元同城免费配送\\n\n\\n\\n \\n\n\\n\n今日甜蜜推荐\n\\n\\n \\n\n\\n\n\\n \\n\n\\n\n葡式蛋挞\n\\n\n酥脆外皮 × 浓郁蛋奶香\n\\n\n\\n ¥8\\n /个\\n\n\\n\n\\n\n\\n\n\\n\\n \\n\n\\n\n\\n \\n\n\\n\n提拉米苏\n\\n\n经典意式风味｜咖啡与马斯卡彭的温柔邂逅\n\\n\n\\n ¥32\\n /份\\n\n\\n\n\\n\n\\n\n\\n\\n \\n\n\\n\n\\n \\n\n\\n\n巴斯克芝士蛋糕\n\\n\n焦糖表皮 × 绵密流心｜6寸整蛋糕\n\\n\n\\n ¥128\\n /6寸\\n\n\\n\n\\n\n\\n\n\\n\n\\n\\n \\n\n\\n\n\\n\n✨ 甜蜜不等待，提前预订更安心 ✨\n\\n\n\\n 📲 立即微信预订\\n\n\\n\n点击跳转至微信聊天（请确保已安装微信）\n\\n\n\\n\n\\n\\n \\n\n\\n © 2024 甜心烘焙坊 · 温馨提示：所有产品均为当日新鲜制作，预订后请耐心等待哦～\\n\n\\n",
+        "factDetails": [
+          "页面价格 50 不在事实表中"
+        ],
+        "unsupportedSentences": [
+          {
+            "sentence": "手作 · 新鲜 ·",
+            "reasons": [
+              "unsupported_claim"
+            ],
+            "evidence": [
+              "手作"
+            ]
+          },
+          {
+            "sentence": "\\n ✅ 支持提前预订｜当日现烤｜满50元同城免费配送\\n",
+            "reasons": [
+              "unsupported_claim",
+              "unsupported_number"
+            ],
+            "evidence": [
+              "现烤",
+              "50元"
+            ]
+          },
+          {
+            "sentence": "\\n © 2024   · 温馨提示：所有产品均为当日新鲜制作，预订后请耐心等待哦～\\n",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "2024"
+            ]
+          }
+        ]
+      },
+      {
+        "sampleId": "bakery-dessert-menu",
+        "group": "A-gold",
+        "n": 3,
+        "ok": true,
+        "factErrors": 0,
+        "priceNameErrors": 0,
+        "unsupported": 7,
+        "costCny": 0.0067,
+        "latencyMs": 71027,
+        "pageFile": "eval/runs/openai-compatible-qwen-plus-1020/bakery-dessert-menu/A-gold/3/page.html",
+        "visibleText": "\\n\\n\n\\n\n\\n \\n \\n \\n\n\\n\n🍰 甜心烘焙坊\n\\n\n手作 · 温暖 · 每一口都用心\n\\n\n\\n\\n\\n\n\\n\n\\n 📞 联系我们\\n\n\\n\n\\n\n\\n\n\\n \\n \\n \\n\n\\n 139 0000 0000\\n\n\\n\n\\n\n\\n \\n \\n \\n\n\\n 微信：tianxin_bake\\n\n\\n\n\\n\n\\n\\n\\n\n\\n\n\\n ✅ 可预订 · 新鲜现做 · 支持自提/同城配送\\n\n\\n\n\\n\\n\\n\n\\n\n✨ 热销甜品\n\\n \\n \\n\n\\n\n\\n \\n\n\\n\n葡式蛋挞\n\\n\n酥脆外皮 · 浓郁蛋香 · 经典不败\n\\n\n\\n ¥8 / 个\\n 热销\\n\n\\n\n\\n\n\\n\n\\n \\n \\n\n\\n\n\\n \\n\n\\n\n提拉米苏\n\\n\n马斯卡彭奶酪 · 手冲咖啡浸润手指饼干\n\\n\n\\n ¥32 / 份\\n 人气推荐\\n\n\\n\n\\n\n\\n\n\\n \\n \\n\n\\n\n\\n \\n\n\\n\n巴斯克芝士蛋糕\n\\n\n浓醇流心 · 焦糖表皮 · 6寸整蛋糕\n\\n\n\\n ¥128 / 个（6寸）\\n 可预订\\n\n\\n\n\\n\n\\n\n\\n\n\\n\\n\\n\n\\n\n\\n\n立即预订，甜蜜不等待！\n\\n\n扫码加微信或致电下单，支持提前1天预订\n\\n\n\\n \\n \\n \\n 拨打订购 →\\n\n\\n\n\\n\n\\n\\n\\n\n\\n\n© 2024 甜心烘焙坊 · 所有甜品均为当日新鲜制作\n\\n\n\\n",
+        "factDetails": [],
+        "unsupportedSentences": [
+          {
+            "sentence": "手作 · 温暖 · 每一口都用心",
+            "reasons": [
+              "unsupported_claim"
+            ],
+            "evidence": [
+              "手作"
+            ]
+          },
+          {
+            "sentence": "\\n ✅   · 新鲜现做 · 支持自提/同城配送\\n",
+            "reasons": [
+              "unsupported_claim"
+            ],
+            "evidence": [
+              "现做"
+            ]
+          },
+          {
+            "sentence": "✨ 热销甜品",
+            "reasons": [
+              "unsupported_claim"
+            ],
+            "evidence": [
+              "热销"
+            ]
+          },
+          {
+            "sentence": "\\n ¥8 / 个\\n 热销\\n",
+            "reasons": [
+              "unsupported_claim"
+            ],
+            "evidence": [
+              "热销"
+            ]
+          },
+          {
+            "sentence": "\\n ¥32 / 份\\n 人气推荐\\n",
+            "reasons": [
+              "unsupported_claim"
+            ],
+            "evidence": [
+              "人气"
+            ]
+          },
+          {
+            "sentence": "扫码加微信或致电下单，支持提前1天预订",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "1天"
+            ]
+          },
+          {
+            "sentence": "© 2024   · 所有甜品均为当日新鲜制作",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "2024"
+            ]
+          }
+        ]
+      },
+      {
+        "sampleId": "bakery-dessert-menu",
+        "group": "A-raw",
+        "n": 1,
+        "ok": true,
+        "factErrors": 0,
+        "priceNameErrors": 0,
+        "unsupported": 5,
+        "costCny": 0.0052,
+        "latencyMs": 65969,
+        "pageFile": "eval/runs/openai-compatible-qwen-plus-1020/bakery-dessert-menu/A-raw/1/page.html",
+        "visibleText": "甜心烘焙坊\n用心烘焙，甜蜜每一刻\n本周限定甜品\n新鲜现做 · 现点现烤 · 限量供应\n葡式蛋挞\n酥皮层层分明，蛋奶香浓顺滑\n8 元/个\n提拉米苏\n经典意式风味，咖啡与马斯卡彭的完美融合\n32 元/份\n巴斯克芝士蛋糕（6寸）\n焦香外皮 + 绵密流心，低温慢烤工艺\n128 元/个\n可预订 · 欢迎下单\n微信：tianxin_bake\n电话：139 0000 0000\n营业时间：10:00 - 20:00（每日新鲜制作）\n© 2025 甜心烘焙坊 · 所有甜品均为当日现做",
+        "factDetails": [],
+        "unsupportedSentences": [
+          {
+            "sentence": "本周限定甜品",
+            "reasons": [
+              "unsupported_claim"
+            ],
+            "evidence": [
+              "本周限定",
+              "限定"
+            ]
+          },
+          {
+            "sentence": "新鲜现做 · 现点现烤 · 限量供应",
+            "reasons": [
+              "unsupported_claim"
+            ],
+            "evidence": [
+              "现做",
+              "现烤",
+              "限量"
+            ]
+          },
+          {
+            "sentence": "焦香外皮 + 绵密流心，低温慢烤工艺",
+            "reasons": [
+              "unsupported_claim"
+            ],
+            "evidence": [
+              "低温",
+              "慢烤"
+            ]
+          },
+          {
+            "sentence": "营业时间：10:00 - 20:00（每日新鲜制作）",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "10",
+              "00",
+              "20"
+            ]
+          },
+          {
+            "sentence": "© 2025   · 所有甜品均为当日现做",
+            "reasons": [
+              "unsupported_number",
+              "unsupported_claim"
+            ],
+            "evidence": [
+              "2025",
+              "现做"
+            ]
+          }
+        ]
+      },
+      {
+        "sampleId": "bakery-dessert-menu",
+        "group": "A-raw",
+        "n": 2,
+        "ok": true,
+        "factErrors": 0,
+        "priceNameErrors": 0,
+        "unsupported": 6,
+        "costCny": 0.0047,
+        "latencyMs": 58078,
+        "pageFile": "eval/runs/openai-compatible-qwen-plus-1020/bakery-dessert-menu/A-raw/2/page.html",
+        "visibleText": "甜心烘焙坊\n用心烘焙，甜蜜每一刻\n本周限定甜品\n新鲜出炉 · 手工制作 · 限量供应\n葡式蛋挞\n8 元/个\n酥皮层层分明，蛋香浓郁顺滑\n提拉米苏\n32 元/份\n经典意式风味，咖啡与奶酪的完美融合\n巴斯克芝士蛋糕\n128 元/6 寸\n焦香外皮，绵密内馅，低温慢烤工艺\n立即预订 · 甜蜜到家\n微信：tianxin_bake\n电话：139 0000 0000\n支持自取 / 配送（限市区）｜提前1天预订更佳\n© 2025 甜心烘焙坊 · 每一口都是爱的味道\n📍 温馨提示：甜品每日限量，售完即止",
+        "factDetails": [],
+        "unsupportedSentences": [
+          {
+            "sentence": "本周限定甜品",
+            "reasons": [
+              "unsupported_claim"
+            ],
+            "evidence": [
+              "本周限定",
+              "限定"
+            ]
+          },
+          {
+            "sentence": "新鲜出炉 · 手工制作 · 限量供应",
+            "reasons": [
+              "unsupported_claim"
+            ],
+            "evidence": [
+              "新鲜出炉",
+              "手工",
+              "限量"
+            ]
+          },
+          {
+            "sentence": "焦香外皮，绵密内馅，低温慢烤工艺",
+            "reasons": [
+              "unsupported_claim"
+            ],
+            "evidence": [
+              "低温",
+              "慢烤"
+            ]
+          },
+          {
+            "sentence": "支持自取 / 配送（限市区）｜提前1天预订更佳",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "1天"
+            ]
+          },
+          {
+            "sentence": "© 2025   · 每一口都是爱的味道",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "2025"
+            ]
+          },
+          {
+            "sentence": "📍 温馨提示：甜品每日限量，售完即止",
+            "reasons": [
+              "unsupported_claim"
+            ],
+            "evidence": [
+              "限量"
+            ]
+          }
+        ]
+      },
+      {
+        "sampleId": "bakery-dessert-menu",
+        "group": "A-raw",
+        "n": 3,
+        "ok": true,
+        "factErrors": 0,
+        "priceNameErrors": 0,
+        "unsupported": 4,
+        "costCny": 0.0062,
+        "latencyMs": 79980,
+        "pageFile": "eval/runs/openai-compatible-qwen-plus-1020/bakery-dessert-menu/A-raw/3/page.html",
+        "visibleText": "甜心烘焙坊\n用心烘焙 · 甜蜜每一刻\n本周限定甜品\n新鲜现做 · 现点现烤 · 限量供应\n葡式蛋挞\n酥脆外皮 · 滑嫩蛋心\n¥8\n/个\n提拉米苏\n经典意式 · 咖啡酒香\n¥32\n/份\n巴斯克芝士蛋糕\n焦香外层 · 绵密内芯\n¥128\n/6寸\n立即预订\n微信预约更便捷，提前预定不排队\n139 0000 0000\ntianxin_bake\n微信扫码预约\n© 2025 甜心烘焙坊 | 所有甜品当日新鲜制作\n地址：城市中心街123号（近梧桐树咖啡）",
+        "factDetails": [],
+        "unsupportedSentences": [
+          {
+            "sentence": "本周限定甜品",
+            "reasons": [
+              "unsupported_claim"
+            ],
+            "evidence": [
+              "本周限定",
+              "限定"
+            ]
+          },
+          {
+            "sentence": "新鲜现做 · 现点现烤 · 限量供应",
+            "reasons": [
+              "unsupported_claim"
+            ],
+            "evidence": [
+              "现做",
+              "现烤",
+              "限量"
+            ]
+          },
+          {
+            "sentence": "© 2025   | 所有甜品当日新鲜制作",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "2025"
+            ]
+          },
+          {
+            "sentence": "地址：城市中心街123号（近梧桐树咖啡）",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "123"
+            ]
+          }
+        ]
+      },
+      {
+        "sampleId": "bakery-dessert-menu",
+        "group": "B-gold",
+        "n": 1,
+        "ok": true,
+        "factErrors": 0,
+        "priceNameErrors": 0,
+        "unsupported": 0,
+        "costCny": 0.0024,
+        "latencyMs": 10376,
+        "guard": {
+          "intercepted": 2,
+          "rewritten": 2,
+          "removed": 0
+        },
+        "pageFile": "eval/runs/openai-compatible-qwen-plus-1020/bakery-dessert-menu/B-gold/1/page.html",
+        "visibleText": "甜心烘焙坊\n甜心烘焙坊的葡式蛋挞\n每一份甜点，都是雅致时光的温柔落笔\n可预订\n葡式蛋挞\n¥8个\n酥脆外皮裹着柔滑蛋奶香\n提拉米苏\n¥32份\n咖啡微苦与奶霜绵密交织，雅致层次悄然唤醒记忆里的柔软。\n巴斯克芝士蛋糕\n¥128个\n6 寸\n表面微焦，内里如云朵般温润，甜蜜在静默中缓缓流淌。\n愿这一口，陪你安放日常的微光\n电话\n139 0000 0000\n微信\ntianxin_bake\n信息有误？告诉老板\n哪一项有误葡式蛋挞 · 名称葡式蛋挞 · 价格提拉米苏 · 名称提拉米苏 · 价格巴斯克芝士蛋糕 · 名称巴斯克芝士蛋糕 · 价格巴斯克芝士蛋糕 · 规格店名电话联系不上或有误微信联系不上或有误其他正确的是补充说明（选填）\n请勿填写你的手机号等个人信息\n提交\n本页由 AI 辅助设计，商品信息由商家提供\n由 实招 Shizhao 生成\n一键拨号\n复制微信号",
+        "factDetails": [],
+        "unsupportedSentences": []
+      },
+      {
+        "sampleId": "bakery-dessert-menu",
+        "group": "B-gold",
+        "n": 2,
+        "ok": true,
+        "factErrors": 0,
+        "priceNameErrors": 0,
+        "unsupported": 0,
+        "costCny": 0.0025,
+        "latencyMs": 11803,
+        "guard": {
+          "intercepted": 2,
+          "rewritten": 2,
+          "removed": 0
+        },
+        "pageFile": "eval/runs/openai-compatible-qwen-plus-1020/bakery-dessert-menu/B-gold/2/page.html",
+        "visibleText": "甜心烘焙坊\n暖甜雅致，入心入味\n每一口，都是温柔烘焙的诚意\n可预订\n葡式蛋挞\n¥8个\n金黄酥皮裹着微颤的焦糖奶香，绵密回甘里透出温润气息\n提拉米苏\n¥32份\n轻盈咖啡香与奶霜层层相依，雅致滋味在舌尖悄然舒展。\n巴斯克芝士蛋糕\n¥128个\n6 寸\n外缘微焦，内里如云朵般柔润，暖甜在朴素中静静流淌。\n慢烘细焙，把心意揉进每一份甜里。\n电话\n139 0000 0000\n微信\ntianxin_bake\n信息有误？告诉老板\n哪一项有误葡式蛋挞 · 名称葡式蛋挞 · 价格提拉米苏 · 名称提拉米苏 · 价格巴斯克芝士蛋糕 · 名称巴斯克芝士蛋糕 · 价格巴斯克芝士蛋糕 · 规格店名电话联系不上或有误微信联系不上或有误其他正确的是补充说明（选填）\n请勿填写你的手机号等个人信息\n提交\n本页由 AI 辅助设计，商品信息由商家提供\n由 实招 Shizhao 生成\n一键拨号\n复制微信号",
+        "factDetails": [],
+        "unsupportedSentences": []
+      },
+      {
+        "sampleId": "bakery-dessert-menu",
+        "group": "B-gold",
+        "n": 3,
+        "ok": true,
+        "factErrors": 0,
+        "priceNameErrors": 0,
+        "unsupported": 0,
+        "costCny": 0.0023,
+        "latencyMs": 11161,
+        "guard": {
+          "intercepted": 3,
+          "rewritten": 3,
+          "removed": 0
+        },
+        "pageFile": "eval/runs/openai-compatible-qwen-plus-1020/bakery-dessert-menu/B-gold/3/page.html",
+        "visibleText": "甜心烘焙坊\n甜暖入心\n每一口，都是雅致时光里悄然融化的温柔\n可预订\n葡式蛋挞\n¥8个\n酥脆外皮裹着柔滑蛋心，微焦香气轻轻漫开。\n提拉米苏\n¥32份\n咖啡与奶霜层层低语，绵密质地如午后阳光般温润舒展。\n巴斯克芝士蛋糕\n¥128个\n6 寸\n表面微皱，内里如云朵般柔软，甜暖在舌尖缓缓铺陈。\n甜心烘焙坊，守候日常里的雅致甜暖。\n电话\n139 0000 0000\n微信\ntianxin_bake\n信息有误？告诉老板\n哪一项有误葡式蛋挞 · 名称葡式蛋挞 · 价格提拉米苏 · 名称提拉米苏 · 价格巴斯克芝士蛋糕 · 名称巴斯克芝士蛋糕 · 价格巴斯克芝士蛋糕 · 规格店名电话联系不上或有误微信联系不上或有误其他正确的是补充说明（选填）\n请勿填写你的手机号等个人信息\n提交\n本页由 AI 辅助设计，商品信息由商家提供\n由 实招 Shizhao 生成\n一键拨号\n复制微信号",
+        "factDetails": [],
+        "unsupportedSentences": []
+      },
+      {
+        "sampleId": "bakery-dessert-menu",
+        "group": "B-e2e",
+        "n": 1,
+        "ok": true,
+        "factErrors": 1,
+        "priceNameErrors": 1,
+        "unsupported": 0,
+        "costCny": 0.0039,
+        "latencyMs": 19021,
+        "guard": {
+          "intercepted": 3,
+          "rewritten": 3,
+          "removed": 0
+        },
+        "pageFile": "eval/runs/openai-compatible-qwen-plus-1020/bakery-dessert-menu/B-e2e/1/page.html",
+        "visibleText": "甜心烘焙坊\n甜心烘焙坊，温润时光\n每一口都裹着雅致的甜蜜\n可预订\n葡式蛋挞\n¥8个\n葡式蛋挞，酥皮轻颤，流心温润\n提拉米苏\n¥32份\n提拉米苏，绵密层叠，咖啡与奶香低语，雅致在舌尖徐徐舒展。\n巴斯克芝士蛋糕\n6 寸\n巴斯克芝士蛋糕，表皮微焦，内里柔润，甜蜜如初遇般温软妥帖。\n甜心烘焙坊，守候日常的雅致甜意\n电话\n139 0000 0000\n微信\ntianxin_bake\n信息有误？告诉老板\n哪一项有误葡式蛋挞 · 名称葡式蛋挞 · 价格提拉米苏 · 名称提拉米苏 · 价格巴斯克芝士蛋糕 · 名称巴斯克芝士蛋糕 · 规格店名电话联系不上或有误微信联系不上或有误其他正确的是补充说明（选填）\n请勿填写你的手机号等个人信息\n提交\n本页由 AI 辅助设计，商品信息由商家提供\n由 实招 Shizhao 生成\n一键拨号\n复制微信号",
+        "factDetails": [
+          "缺少「巴斯克芝士蛋糕」的价格 128"
+        ],
+        "unsupportedSentences": []
+      },
+      {
+        "sampleId": "bakery-dessert-menu",
+        "group": "B-e2e",
+        "n": 2,
+        "ok": true,
+        "factErrors": 1,
+        "priceNameErrors": 1,
+        "unsupported": 0,
+        "costCny": 0.0039,
+        "latencyMs": 20047,
+        "guard": {
+          "intercepted": 2,
+          "rewritten": 2,
+          "removed": 0
+        },
+        "pageFile": "eval/runs/openai-compatible-qwen-plus-1020/bakery-dessert-menu/B-e2e/2/page.html",
+        "visibleText": "甜心烘焙坊\n甜心烘焙坊，温润雅致\n每一口都裹着细腻心意与时光温度\n可预订\n葡式蛋挞\n¥8个\n金黄酥皮轻颤，内里蛋奶微漾，唇齿间缓缓化开\n提拉米苏\n¥32份\n咖啡香与奶霜层叠交融，轻盈绵密，如午后一段温柔低语。\n巴斯克芝士蛋糕\n6 寸\n外缘微焦，内里柔润如绸，纯粹芝士香里藏着不动声色的雅致。\n甜蜜不喧哗，只待你静心相逢。\n电话\n139 0000 0000\n微信\ntianxin_bake\n信息有误？告诉老板\n哪一项有误葡式蛋挞 · 名称葡式蛋挞 · 价格提拉米苏 · 名称提拉米苏 · 价格巴斯克芝士蛋糕 · 名称巴斯克芝士蛋糕 · 规格店名电话联系不上或有误微信联系不上或有误其他正确的是补充说明（选填）\n请勿填写你的手机号等个人信息\n提交\n本页由 AI 辅助设计，商品信息由商家提供\n由 实招 Shizhao 生成\n一键拨号\n复制微信号",
+        "factDetails": [
+          "缺少「巴斯克芝士蛋糕」的价格 128"
+        ],
+        "unsupportedSentences": []
+      },
+      {
+        "sampleId": "bakery-dessert-menu",
+        "group": "B-e2e",
+        "n": 3,
+        "ok": true,
+        "factErrors": 1,
+        "priceNameErrors": 1,
+        "unsupported": 0,
+        "costCny": 0.0037,
+        "latencyMs": 18664,
+        "guard": {
+          "intercepted": 2,
+          "rewritten": 1,
+          "removed": 1
+        },
+        "pageFile": "eval/runs/openai-compatible-qwen-plus-1020/bakery-dessert-menu/B-e2e/3/page.html",
+        "visibleText": "甜心烘焙坊\n甜心烘焙坊\n每一口都带着雅致的温度与心意\n可预订\n葡式蛋挞\n¥8个\n葡式蛋挞，酥皮轻颤，内里柔滑微颤，甜意如初阳般温润铺展。\n提拉米苏\n¥32份\n提拉米苏，绵密层叠间浮起淡淡酒香与可可余韵，甜暖不言而喻。\n巴斯克芝士蛋糕\n6 寸\n巴斯克芝士蛋糕，表皮微焦如秋日私语，内里醇厚柔润，雅致悄然弥漫。\n甜心烘焙坊，守候日常里的温柔光亮\n电话\n139 0000 0000\n微信\ntianxin_bake\n信息有误？告诉老板\n哪一项有误葡式蛋挞 · 名称葡式蛋挞 · 价格提拉米苏 · 名称提拉米苏 · 价格巴斯克芝士蛋糕 · 名称巴斯克芝士蛋糕 · 规格店名电话联系不上或有误微信联系不上或有误其他正确的是补充说明（选填）\n请勿填写你的手机号等个人信息\n提交\n本页由 AI 辅助设计，商品信息由商家提供\n由 实招 Shizhao 生成\n一键拨号\n复制微信号",
+        "factDetails": [
+          "缺少「巴斯克芝士蛋糕」的价格 128"
+        ],
+        "unsupportedSentences": []
+      },
+      {
+        "sampleId": "drink-cafe-menu",
+        "group": "A-gold",
+        "n": 1,
+        "ok": true,
+        "factErrors": 0,
+        "priceNameErrors": 0,
+        "unsupported": 3,
+        "costCny": 0.0036,
+        "latencyMs": 37142,
+        "pageFile": "eval/runs/openai-compatible-qwen-plus-1020/drink-cafe-menu/A-gold/1/page.html",
+        "visibleText": "☕\n转角咖啡\n菜单\n城市角落，一杯温暖\n西湖边的慢时光，现磨咖啡与手作茶饮，等你来邂逅\n📍\n地址\n杭州市西湖区文三路 100 号\n⏰\n营业时间\n每日 9:00 – 21:00\n今日推荐\n拿铁\n¥22\n中杯 · 香浓顺滑，奶泡绵密\n美式\n¥18\n经典黑咖，醇厚回甘\n柠檬茶\n¥15\n手作鲜榨，清爽解腻\n现在就来坐坐吧！\n步行可达 · 免费 Wi-Fi · 温馨阅读角\n一键导航到店\n© 2024 转角咖啡 · 杭州西湖区\n用心冲煮每一杯，静候你的转角相遇",
+        "factDetails": [],
+        "unsupportedSentences": [
+          {
+            "sentence": "西湖边的慢时光，现磨咖啡与手作茶饮，等你来邂逅",
+            "reasons": [
+              "unsupported_claim"
+            ],
+            "evidence": [
+              "现磨",
+              "手作"
+            ]
+          },
+          {
+            "sentence": "手作鲜榨，清爽解腻",
+            "reasons": [
+              "unsupported_claim"
+            ],
+            "evidence": [
+              "手作",
+              "鲜榨"
+            ]
+          },
+          {
+            "sentence": "© 2024   · 杭州西湖区",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "2024"
+            ]
+          }
+        ]
+      },
+      {
+        "sampleId": "drink-cafe-menu",
+        "group": "A-gold",
+        "n": 2,
+        "ok": true,
+        "factErrors": 0,
+        "priceNameErrors": 0,
+        "unsupported": 2,
+        "costCny": 0.0032,
+        "latencyMs": 33322,
+        "pageFile": "eval/runs/openai-compatible-qwen-plus-1020/drink-cafe-menu/A-gold/2/page.html",
+        "visibleText": "☕ 转角咖啡\n营业中\n城市转角，一杯温暖\n西湖边的慢时光，从这一杯开始\n📍\n地址\n杭州市西湖区文三路 100 号\n⏰\n营业时间\n每天 9:00 — 21:00\n今日推荐饮品\n拿铁\n22 元/杯\n经典意式浓缩融合温热牛奶，中杯规格\n美式\n18 元/杯\n纯粹醇厚，唤醒你的每一刻\n柠檬茶\n15 元/杯\n清爽酸甜，夏日特调\n现在就来坐坐吧！\n步行可达 · 免费 Wi-Fi · 温馨座位\n📍 导航到店\n© 2024 转角咖啡 · 杭州西湖\n用心手作 · 每一杯都值得等待",
+        "factDetails": [],
+        "unsupportedSentences": [
+          {
+            "sentence": "© 2024   · 杭州西湖",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "2024"
+            ]
+          },
+          {
+            "sentence": "用心手作 · 每一杯都值得等待",
+            "reasons": [
+              "unsupported_claim"
+            ],
+            "evidence": [
+              "手作"
+            ]
+          }
+        ]
+      },
+      {
+        "sampleId": "drink-cafe-menu",
+        "group": "A-gold",
+        "n": 3,
+        "ok": true,
+        "factErrors": 0,
+        "priceNameErrors": 0,
+        "unsupported": 4,
+        "costCny": 0.0039,
+        "latencyMs": 41061,
+        "pageFile": "eval/runs/openai-compatible-qwen-plus-1020/drink-cafe-menu/A-gold/3/page.html",
+        "visibleText": "☕ 转角咖啡\n遇见一杯有温度的日常\n地址\n杭州市西湖区文三路 100 号\n营业时间\n9:00 – 21:00（每日）\n今日推荐\n拿铁\n中杯 · 绵密奶泡 × 香醇意式浓缩\n¥22\n热/冰可选\n美式\n纯粹本味 · 现萃现做\n¥18\n经典款\n柠檬茶\n手作鲜榨 × 清爽回甘\n¥15\n夏日限定\n就在下一个转角，等你来坐\n步行可达 · 免费 Wi-Fi · 宠物友好\n微信扫码下单\n或直接到店 · 支持现金 / 支付宝 / 微信支付\n© 2024 转角咖啡 · 杭州西湖区文三路 100 号",
+        "factDetails": [],
+        "unsupportedSentences": [
+          {
+            "sentence": "纯粹本味 · 现萃现做",
+            "reasons": [
+              "unsupported_claim"
+            ],
+            "evidence": [
+              "现做"
+            ]
+          },
+          {
+            "sentence": "手作鲜榨 × 清爽回甘",
+            "reasons": [
+              "unsupported_claim"
+            ],
+            "evidence": [
+              "手作",
+              "鲜榨"
+            ]
+          },
+          {
+            "sentence": "夏日限定",
+            "reasons": [
+              "unsupported_claim"
+            ],
+            "evidence": [
+              "限定"
+            ]
+          },
+          {
+            "sentence": "© 2024   · 杭州西湖区文三路 100 号",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "2024",
+              "三",
+              "100"
+            ]
+          }
+        ]
+      },
+      {
+        "sampleId": "drink-cafe-menu",
+        "group": "A-raw",
+        "n": 1,
+        "ok": true,
+        "factErrors": 0,
+        "priceNameErrors": 0,
+        "unsupported": 1,
+        "costCny": 0.0042,
+        "latencyMs": 52672,
+        "pageFile": "eval/runs/openai-compatible-qwen-plus-1020/drink-cafe-menu/A-raw/1/page.html",
+        "visibleText": "转角咖啡\n城市角落的温暖一隅\n一杯好咖啡，治愈整个午后\n今日推荐\n拿铁（中杯）\n醇厚奶香 · 经典之选\n¥22\n美式\n纯粹咖啡因 · 清爽提神\n¥18\n柠檬茶\n清新酸甜 · 夏日必备\n¥15\n地址\n杭州市西湖区文三路 100 号\n营业时间\n周一至周日 9:00 - 21:00\n立即下单 · 外卖到家\n© 2025 转角咖啡 · 每一杯都用心制作",
+        "factDetails": [],
+        "unsupportedSentences": [
+          {
+            "sentence": "© 2025   · 每一杯都用心制作",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "2025"
+            ]
+          }
+        ]
+      },
+      {
+        "sampleId": "drink-cafe-menu",
+        "group": "A-raw",
+        "n": 2,
+        "ok": true,
+        "factErrors": 0,
+        "priceNameErrors": 0,
+        "unsupported": 0,
+        "costCny": 0.0042,
+        "latencyMs": 52722,
+        "pageFile": "eval/runs/openai-compatible-qwen-plus-1020/drink-cafe-menu/A-raw/2/page.html",
+        "visibleText": "转角咖啡\n城市角落的温暖一隅\n今日特选\n一杯好咖啡，治愈整个午后\n☕\n饮品菜单\n🥛\n拿铁（中杯）\n经典意式浓缩与绵密奶泡的温柔邂逅\n22 元\n💧\n美式咖啡\n纯粹黑咖，唤醒清晨能量\n18 元\n🍋\n柠檬茶\n清新酸甜，解腻提神\n15 元\n📍\n地址\n杭州市西湖区文三路 100 号\n⏰\n营业时间\n每日 9:00 - 21:00\n欢迎光临「转角咖啡」——\n在匆忙城市中，为你留一席静谧时光\n立即到店，享受今日特惠\n扫码导航 · 外卖直达 · 会员积分\n导航到店\n外卖下单",
+        "factDetails": [],
+        "unsupportedSentences": []
+      },
+      {
+        "sampleId": "drink-cafe-menu",
+        "group": "A-raw",
+        "n": 3,
+        "ok": true,
+        "factErrors": 0,
+        "priceNameErrors": 0,
+        "unsupported": 3,
+        "costCny": 0.0049,
+        "latencyMs": 61528,
+        "pageFile": "eval/runs/openai-compatible-qwen-plus-1020/drink-cafe-menu/A-raw/3/page.html",
+        "visibleText": "转角咖啡\nLATTE (M)\n22\nAMERICANO\n18\nLEMON TEA\n15\n今日推荐\n☕\n拿铁（中杯）\n丝滑奶香 · 经典之选\n¥22\n💧\n美式咖啡\n清爽提神 · 纯粹本味\n¥18\n🍋\n柠檬茶\n清新酸甜 · 夏日必备\n¥15\n地址\n杭州市西湖区文三路 100 号\n营业时间\n周一至周日 9:00 - 21:00\n立即下单 · 享受片刻宁静",
+        "factDetails": [],
+        "unsupportedSentences": [
+          {
+            "sentence": "22",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "22"
+            ]
+          },
+          {
+            "sentence": "18",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "18"
+            ]
+          },
+          {
+            "sentence": "15",
+            "reasons": [
+              "unsupported_number"
+            ],
+            "evidence": [
+              "15"
+            ]
+          }
+        ]
+      },
+      {
+        "sampleId": "drink-cafe-menu",
+        "group": "B-gold",
+        "n": 1,
+        "ok": true,
+        "factErrors": 0,
+        "priceNameErrors": 0,
+        "unsupported": 0,
+        "costCny": 0.0026,
+        "latencyMs": 12711,
+        "guard": {
+          "intercepted": 4,
+          "rewritten": 0,
+          "removed": 4
+        },
+        "pageFile": "eval/runs/openai-compatible-qwen-plus-1020/drink-cafe-menu/B-gold/1/page.html",
+        "visibleText": "转角咖啡\n转角咖啡\n温润一杯，简约如初\n拿铁\n¥22杯\n中杯\n美式\n¥18杯\n柠檬茶\n¥15杯\n在这里，每一杯都安放着日常的呼吸\n营业时间\n9:00-21:00\n地址\n杭州市西湖区文三路 100 号\n信息有误？告诉老板\n哪一项有误拿铁 · 名称拿铁 · 价格拿铁 · 规格美式 · 名称美式 · 价格柠檬茶 · 名称柠檬茶 · 价格店名地址营业时间其他正确的是补充说明（选填）\n请勿填写你的手机号等个人信息\n提交\n本页由 AI 辅助设计，商品信息由商家提供\n由 实招 Shizhao 生成\n地图导航",
+        "factDetails": [],
+        "unsupportedSentences": []
+      },
+      {
+        "sampleId": "drink-cafe-menu",
+        "group": "B-gold",
+        "n": 2,
+        "ok": true,
+        "factErrors": 0,
+        "priceNameErrors": 0,
+        "unsupported": 0,
+        "costCny": 0.0024000000000000002,
+        "latencyMs": 11896,
+        "guard": {
+          "intercepted": 3,
+          "rewritten": 2,
+          "removed": 1
+        },
+        "pageFile": "eval/runs/openai-compatible-qwen-plus-1020/drink-cafe-menu/B-gold/2/page.html",
+        "visibleText": "转角咖啡\n转角咖啡\n温润一杯，简约如初\n拿铁\n¥22杯\n中杯\n拿铁，奶与萃取相融，是晨光里的陪伴\n美式\n¥18杯\n美式清简，水与豆的本真对话，适合安静翻页的片刻。\n柠檬茶\n¥15杯\n柠檬茶微光浮动，沁凉如午后清爽\n在这里，日常自有温度\n营业时间\n9:00-21:00\n地址\n杭州市西湖区文三路 100 号\n信息有误？告诉老板\n哪一项有误拿铁 · 名称拿铁 · 价格拿铁 · 规格美式 · 名称美式 · 价格柠檬茶 · 名称柠檬茶 · 价格店名地址营业时间其他正确的是补充说明（选填）\n请勿填写你的手机号等个人信息\n提交\n本页由 AI 辅助设计，商品信息由商家提供\n由 实招 Shizhao 生成\n地图导航",
+        "factDetails": [],
+        "unsupportedSentences": []
+      },
+      {
+        "sampleId": "drink-cafe-menu",
+        "group": "B-gold",
+        "n": 3,
+        "ok": true,
+        "factErrors": 0,
+        "priceNameErrors": 0,
+        "unsupported": 0,
+        "costCny": 0.0031,
+        "latencyMs": 15771,
+        "guard": {
+          "intercepted": 6,
+          "rewritten": 4,
+          "removed": 2
+        },
+        "pageFile": "eval/runs/openai-compatible-qwen-plus-1020/drink-cafe-menu/B-gold/3/page.html",
+        "visibleText": "转角咖啡\n转角咖啡\n拿铁与美式，在9:00-21:00间供应\n拿铁\n¥22杯\n中杯\n中杯拿铁22元，美式18元，柠檬茶15元\n美式\n¥18杯\n柠檬茶\n¥15杯\n营业时间9:00至21:00\n转角咖啡，日常可至\n营业时间\n9:00-21:00\n地址\n杭州市西湖区文三路 100 号\n信息有误？告诉老板\n哪一项有误拿铁 · 名称拿铁 · 价格拿铁 · 规格美式 · 名称美式 · 价格柠檬茶 · 名称柠檬茶 · 价格店名地址营业时间其他正确的是补充说明（选填）\n请勿填写你的手机号等个人信息\n提交\n本页由 AI 辅助设计，商品信息由商家提供\n由 实招 Shizhao 生成\n地图导航",
+        "factDetails": [],
+        "unsupportedSentences": []
+      },
+      {
+        "sampleId": "drink-cafe-menu",
+        "group": "B-e2e",
+        "n": 1,
+        "ok": true,
+        "factErrors": 0,
+        "priceNameErrors": 0,
+        "unsupported": 0,
+        "costCny": 0.004,
+        "latencyMs": 21383,
+        "guard": {
+          "intercepted": 6,
+          "rewritten": 6,
+          "removed": 0
+        },
+        "pageFile": "eval/runs/openai-compatible-qwen-plus-1020/drink-cafe-menu/B-e2e/1/page.html",
+        "visibleText": "转角咖啡\n转角咖啡，温润日常\n拿铁中杯，静谧时光\n拿铁（中杯）\n¥22\n拿铁中杯，奶香与咖啡相融\n美式\n¥18\n拿铁中杯，清简回甘\n柠檬茶\n¥15\n柠檬茶，清气温润\n转角咖啡，映照此刻\n营业时间\n9:00-21:00\n地址\n杭州市西湖区文三路 100 号\n信息有误？告诉老板\n哪一项有误拿铁（中杯） · 名称拿铁（中杯） · 价格美式 · 名称美式 · 价格柠檬茶 · 名称柠檬茶 · 价格店名地址营业时间其他正确的是补充说明（选填）\n请勿填写你的手机号等个人信息\n提交\n本页由 AI 辅助设计，商品信息由商家提供\n由 实招 Shizhao 生成\n地图导航",
+        "factDetails": [],
+        "unsupportedSentences": []
+      },
+      {
+        "sampleId": "drink-cafe-menu",
+        "group": "B-e2e",
+        "n": 2,
+        "ok": true,
+        "factErrors": 0,
+        "priceNameErrors": 0,
+        "unsupported": 0,
+        "costCny": 0.0040999999999999995,
+        "latencyMs": 22387,
+        "guard": {
+          "intercepted": 6,
+          "rewritten": 6,
+          "removed": 0
+        },
+        "pageFile": "eval/runs/openai-compatible-qwen-plus-1020/drink-cafe-menu/B-e2e/2/page.html",
+        "visibleText": "转角咖啡\n转角，一杯拿铁\n中杯拿铁\n拿铁（中杯）\n¥22\n美式咖啡\n美式\n¥18\n柠檬茶\n柠檬茶\n¥15\n营业时间9:00-21:00\n杭州市西湖区文三路100号\n营业时间\n9:00-21:00\n地址\n杭州市西湖区文三路 100 号\n信息有误？告诉老板\n哪一项有误拿铁（中杯） · 名称拿铁（中杯） · 价格美式 · 名称美式 · 价格柠檬茶 · 名称柠檬茶 · 价格店名地址营业时间其他正确的是补充说明（选填）\n请勿填写你的手机号等个人信息\n提交\n本页由 AI 辅助设计，商品信息由商家提供\n由 实招 Shizhao 生成\n地图导航",
+        "factDetails": [],
+        "unsupportedSentences": []
+      },
+      {
+        "sampleId": "drink-cafe-menu",
+        "group": "B-e2e",
+        "n": 3,
+        "ok": true,
+        "factErrors": 0,
+        "priceNameErrors": 0,
+        "unsupported": 0,
+        "costCny": 0.004,
+        "latencyMs": 21202,
+        "guard": {
+          "intercepted": 6,
+          "rewritten": 6,
+          "removed": 0
+        },
+        "pageFile": "eval/runs/openai-compatible-qwen-plus-1020/drink-cafe-menu/B-e2e/3/page.html",
+        "visibleText": "转角咖啡\n转角咖啡\n拿铁（中杯）\n拿铁（中杯）\n¥22\n美式\n美式\n¥18\n柠檬茶\n柠檬茶\n¥15\n9:00-21:00\n杭州市西湖区文三路 100 号\n营业时间\n9:00-21:00\n地址\n杭州市西湖区文三路 100 号\n信息有误？告诉老板\n哪一项有误拿铁（中杯） · 名称拿铁（中杯） · 价格美式 · 名称美式 · 价格柠檬茶 · 名称柠檬茶 · 价格店名地址营业时间其他正确的是补充说明（选填）\n请勿填写你的手机号等个人信息\n提交\n本页由 AI 辅助设计，商品信息由商家提供\n由 实招 Shizhao 生成\n地图导航",
+        "factDetails": [],
+        "unsupportedSentences": []
+      }
+    ],
+    "missing": [],
+    "summaries": {
+      "A-gold": {
+        "attempts": 9,
+        "pages": 9,
+        "failed": 0,
+        "totalFactErrors": 1,
+        "meanFactErrors": 0.1111111111111111,
+        "totalPriceNameErrors": 1,
+        "meanPriceNameErrors": 0.1111111111111111,
+        "totalUnsupported": 38,
+        "meanUnsupported": 4.222222222222222,
+        "meanCostCny": 0.005122222222222222,
+        "meanLatencyMs": 54274.444444444445,
+        "guard": null
+      },
+      "A-raw": {
+        "attempts": 9,
+        "pages": 7,
+        "failed": 2,
+        "totalFactErrors": 1,
+        "meanFactErrors": 0.14285714285714285,
+        "totalPriceNameErrors": 1,
+        "meanPriceNameErrors": 0.14285714285714285,
+        "totalUnsupported": 22,
+        "meanUnsupported": 3.142857142857143,
+        "meanCostCny": 0.0037444444444444443,
+        "meanLatencyMs": 46338.666666666664,
+        "guard": null
+      },
+      "B-gold": {
+        "attempts": 9,
+        "pages": 8,
+        "failed": 1,
+        "totalFactErrors": 0,
+        "meanFactErrors": 0,
+        "totalPriceNameErrors": 0,
+        "meanPriceNameErrors": 0,
+        "totalUnsupported": 0,
+        "meanUnsupported": 0,
+        "meanCostCny": 0.002355555555555555,
+        "meanLatencyMs": 11092.444444444445,
+        "guard": {
+          "intercepted": 27,
+          "rewritten": 20,
+          "removed": 7
+        }
+      },
+      "B-e2e": {
+        "attempts": 9,
+        "pages": 9,
+        "failed": 0,
+        "totalFactErrors": 3,
+        "meanFactErrors": 0.3333333333333333,
+        "totalPriceNameErrors": 3,
+        "meanPriceNameErrors": 0.3333333333333333,
+        "totalUnsupported": 4,
+        "meanUnsupported": 0.4444444444444444,
+        "meanCostCny": 0.003777777777777778,
+        "meanLatencyMs": 19120.777777777777,
+        "guard": {
+          "intercepted": 35,
+          "rewritten": 34,
+          "removed": 1
+        }
+      }
+    }
+  },
+  "guard": {
+    "rules": {
+      "judgeProvider": null,
+      "rates": {
+        "blockCases": 78,
+        "detected": 78,
+        "passCases": 42,
+        "falsePositives": 0,
+        "blockRate": 1,
+        "falsePositiveRate": 0
+      },
+      "models": []
+    },
+    "rules-judge": {
+      "judgeProvider": "openai-compatible",
+      "rates": {
+        "blockCases": 78,
+        "detected": 78,
+        "passCases": 42,
+        "falsePositives": 0,
+        "blockRate": 1,
+        "falsePositiveRate": 0
+      },
+      "models": [
+        "openai-compatible/qwen-plus"
+      ]
+    }
+  }
+}
