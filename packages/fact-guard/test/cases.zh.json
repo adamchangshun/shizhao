@@ -483,5 +483,120 @@
     "sentence": "本地第一眼镜级精致",
     "facts": ["本地第一眼镜级精致"],
     "expect": "block"
+  },
+  {
+    "sentence": "晨光里的手作可颂",
+    "facts": ["黄油可颂"],
+    "expect": "block"
+  },
+  {
+    "sentence": "手作萃取的澄澈，静谧中自有回甘。",
+    "facts": ["美式"],
+    "expect": "block"
+  },
+  {
+    "sentence": "招牌黄油可颂",
+    "facts": ["黄油可颂"],
+    "expect": "block"
+  },
+  {
+    "sentence": "本周限定甜品",
+    "facts": ["甜品"],
+    "expect": "block"
+  },
+  {
+    "sentence": "新鲜出炉的蛋糕",
+    "facts": ["蛋糕"],
+    "expect": "block"
+  },
+  {
+    "sentence": "热销蛋糕",
+    "facts": ["蛋糕"],
+    "expect": "block"
+  },
+  {
+    "sentence": "现磨咖啡",
+    "facts": ["咖啡"],
+    "expect": "block"
+  },
+  {
+    "sentence": "低温慢烤",
+    "facts": ["蛋糕"],
+    "expect": "block"
+  },
+  {
+    "sentence": "秘制手切",
+    "facts": ["蛋糕"],
+    "expect": "block"
+  },
+  {
+    "sentence": "必点爆款",
+    "facts": ["蛋糕"],
+    "expect": "block"
+  },
+  {
+    "sentence": "限量供应",
+    "facts": ["蛋糕"],
+    "expect": "block"
+  },
+  {
+    "sentence": "招牌",
+    "facts": ["招牌黄油可颂"],
+    "expect": "pass"
+  },
+  {
+    "sentence": "本周限定",
+    "facts": ["本周限定甜品"],
+    "expect": "pass"
+  },
+  {
+    "sentence": "手作",
+    "facts": ["手作黄油可颂"],
+    "expect": "pass"
+  },
+  {
+    "sentence": "新鲜出炉",
+    "facts": ["当天新鲜出炉"],
+    "expect": "pass"
+  },
+  {
+    "sentence": "每天 7:30 — 19:00",
+    "facts": ["每天7:30-19:00"],
+    "expect": "pass"
+  },
+  {
+    "sentence": "每天7点30分至19点",
+    "facts": ["每天7:30-19:00"],
+    "expect": "pass"
+  },
+  {
+    "sentence": "每天７時３０分～１９時",
+    "facts": ["每天7:30-19:00"],
+    "expect": "pass"
+  },
+  {
+    "sentence": "西湖区文三路 100 号",
+    "facts": ["杭州市西湖区文三路100号"],
+    "expect": "pass"
+  },
+  {
+    "sentence": "西湖区文三路１００～１０２号",
+    "facts": ["西湖区文三路100-102号"],
+    "expect": "pass"
+  },
+  {
+    "sentence": "咖啡与奶轻柔相融",
+    "facts": ["拿铁"],
+    "expect": "pass"
+  },
+  {
+    "sentence": "芝士柔滑，香气轻盈",
+    "facts": ["芝士蛋糕"],
+    "expect": "pass"
+  },
+  {
+    "sentence": "柠檬清香浮沉于茶汤",
+    "facts": ["柠檬茶"],
+    "expect": "pass"
   }
 ]

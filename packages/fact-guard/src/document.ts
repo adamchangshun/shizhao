@@ -24,11 +24,14 @@ export function computeDocumentRefs(fields: Record<string, string>, corpus: Fact
       splitSentences(text).map((sentence) => ({
         sentence,
         refs: [
-          ...new Set(
-            corpus.facts.flatMap((fact, i) =>
+          ...new Set([
+            ...corpus.facts.flatMap((fact, i) =>
               fact && sentence.includes(fact) ? [corpus.paths?.[i] ?? `facts.${i}`] : [],
             ),
-          ),
+            ...(corpus.spanFacts ?? []).flatMap((fact, i) =>
+              fact && sentence.includes(fact) ? [corpus.spanPaths?.[i] ?? `spanFacts.${i}`] : [],
+            ),
+          ]),
         ],
       })),
     ]),
@@ -69,6 +72,7 @@ export async function guardDocument(
     const results = await opts.judge({
       sentences: entriesToJudge.map((entry) => entry.sentence),
       facts: [...corpus.facts],
+      ...(corpus.spanFacts ? { spanFacts: [...corpus.spanFacts] } : {}),
     })
     validateArray(
       results,
@@ -112,6 +116,7 @@ export async function guardDocument(
         problems: entry.hits.map((hit) => `${hit.reason}: ${hit.evidence}`),
       })),
       facts: [...corpus.facts],
+      ...(corpus.spanFacts ? { spanFacts: [...corpus.spanFacts] } : {}),
     })
     validateArray(results, selected.length, (item) => typeof item === 'string')
     // A rewrite may introduce multiple sentences. Every one must pass; no unchecked tails.

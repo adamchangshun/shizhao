@@ -85,6 +85,19 @@ export const defaultRules: RuleSet = {
       whitelist: [],
     },
     {
+      id: 'process',
+      reason: 'unsupported_claim',
+      terms: ['手作', '手工', '现烤', '现做', '现磨', '手切', '慢烤', '低温', '古法', '秘制'],
+      whitelist: ['低温天气', '低温的冬夜', '慢烤的时光'],
+      whitelistPatterns: ['手工皂(?:般|一样|一般)(?:的)?细腻'],
+    },
+    {
+      id: 'positioning',
+      reason: 'unsupported_claim',
+      terms: ['招牌', '热销', '人气', '必点', '限量', '限定', '本周限定', '新鲜出炉'],
+      whitelist: ['招牌笑容', '限定的温柔'],
+    },
+    {
       id: 'effects',
       reason: 'unsupported_claim',
       terms: [
@@ -148,6 +161,7 @@ export const rulePacks: Record<'food', RuleSet> = {
         reason: 'unsupported_claim',
         terms: ['现做', '现烤', '鲜榨', '手工'],
         whitelist: [],
+        whitelistPatterns: ['手工皂(?:般|一样|一般)(?:的)?细腻'],
       },
       { id: 'food-effects', reason: 'unsupported_claim', terms: ['保健', '药膳'], whitelist: [] },
     ],

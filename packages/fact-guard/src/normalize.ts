@@ -70,6 +70,12 @@ const simplified: Record<string, string> = {
   麩: '麸',
   質: '质',
   體: '体',
+  現: '现',
+  點: '点',
+  氣: '气',
+  爐: '炉',
+  製: '制',
+  祕: '秘',
 }
 export interface NormalizedText {
   text: string

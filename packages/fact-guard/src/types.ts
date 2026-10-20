@@ -3,6 +3,10 @@ export interface FactCorpus {
   facts: string[]
   /** Optional paths parallel to facts, used for document source references. */
   paths?: string[]
+  /** Whole-span evidence only; its words and numbers cannot support unrelated claims. */
+  spanFacts?: string[]
+  /** Optional paths parallel to spanFacts. References still require literal occurrences. */
+  spanPaths?: string[]
 }
 export interface Rule {
   id: string
@@ -34,10 +38,14 @@ export interface RuleHit {
 export type Judge = (input: {
   sentences: string[]
   facts: string[]
+  /** Span-only context, kept separate from general facts; honor the FactCorpus restrictions. */
+  spanFacts?: string[]
 }) => Promise<Array<{ unsupported: boolean; reason?: string }>>
 export type Rewriter = (input: {
   items: Array<{ sentence: string; problems: string[] }>
   facts: string[]
+  /** Span-only context; all rewrites are checked again against the original corpus. */
+  spanFacts?: string[]
 }) => Promise<string[]>
 export interface GuardOptions {
   judge?: Judge

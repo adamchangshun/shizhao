@@ -9,7 +9,10 @@
         "鲜榨",
         "手工"
       ],
-      "whitelist": []
+      "whitelist": [],
+      "whitelistPatterns": [
+        "手工皂(?:般|一样|一般)(?:的)?细腻"
+      ]
     },
     {
       "id": "food-effects",

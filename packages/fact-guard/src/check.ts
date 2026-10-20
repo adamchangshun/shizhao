@@ -1,4 +1,5 @@
 import { extractNumbers } from './cn-number.js'
+import { displayFactRanges, numberEvidence } from './grounding.js'
 import { normalizeText, originalSpan } from './normalize.js'
 import { defaultRules } from './rules/index.js'
 import type { FactCorpus, RuleHit, RuleSet } from './types.js'
@@ -57,15 +58,22 @@ export function checkSentence(
   const normalized = normalizeText(sentence)
   const facts = corpus.facts.map((fact) => normalizeText(fact).text)
   const factSpans = literalRanges(sentence, corpus.facts)
+  const spanFactRanges = displayFactRanges(sentence, corpus.spanFacts ?? [])
   const hits: RuleHit[] = []
   if (rules.numbers) {
-    const factNumbers = corpus.facts.flatMap(extractNumbers)
+    const evidence = numberEvidence(sentence, corpus.facts, corpus.spanFacts)
     const allowed = ranges(normalized.text, rules.numberWhitelist ?? []).map(([start, end]) =>
       originalSpan(normalized, start, end),
     )
     for (const number of extractNumbers(sentence)) {
       if (allowed.some((range) => number.start >= range.start && number.end <= range.end)) continue
-      if (!factNumbers.some((fact) => fact.value === number.value && fact.unit === number.unit)) {
+      const supported = evidence.inTime(number.start, number.end)
+        ? covered(number.start, number.end, evidence.groundedTimes)
+        : covered(number.start, number.end, evidence.groundedFacts) ||
+          evidence.factNumbers.some(
+            (fact) => fact.value === number.value && fact.unit === number.unit,
+          )
+      if (!supported) {
         hits.push({
           reason: 'unsupported_number',
           ruleId: 'numbers',
@@ -98,9 +106,10 @@ export function checkSentence(
       const evidence = normalized.text.slice(evidenceStart, evidenceEnd)
       const span = originalSpan(normalized, evidenceStart, evidenceEnd)
       const supported =
-        rule.evidenceScope === 'fact-span'
+        covered(span.start, span.end, spanFactRanges) ||
+        (rule.evidenceScope === 'fact-span'
           ? covered(span.start, span.end, factSpans)
-          : supportedClaim(evidence, facts)
+          : supportedClaim(evidence, facts))
       if (!rule.always && supported) continue
       const key = `${span.start}:${span.end}`
       if (seen.has(key)) continue

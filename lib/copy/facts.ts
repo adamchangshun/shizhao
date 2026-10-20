@@ -9,6 +9,9 @@ export interface CopyCorpus extends FactCorpus {
 export function buildFactCorpus(input: FactSheet): CopyCorpus {
   const sheet = FactSheet.parse(input)
   const entries: Array<[string, string]> = [['shop.name', sheet.shop.name]]
+  const spanEntries: Array<[string, string]> = []
+  if (sheet.shop.hours) spanEntries.push(['shop.hours', sheet.shop.hours])
+  if (sheet.shop.address) spanEntries.push(['shop.address', sheet.shop.address])
   // The contract permits shop names up to 30 chars, but headlines only 20.
   if (sheet.shop.name.length > 20) entries.push(['shop.name', sheet.shop.name.slice(0, 20)])
   for (const item of sheet.items) {
@@ -31,6 +34,8 @@ export function buildFactCorpus(input: FactSheet): CopyCorpus {
   return {
     facts: entries.map(([, text]) => text),
     paths: entries.map(([path]) => path),
+    spanFacts: spanEntries.map(([, text]) => text),
+    spanPaths: spanEntries.map(([path]) => path),
     shopName: sheet.shop.name,
   }
 }
