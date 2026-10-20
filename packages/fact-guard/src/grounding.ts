@@ -9,9 +9,9 @@ interface ClockSpan {
 }
 const numeral = '[0-9零〇一二两三四五六七八九十]+'
 const clock = `${numeral}(?::${numeral}|[点时](?:${numeral}分?|半|整)?)`
-// Chinese decimal quantities such as 三点五元 / 三点五分钟 are not clock times.
+// Decimal quantities and point-denominated rewards (8点积分) are not clock times.
 const quantitySuffix =
-  '小时|分钟|钟|千克|公斤|毫升|年|天|月|日|元|块|角|寸|米|种|个|份|杯|碗|口|次|人|件|倍|成|折|价|%|[a-z]'
+  '小时|分钟|钟|千克|公斤|毫升|(?:会员|會員)?(?:积分|積分|积点|積点|奖励|獎勵)|点数|點數|年|天|月|日|元|块|角|寸|米|种|个|份|杯|碗|口|次|人|件|倍|成|折|价|%|[a-z]'
 const clockPattern = new RegExp(
   `(?<![0-9零〇一二两三四五六七八九十])(?<![0-9]:)(${clock})(?:[-至到](${clock}))?(?![0-9零〇一二两三四五六七八九十:]|${quantitySuffix})`,
   'gu',

@@ -87,9 +87,17 @@ export const defaultRules: RuleSet = {
     {
       id: 'process',
       reason: 'unsupported_claim',
-      terms: ['手作', '手工', '现烤', '现做', '现磨', '手切', '慢烤', '低温', '古法', '秘制'],
-      whitelist: ['低温天气', '低温的冬夜', '慢烤的时光'],
-      whitelistPatterns: ['手工皂(?:般|一样|一般)(?:的)?细腻'],
+      terms: ['手作', '手工', '现烤', '现做', '现磨', '手切', '慢烤', '古法', '秘制'],
+      // Temperature alone describes weather; require a nearby process or direct product modifier.
+      patterns: [
+        '低温(?=[^，。！？；、,.!?;：:\\r\\n]{0,12}(?:发酵|慢烤|烘焙|烘烤|烤制|熟成|萃取|制作|加工|冷藏|冷萃|保鲜|杀菌|烘干|工艺)|(?:的)?(?:蛋糕|可颂|黄油|面包|牛奶|酸奶|肉|甜点|甜品|食材|原料))',
+      ],
+      whitelist: [],
+      whitelistPatterns: [
+        '手工皂(?:般|一样|一般)(?:的)?细腻',
+        // Reject factual leads in this clause; bound the scan to the longest copy-field budget.
+        '(?<!(?:经|采用|使用|坚持|都是|均为|用|每块|每份|每个)[^，。！？；、,.!?;：:\\r\\n]{0,60})慢烤(?:般|一样|一般)?的?(?:悠长|缓慢|漫长)?的?(?:时光|岁月|周末|午后|夜晚|日子)',
+      ],
     },
     {
       id: 'positioning',

@@ -92,3 +92,25 @@ describe('07gap MEDIUM-3: time endpoints without recombining ranges', () => {
     },
   )
 })
+
+describe('07gap follow-up: real shop corpus and copy cleaning', () => {
+  it('removes unsupported processes and points while retaining weather and opening time', () => {
+    const facts = sheet({ hours: '每天8:00-22:00' })
+    const result = guardWithRulesOnly(
+      {
+        headline: '小麦烘焙',
+        subhead: '低温的夜晚，来杯热可可。经过慢烤的时光沉淀。',
+        itemBlurbs: { croissant: '模拟低温天气的慢发酵。' },
+        closing: '8点开门。下单送8点积分。',
+      },
+      buildFactCorpus(facts),
+    )
+    expect(result.copy).toEqual({
+      headline: '小麦烘焙',
+      subhead: '低温的夜晚，来杯热可可。',
+      itemBlurbs: { croissant: '' },
+      closing: '8点开门。',
+    })
+    expect(result.removed).toBe(3)
+  })
+})
