@@ -272,7 +272,10 @@ describe('copy generation and guard integration', () => {
   })
   it('a price without a unit adds only its two amount aliases to the corpus', () => {
     const base = facts()
-    const sheet = { ...base, items: [{ ...base.items[0]!, price: { amount: 28, currency: 'CNY' as const } }] }
+    const sheet = {
+      ...base,
+      items: [{ ...base.items[0]!, price: { amount: 28, currency: 'CNY' as const } }],
+    }
     const corpus = copyApi.buildFactCorpus(sheet)
     const priceTexts = corpus.facts.filter((_, i) => corpus.paths?.[i] === 'items.cake.price')
     expect(priceTexts).toEqual(['28元', '¥28'])
@@ -321,5 +324,190 @@ describe('copy generation and guard integration', () => {
     )
     expect(result.copy.headline).toBe('香'.repeat(20))
     expect(CopyDraft.safeParse(result.copy).success).toBe(true)
+  })
+})
+
+describe('item blurbs rest only on their own item facts (A4 H2)', () => {
+  // A: 拿铁 ¥28 约450ml; B: 美式 ¥18 约300ml.
+  function twoItems(): FactSheet {
+    return {
+      projectId: insertProject({ type: 'menu', title: '午后小店' }).id,
+      revision: 1,
+      shop: { name: '午后小店' },
+      items: [
+        {
+          id: 'latte',
+          name: '拿铁',
+          price: { amount: 28, currency: 'CNY' },
+          spec: '约450ml',
+          tags: [],
+          imageAssetIds: [],
+          sources: {},
+        },
+        {
+          id: 'americano',
+          name: '美式',
+          price: { amount: 18, currency: 'CNY' },
+          spec: '约300ml',
+          tags: [],
+          imageAssetIds: [],
+          sources: {},
+        },
+      ],
+      extraClaims: [],
+      confirmedAt: '2026-10-20T08:00:00.000Z',
+    }
+  }
+  const crossCopy: CopyDraft = {
+    headline: '拿铁28元',
+    subhead: '美式18元。',
+    itemBlurbs: { latte: '仅售28元。约450ml。', americano: '仅售28元。约450ml。慢慢喝。' },
+    closing: '',
+  }
+
+  it("flags B's blurb quoting A's price or spec, while A and page-level fields may quote them", () => {
+    const sheet = twoItems()
+    const result = copyApi.guardWithRulesOnly(crossCopy, copyApi.buildFactCorpus(sheet))
+    expect(result.copy).toEqual({
+      ...crossCopy,
+      itemBlurbs: { latte: '仅售28元。约450ml。', americano: '慢慢喝。' },
+    })
+    expect(result.violations).toEqual([
+      {
+        field: 'itemBlurbs.americano',
+        sentence: '仅售28元。',
+        reason: 'unsupported_number',
+        evidence: '28元',
+      },
+      {
+        field: 'itemBlurbs.americano',
+        sentence: '约450ml。',
+        reason: 'unsupported_number',
+        evidence: '450ml',
+      },
+    ])
+    expect(result.removed).toBe(2)
+    expect(result.copyRefs).toEqual(copyApi.computeCopyRefs(result.copy, sheet))
+  })
+
+  it("still lets B's blurb quote B's own price and spec", () => {
+    const sheet = twoItems()
+    const result = copyApi.guardWithRulesOnly(
+      { ...crossCopy, itemBlurbs: { latte: '', americano: '仅售18元。约300ml。' } },
+      copyApi.buildFactCorpus(sheet),
+    )
+    expect(result.violations).toEqual([])
+    expect(result.copy.itemBlurbs.americano).toBe('仅售18元。约300ml。')
+    expect(result.copyRefs['itemBlurbs.americano']).toEqual([
+      { sentence: '仅售18元。', refs: ['items.americano.price'] },
+      { sentence: '约300ml。', refs: ['items.americano.spec'] },
+    ])
+  })
+
+  it('does not treat a dotted item id sharing a prefix as the same item', () => {
+    const base = twoItems()
+    const sheet = {
+      ...base,
+      items: [
+        { ...base.items[0]!, id: 'a' },
+        { ...base.items[1]!, id: 'a.b' },
+      ],
+    }
+    const result = copyApi.guardWithRulesOnly(
+      { ...crossCopy, itemBlurbs: { a: '仅售18元。', 'a.b': '仅售18元。' } },
+      copyApi.buildFactCorpus(sheet),
+    )
+    expect(result.copy.itemBlurbs).toEqual({ a: '', 'a.b': '仅售18元。' })
+  })
+
+  it('fails closed for item blurbs when the corpus carries no fact paths', () => {
+    const result = copyApi.guardWithRulesOnly(
+      { headline: '仅售28元', subhead: '', itemBlurbs: { latte: '仅售28元。' }, closing: '' },
+      { facts: ['28元'] },
+    )
+    expect(result.copy).toMatchObject({ headline: '仅售28元', itemBlurbs: { latte: '' } })
+  })
+
+  it('guardCopy removes the cross-item price and gives the judge field names and fact paths', async () => {
+    const sheet = twoItems()
+    const provider = new ScriptedProvider((stage, input) =>
+      stage === 'guard-judge'
+        ? sentencesIn(input).map(() => ({ unsupported: false }))
+        : (input.items as unknown[]).map(() => ''),
+    )
+    const result = await copyApi.guardCopy({ copy: crossCopy, factSheet: sheet }, { provider })
+    expect(result.copy.itemBlurbs).toEqual({ latte: '仅售28元。约450ml。', americano: '慢慢喝。' })
+    expect(result.violations.map((v) => [v.field, v.sentence, v.reason])).toEqual([
+      ['itemBlurbs.americano', '仅售28元。', 'unsupported_number'],
+      ['itemBlurbs.americano', '约450ml。', 'unsupported_number'],
+    ])
+    expect(result.copyRefs).toEqual(copyApi.computeCopyRefs(result.copy, sheet))
+    const judge = provider.requests.find((r) => r.stage === 'guard-judge')!
+    expect(judge.input.sentences).toEqual([
+      '拿铁28元',
+      '美式18元。',
+      '仅售28元。',
+      '约450ml。',
+      '慢慢喝。',
+    ])
+    expect(judge.input.fields).toEqual([
+      'headline',
+      'subhead',
+      'itemBlurbs.latte',
+      'itemBlurbs.latte',
+      'itemBlurbs.americano',
+    ])
+    const facts = judge.input.facts as string[],
+      paths = judge.input.paths as string[]
+    expect(paths[facts.indexOf('28元')]).toBe('items.latte.price')
+    expect(paths[facts.indexOf('约300ml')]).toBe('items.americano.spec')
+    const evidence = judge.input.evidence as Array<{ facts: string[]; paths: string[] } | null>
+    expect(evidence.map((e) => e && e.paths[1])).toEqual([
+      null,
+      null,
+      'items.latte.name',
+      'items.latte.name',
+      'items.americano.name',
+    ])
+    expect(evidence[4]).toMatchObject({
+      facts: ['午后小店', '美式', '约300ml', '18元', '¥18'],
+      paths: [
+        'shop.name',
+        'items.americano.name',
+        'items.americano.spec',
+        'items.americano.price',
+        'items.americano.price',
+      ],
+    })
+    expect(judge.system).toMatch(/evidence\[i\] 中的 facts 和 spanFacts 为依据/)
+  })
+
+  it("does not hand the judge a dotted-prefix item's description as evidence", async () => {
+    const base = twoItems()
+    const sheet = {
+      ...base,
+      items: [
+        { ...base.items[0]!, id: 'a', description: undefined },
+        { ...base.items[1]!, id: 'a.b', description: '云南小粒咖啡' },
+      ],
+    }
+    const provider = new ScriptedProvider((stage, input) =>
+      sentencesIn(input).map(() => ({ unsupported: false })),
+    )
+    await copyApi.guardCopy(
+      {
+        copy: {
+          headline: '午后',
+          subhead: '',
+          itemBlurbs: { a: '慢慢喝。', 'a.b': '' },
+          closing: '',
+        },
+        factSheet: sheet,
+      },
+      { provider },
+    )
+    const evidence = provider.requests[0]!.input.evidence as Array<{ facts: string[] } | null>
+    expect(evidence[0]).toBeNull()
+    expect(evidence[1]!.facts).toEqual(['午后小店', '拿铁', '约450ml', '28元', '¥28'])
   })
 })

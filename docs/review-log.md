@@ -548,3 +548,28 @@ MEDIUM 不阻塞，留待后续：①氛围白名单只覆盖原句，「低温�
 ### 第 2 轮：APPROVE（0 CRITICAL / HIGH）
 
 报告：提示词目录 `审查报告/04unit-第1轮.md`、`04unit-第2轮.md`。测试：`pnpm test` 1069 通过（rebase 到最新 main 后），`pnpm test:e2e` 12 通过（新增「无单位 → 商家手填『杯』→ 核对页显示『22 元 / 杯』」）；`PROVIDER=mock pnpm demo` 实跑，麦香小铺公开页为 `¥12` + 单位「个」，转角咖啡（drink-cafe-menu）公开页为 `¥22`、`¥18`、`¥15`，没有「份」也没有 `undefined`。
+
+## A4 发布门禁修复：H1 镜像打包 deploy/.env、H2 文案跨商品借用事实（Claude 实现，Codex 审查）
+
+起因：A4 全仓安全审查第 1 轮核实后 0 CRITICAL / 2 HIGH（提示词目录 `审查报告/A4-第1轮.md`），挡住 v0.1.0 发布。M1（全局登录失败预算）等负责人裁决，其余 MEDIUM / LOW 排进 v0.1.x，本次不改。
+
+- H1：`.dockerignore` 改为 `**/.env*` + `!**/.env.example`；Dockerfile 的 build 阶段改为 `COPY --exclude=**/.env* . .`，再显式复制两个不含值的模板。这样即使 `.dockerignore` 被覆盖，env 文件也进不了任何层或构建缓存。运行时仍复制整棵树（注释写明的 migrations、rules、tsx、demo 依赖），没有改成白名单。
+- H2：`lib/copy/facts.ts` 新增 `fieldCorpus`：`itemBlurbs.<id>` 只以本商品事实（按 `name|spec|description|price|tags.N` 后缀精确匹配，id 含点号也不串）加店铺事实和 extraClaims 为依据；没有路径的事实不算依据（fail-closed）。标题、副标题、结尾仍用全表。`packages/fact-guard` 的 `guardDocument` 新增 `GuardOptions.corpusFor`，规则检查和重写复查都按字段取证据；judge 输入在该模式下另带 `fields`、`paths` 和逐句 `evidence[i]`（与规则层同一份证据，页面级字段为 null），判定提示词要求只以 `evidence[i]` 为依据。不传 `corpusFor` 时 judge 输入不变（eval、`/api/guard` 不受影响）。copyRefs 仍按 R7 对全表字面引用计算，`computeCopyRefs` 与守卫结果一致。
+
+### 第 1 轮（`cdx-review --base main --security`）：1 CRITICAL，2 HIGH
+
+| 级别 | 问题 | 处理 |
+|---|---|---|
+| CRITICAL | Dockerfile 的 find 兜底在 `COPY . .` 之后，`.dockerignore` 失效时密钥已进入 COPY 层与缓存 | 已修：改为 `COPY --exclude=**/.env*`，删除 find 兜底 |
+| HIGH | `fieldCorpus` 缺 paths 时返回全表（fail-open） | 已修：缺路径的事实对 itemBlurbs 不算依据，补测试 |
+| HIGH | 前缀匹配会把 id `a.b` 的事实算给 `a` | 已修（审查期间自查发现）：按后缀精确匹配，补测试 |
+
+### 第 2 轮：1 HIGH
+
+| 级别 | 问题 | 处理 |
+|---|---|---|
+| HIGH | judge 仍收到全表 facts，只能靠路径前缀判断归属，无数字的跨商品语义事实可能放行 | 已修：逐句传 `evidence[i]`，补 `a` / `a.b` 非数字事实的 judge 回归测试 |
+
+### 第 3 轮：APPROVE（0 CRITICAL / HIGH）
+
+测试：typecheck、lint 通过，`pnpm test` 1077 通过（合并前 main 为 1069）。新增回归：商品 A 28 元、B 18 元时，B 的描述写「仅售28元」「约450ml」判为 unsupported_number 并删除，A 的描述和标题可以写。Docker 镜像构建未实测：本机 Docker Desktop 启动时停在管理员授权，守护进程不可用。详见审查报告 `A4-第2轮.md`。

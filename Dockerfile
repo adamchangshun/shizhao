@@ -19,7 +19,11 @@ RUN pnpm install --frozen-lockfile
 
 # --- build ---
 FROM deps AS build
-COPY . .
+# Env files (e.g. deploy/.env) never enter a layer, even if .dockerignore is overridden;
+# only the committed, value-free templates are copied back.
+COPY --exclude=**/.env* . .
+COPY .env.example ./
+COPY deploy/.env.example deploy/
 RUN pnpm build
 
 # --- runtime ---

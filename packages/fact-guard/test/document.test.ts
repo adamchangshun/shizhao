@@ -152,4 +152,47 @@ describe('document cleaning', () => {
     expect(result.fields.constructor).toBe('香气扑鼻。')
     expect(result.removed).toBe(1)
   })
+  it('checks each field and each rewrite against its own corpus and tells the judge fields and paths', async () => {
+    const corpus = { facts: ['28元', '18元'], paths: ['items.a.price', 'items.b.price'] }
+    const scoped = (field: string) =>
+      field === 'b' ? { facts: ['18元'], paths: ['items.b.price'] } : corpus
+    const judged: Parameters<Judge>[0][] = []
+    const judge: Judge = async (input) => {
+      judged.push(input)
+      return input.sentences.map(() => ({ unsupported: false }))
+    }
+    const result = await guard.guardDocument(
+      { a: '仅售28元。', b: '仅售28元。' },
+      corpus,
+      { corpusFor: scoped, judge, rewriter: async () => ['也是28元。'] },
+    )
+    expect(result.fields).toEqual({ a: '仅售28元。', b: '' })
+    expect(result.hits.map((hit) => [hit.field, hit.phase, hit.reason])).toEqual([
+      ['b', 'original', 'unsupported_number'],
+      ['b', 'rewrite', 'unsupported_number'],
+    ])
+    expect(judged).toEqual([
+      {
+        sentences: ['仅售28元。'],
+        facts: ['28元', '18元'],
+        fields: ['a'],
+        paths: ['items.a.price', 'items.b.price'],
+        evidence: [null],
+      },
+    ])
+  })
+  it('leaves the judge payload unchanged without per-field corpora', async () => {
+    const judged: Parameters<Judge>[0][] = []
+    await guard.guardDocument(
+      { a: '暖意。' },
+      { facts: ['暖'], paths: ['items.a.name'] },
+      {
+        judge: async (input) => {
+          judged.push(input)
+          return [{ unsupported: false }]
+        },
+      },
+    )
+    expect(judged).toEqual([{ sentences: ['暖意。'], facts: ['暖'] }])
+  })
 })

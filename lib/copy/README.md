@@ -37,7 +37,7 @@ MockProvider 延续固定 demo 内容，但按 copy.itemIds、judge.sentences、
 - Claude A1 原题在开发期间被实现方参考并用于调整规则。原提交 9d99a06 上的44/47（93.62%）、误杀0/23、spacing_and_punct 7/7是样本内成绩，不得表述为独立留出评测。A1 此后只用于回归；第1轮报告提供的37/47（78.7%）消融结果属于审查方对原提交的实验，本轮未重新运行该消融。
 - 07gap 修复后的 A1 回归：45/47 拦截、误杀0/23，spacing_and_punct 7/7。仍漏检 adv-019「一杯下肚，熬夜加班都不怕」（出题方标记 disputed）和 adv-033「朋友圈都在晒的杨枝甘露」，涉及隐含语义，需要 Judge。测试没有更改原题或原标签；未访问或使用 A1b 调整规则。
 - A1 读取方式：`FACT_GUARD_A1_PATH=<原题路径> pnpm test`；未合并 A1 时普通测试将明确跳过一项，不代表 A1 已被纳入 main。
-- 语义模型为 MockProvider/受控边界验证，未做真实在线或 Ollama 模型核验。规则层数字为事实表全局数值/单位比对，未证明商品归属或所有同义声明都正确。
+- 语义模型为 MockProvider/受控边界验证，未做真实在线或 Ollama 模型核验。`itemBlurbs.<id>` 只以本商品事实加店铺事实和 extraClaims 为依据（`fieldCorpus`，A4 H2），B 的描述引用 A 的价格或规格会判为 unsupported_number；标题、副标题、结尾面向整页，仍用全表事实。Judge 输入另带 fields 与 paths 供它按字段核对。copyRefs 仍按 R7 对全表字面引用计算，纠正 A 的事实时会一并剪掉引用 A 的其他句子。规则层不证明所有同义声明都正确。
 - 本分支由 Codex 实现与自查，仍须 Claude 交叉审查；不合并、不推送。
 
 ## English: shop evidence and review regression
@@ -48,4 +48,4 @@ Judge/Rewriter JSON inputs carry `spanFacts` separately. Their existing applicat
 
 Final `copyRefs` includes literal shop.name/hours/address references alongside product and extra-claim paths. Display-equivalent or endpoint-only references do not invent a complete literal match. No shared schema changed.
 
-The 07gap A1 regression blocks 45/47 cases with 0/23 false positives and catches 7/7 spacing/punctuation cases. The remaining misses are adv-019 (implicit effect, disputed) and adv-033 (implicit popularity). A1 was visible during development and is not a holdout evaluation; its cases/labels are unchanged. A1b was neither accessed nor used for tuning. Global matched-term/number evidence still does not establish product ownership. Claude's independent review remains a separate gate; there is no merge or push.
+The 07gap A1 regression blocks 45/47 cases with 0/23 false positives and catches 7/7 spacing/punctuation cases. The remaining misses are adv-019 (implicit effect, disputed) and adv-033 (implicit popularity). A1 was visible during development and is not a holdout evaluation; its cases/labels are unchanged. A1b was neither accessed nor used for tuning. Item blurbs are checked against their own item's facts plus shop facts and extraClaims (`fieldCorpus`, A4 H2); page-level fields keep the full sheet, and copyRefs stay sheet-wide literal references (R7). Claude's independent review remains a separate gate; there is no merge or push.
