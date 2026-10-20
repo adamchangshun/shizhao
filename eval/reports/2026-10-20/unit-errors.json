@@ -1,8 +1,8 @@
 {
   "goldSha256": {
-    "bakery-croissant-single": "751f2d841d54bc89199897b11eac0e1756aaed8449f00e150741355a8d550d17",
-    "bakery-dessert-menu": "2c7f009dff9a40e1da7c65850101fc254b070ebfe2ee1a620adaf83765449ecd",
-    "drink-cafe-menu": "0f43bb251b371ee7e117689ec086b7dfe2b9203f4aae49eaf8149aa944168e89"
+    "bakery-croissant-single": "751f2d841d54bc89",
+    "bakery-dessert-menu": "2c7f009dff9a40e1",
+    "drink-cafe-menu": "0f43bb251b371ee7"
   },
   "pagesByGroup": {
     "A-gold": 9,
