@@ -481,3 +481,30 @@ Claude 核实后认为 4 条 CRITICAL 都是真实的加固点，但影响面达
 多图样本中没有指定图片的商品，会按上传顺序自动配图（04 号原有规则：商品与图片按顺序对应）。商家可在「核对信息」中调整，记录在此作为已知行为。
 
 审查：Codex 第 1 轮 APPROVE（0 CRITICAL / HIGH）。测试：`pnpm test` 849 通过（新增价格正反 11 条、座机正反 8 条与一条无图抽取用例）；`PROVIDER=mock pnpm demo` 实跑，公开页出现 `¥12` 与 `021-6123 4567`。
+
+## A3 CI 与合规脚本（Codex 实现，Claude 审查）
+
+新增 `.github/workflows/ci.yml`（checks job：typecheck、lint、test、`check:secrets`、`check:licenses`、build；e2e job：Playwright mock 端到端）、`.gitee/ci.yml`（未在 Gitee 上实际运行过）、`scripts/check-secrets.ts`、`scripts/check-licenses.ts`、`.secretsignore`、`.licenseallow`。
+
+### 第 1 轮：3 HIGH，1 LOW
+
+| 级别 | 问题 | 处理 |
+|---|---|---|
+| HIGH | 分支落后 main，`check:secrets` 在 main 上 35 处误报（URL 路径、测试假令牌），靠行号豁免 | 已修：排除 URL 内匹配、`sha256-` 摘要，`file:const:NAME` 按常量豁免 |
+| HIGH | `check:licenses` 因 sharp-libvips、libheif-js 的 LGPL 失败 | 项目负责人确认以未修改方式使用；新增 `.licenseallow`，`THIRD_PARTY_LICENSES.md` 已声明 |
+| HIGH | e2e job 手动 `pnpm start` 占用端口，与 Playwright `webServer` 冲突 | 已修：由 Playwright 管理服务 |
+
+### 第 2 轮：2 HIGH，1 MEDIUM，2 LOW
+
+| 级别 | 问题 | 处理 |
+|---|---|---|
+| HIGH | 13 个测试文件整文件豁免，植入的 `sk-` 不被报出 | 已修：删除整文件豁免；文件/行号豁免只作用于通用 hex/base64 规则；`Bearer` 只放行两个固定测试字面量 |
+| HIGH | e2e job 先 `pnpm build` 再 `next dev`，共用 `.next` 导致用例全部失败 | 已修：build 移到 checks job，e2e job 在全新 runner 上不构建 |
+| MEDIUM | 通用规则跳过所有含 `/` 的 base64 | 已修：只排除 URL 内的候选串 |
+| LOW | `.licenseallow` 只绑定包名 | 已修：条目必须写明许可证，许可证变化时重新报出 |
+
+### 第 3 轮（最后一轮）：0 HIGH，3 LOW
+
+LOW 不阻塞：action 钉到 `@v4` 而非 SHA；文档行号豁免会随编辑错位（只影响通用规则，最坏是误报）；本机先 build 再跑 e2e 仍需手动删除 `.next`。
+
+审查结论：第 3 轮 0 CRITICAL / HIGH，合并。测试（rebase 到 `ee741a2` 后）：typecheck、lint 通过；`pnpm test` 862 通过；`pnpm check:secrets` 0 finding，7 处植入（原整文件豁免的测试文件、行号豁免行、常量豁免文件、含 `/` 的 base64）全部报出；`pnpm check:licenses` 0 blocked、2 allowed；无 `.next` 的 worktree 中 `pnpm test:e2e` 10 通过；checks job 的 `pnpm build` 成功。

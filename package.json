@@ -30,7 +30,9 @@
     "eval:report": "tsx --tsconfig tsconfig.scripts.json --env-file-if-exists=.env.local eval/scripts/report.ts",
     "eval:promptfoo": "tsx --tsconfig tsconfig.scripts.json --env-file-if-exists=.env.local eval/scripts/promptfoo.ts",
     "stats:export": "node --env-file-if-exists=.env.local --import tsx lib/stats/export.ts",
-    "corrections:export": "node --env-file-if-exists=.env.local --import tsx lib/corrections/export.ts"
+    "corrections:export": "node --env-file-if-exists=.env.local --import tsx lib/corrections/export.ts",
+    "check:secrets": "tsx scripts/check-secrets.ts",
+    "check:licenses": "tsx scripts/check-licenses.ts"
   },
   "dependencies": {
     "@fontsource/noto-sans-sc": "^5.3.1",
