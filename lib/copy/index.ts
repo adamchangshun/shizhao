@@ -14,10 +14,10 @@ import {
 import { CopyDraft, DesignSpec, FactSheet, GuardResult, type CopyRefs } from '../core/schemas'
 import { getDb } from '../db/client'
 import { getProvider, recordUsage, type GenerateJSONRequest, type LLMProvider } from '../providers'
-import { buildFactCorpus, copyFields, type CopyCorpus } from './facts'
+import { buildFactCorpus, copyFields, fieldCorpus, type CopyCorpus } from './facts'
 import { COPY_SYSTEM, JUDGE_SYSTEM, REWRITE_SYSTEM } from './prompt'
 
-export { buildFactCorpus, computeCopyRefs } from './facts'
+export { buildFactCorpus, computeCopyRefs, fieldCorpus } from './facts'
 export type { CopyCorpus } from './facts'
 export interface CopyOptions {
   provider?: LLMProvider
@@ -114,6 +114,7 @@ export async function guardCopy(
     fields = copyFields(copy)
   const result = await guardDocument(fields, corpus, {
     rules: foodRules,
+    corpusFor: (field) => fieldCorpus(corpus, field),
     maxFieldLengths: Object.fromEntries(
       Object.keys(fields).map((field) => [
         field,
@@ -159,7 +160,7 @@ export function guardWithRulesOnly(
       field,
       splitSentences(text)
         .filter((sentence) => {
-          const sentenceHits = checkSentence(sentence, corpus, rules)
+          const sentenceHits = checkSentence(sentence, fieldCorpus(corpus, field), rules)
           if (sentenceHits.length === 0) return true
           hits.push(
             ...sentenceHits.map((hit) => ({ ...hit, field, sentence, phase: 'original' as const })),

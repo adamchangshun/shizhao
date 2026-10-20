@@ -323,3 +323,117 @@ describe('copy generation and guard integration', () => {
     expect(CopyDraft.safeParse(result.copy).success).toBe(true)
   })
 })
+
+describe('item blurbs rest only on their own item facts (A4 H2)', () => {
+  // A: 拿铁 ¥28 约450ml; B: 美式 ¥18 约300ml.
+  function twoItems(): FactSheet {
+    return {
+      projectId: insertProject({ type: 'menu', title: '午后小店' }).id,
+      revision: 1,
+      shop: { name: '午后小店' },
+      items: [
+        {
+          id: 'latte',
+          name: '拿铁',
+          price: { amount: 28, currency: 'CNY' },
+          spec: '约450ml',
+          tags: [],
+          imageAssetIds: [],
+          sources: {},
+        },
+        {
+          id: 'americano',
+          name: '美式',
+          price: { amount: 18, currency: 'CNY' },
+          spec: '约300ml',
+          tags: [],
+          imageAssetIds: [],
+          sources: {},
+        },
+      ],
+      extraClaims: [],
+      confirmedAt: '2026-10-20T08:00:00.000Z',
+    }
+  }
+  const crossCopy: CopyDraft = {
+    headline: '拿铁28元',
+    subhead: '美式18元。',
+    itemBlurbs: { latte: '仅售28元。约450ml。', americano: '仅售28元。约450ml。慢慢喝。' },
+    closing: '',
+  }
+
+  it("flags B's blurb quoting A's price or spec, while A and page-level fields may quote them", () => {
+    const sheet = twoItems()
+    const result = copyApi.guardWithRulesOnly(crossCopy, copyApi.buildFactCorpus(sheet))
+    expect(result.copy).toEqual({
+      ...crossCopy,
+      itemBlurbs: { latte: '仅售28元。约450ml。', americano: '慢慢喝。' },
+    })
+    expect(result.violations).toEqual([
+      {
+        field: 'itemBlurbs.americano',
+        sentence: '仅售28元。',
+        reason: 'unsupported_number',
+        evidence: '28元',
+      },
+      {
+        field: 'itemBlurbs.americano',
+        sentence: '约450ml。',
+        reason: 'unsupported_number',
+        evidence: '450ml',
+      },
+    ])
+    expect(result.removed).toBe(2)
+    expect(result.copyRefs).toEqual(copyApi.computeCopyRefs(result.copy, sheet))
+  })
+
+  it("still lets B's blurb quote B's own price and spec", () => {
+    const sheet = twoItems()
+    const result = copyApi.guardWithRulesOnly(
+      { ...crossCopy, itemBlurbs: { latte: '', americano: '仅售18元。约300ml。' } },
+      copyApi.buildFactCorpus(sheet),
+    )
+    expect(result.violations).toEqual([])
+    expect(result.copy.itemBlurbs.americano).toBe('仅售18元。约300ml。')
+    expect(result.copyRefs['itemBlurbs.americano']).toEqual([
+      { sentence: '仅售18元。', refs: ['items.americano.price'] },
+      { sentence: '约300ml。', refs: ['items.americano.spec'] },
+    ])
+  })
+
+  it('guardCopy removes the cross-item price and gives the judge field names and fact paths', async () => {
+    const sheet = twoItems()
+    const provider = new ScriptedProvider((stage, input) =>
+      stage === 'guard-judge'
+        ? sentencesIn(input).map(() => ({ unsupported: false }))
+        : (input.items as unknown[]).map(() => ''),
+    )
+    const result = await copyApi.guardCopy({ copy: crossCopy, factSheet: sheet }, { provider })
+    expect(result.copy.itemBlurbs).toEqual({ latte: '仅售28元。约450ml。', americano: '慢慢喝。' })
+    expect(result.violations.map((v) => [v.field, v.sentence, v.reason])).toEqual([
+      ['itemBlurbs.americano', '仅售28元。', 'unsupported_number'],
+      ['itemBlurbs.americano', '约450ml。', 'unsupported_number'],
+    ])
+    expect(result.copyRefs).toEqual(copyApi.computeCopyRefs(result.copy, sheet))
+    const judge = provider.requests.find((r) => r.stage === 'guard-judge')!
+    expect(judge.input.sentences).toEqual([
+      '拿铁28元',
+      '美式18元。',
+      '仅售28元。',
+      '约450ml。',
+      '慢慢喝。',
+    ])
+    expect(judge.input.fields).toEqual([
+      'headline',
+      'subhead',
+      'itemBlurbs.latte',
+      'itemBlurbs.latte',
+      'itemBlurbs.americano',
+    ])
+    const facts = judge.input.facts as string[],
+      paths = judge.input.paths as string[]
+    expect(paths[facts.indexOf('28元')]).toBe('items.latte.price')
+    expect(paths[facts.indexOf('约300ml')]).toBe('items.americano.spec')
+    expect(judge.system).toMatch(/itemBlurbs\.<id> 的句子只能以路径为 items\.<id>\.\*/)
+  })
+})

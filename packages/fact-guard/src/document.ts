@@ -59,11 +59,13 @@ export async function guardDocument(
   corpus: FactCorpus,
   opts: GuardOptions = {},
 ): Promise<DocumentResult> {
+  const check = (sentence: string, field: string) =>
+    checkSentence(sentence, opts.corpusFor?.(field) ?? corpus, opts.rules)
   const entries: Entry[] = Object.entries(fields).flatMap(([field, text]) =>
     splitSentences(text).map((sentence) => ({
       field,
       sentence,
-      hits: checkSentence(sentence, corpus, opts.rules),
+      hits: check(sentence, field),
       output: sentence,
     })),
   )
@@ -73,6 +75,14 @@ export async function guardDocument(
       sentences: entriesToJudge.map((entry) => entry.sentence),
       facts: [...corpus.facts],
       ...(corpus.spanFacts ? { spanFacts: [...corpus.spanFacts] } : {}),
+      // Scoped documents tell the judge which field each sentence is in and where each fact is from.
+      ...(opts.corpusFor
+        ? {
+            fields: entriesToJudge.map((entry) => entry.field),
+            ...(corpus.paths ? { paths: [...corpus.paths] } : {}),
+            ...(corpus.spanPaths ? { spanPaths: [...corpus.spanPaths] } : {}),
+          }
+        : {}),
     })
     validateArray(
       results,
@@ -124,7 +134,7 @@ export async function guardDocument(
       splitSentences(text).map((sentence) => ({
         field: selected[i]!.field,
         sentence,
-        hits: checkSentence(sentence, corpus, opts.rules),
+        hits: check(sentence, selected[i]!.field),
         output: sentence,
       })),
     )

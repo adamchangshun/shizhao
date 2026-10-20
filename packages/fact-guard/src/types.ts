@@ -40,6 +40,11 @@ export type Judge = (input: {
   facts: string[]
   /** Span-only context, kept separate from general facts; honor the FactCorpus restrictions. */
   spanFacts?: string[]
+  /** Present only with GuardOptions.corpusFor: the field of each sentence, parallel to sentences. */
+  fields?: string[]
+  /** Present only with GuardOptions.corpusFor: fact paths, parallel to facts and spanFacts. */
+  paths?: string[]
+  spanPaths?: string[]
 }) => Promise<Array<{ unsupported: boolean; reason?: string }>>
 export type Rewriter = (input: {
   items: Array<{ sentence: string; problems: string[] }>
@@ -51,6 +56,11 @@ export interface GuardOptions {
   judge?: Judge
   rewriter?: Rewriter
   rules?: RuleSet
+  /**
+   * Per-field evidence for rule checks and rewrite rechecks; defaults to the document corpus.
+   * The judge still sees the document corpus, plus field names and fact paths to scope it.
+   */
+  corpusFor?: (field: string) => FactCorpus
   /** Optional consumer contract limits. Oversized replacements are deleted, never truncated. */
   maxFieldLengths?: Record<string, number>
 }

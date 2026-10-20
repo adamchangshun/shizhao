@@ -2,8 +2,9 @@
 .next
 .git
 data
-.env*
-!.env.example
+# Any depth: the production compose builds from the repo root and keeps secrets in deploy/.env.
+**/.env*
+!**/.env.example
 .omc
 .vitest
 eval/runs

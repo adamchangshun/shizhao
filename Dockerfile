@@ -20,7 +20,10 @@ RUN pnpm install --frozen-lockfile
 # --- build ---
 FROM deps AS build
 COPY . .
-RUN pnpm build
+# Backstop for .dockerignore: refuse to build if an env file (e.g. deploy/.env) got into the context.
+RUN leaked="$(find . -name node_modules -prune -o -name '.env*' ! -name '.env.example' -print)" \
+  && if [ -n "$leaked" ]; then echo "env files in build context: $leaked" >&2; exit 1; fi \
+  && pnpm build
 
 # --- runtime ---
 FROM base AS runtime
