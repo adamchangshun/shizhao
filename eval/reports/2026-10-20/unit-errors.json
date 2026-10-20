@@ -1,0 +1,16 @@
+{
+  "pagesByGroup": {
+    "A-gold": 9,
+    "A-raw": 7,
+    "B-gold": 8,
+    "B-e2e": 9
+  },
+  "errorsByGroup": {
+    "A-gold": 0,
+    "A-raw": 0,
+    "B-gold": 0,
+    "B-e2e": 0
+  },
+  "total": 0,
+  "errors": []
+}
