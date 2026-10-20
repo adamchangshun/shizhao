@@ -272,7 +272,10 @@ describe('copy generation and guard integration', () => {
   })
   it('a price without a unit adds only its two amount aliases to the corpus', () => {
     const base = facts()
-    const sheet = { ...base, items: [{ ...base.items[0]!, price: { amount: 28, currency: 'CNY' as const } }] }
+    const sheet = {
+      ...base,
+      items: [{ ...base.items[0]!, price: { amount: 28, currency: 'CNY' as const } }],
+    }
     const corpus = copyApi.buildFactCorpus(sheet)
     const priceTexts = corpus.facts.filter((_, i) => corpus.paths?.[i] === 'items.cake.price')
     expect(priceTexts).toEqual(['28元', '¥28'])
@@ -399,6 +402,30 @@ describe('item blurbs rest only on their own item facts (A4 H2)', () => {
       { sentence: '仅售18元。', refs: ['items.americano.price'] },
       { sentence: '约300ml。', refs: ['items.americano.spec'] },
     ])
+  })
+
+  it('does not treat a dotted item id sharing a prefix as the same item', () => {
+    const base = twoItems()
+    const sheet = {
+      ...base,
+      items: [
+        { ...base.items[0]!, id: 'a' },
+        { ...base.items[1]!, id: 'a.b' },
+      ],
+    }
+    const result = copyApi.guardWithRulesOnly(
+      { ...crossCopy, itemBlurbs: { a: '仅售18元。', 'a.b': '仅售18元。' } },
+      copyApi.buildFactCorpus(sheet),
+    )
+    expect(result.copy.itemBlurbs).toEqual({ a: '', 'a.b': '仅售18元。' })
+  })
+
+  it('fails closed for item blurbs when the corpus carries no fact paths', () => {
+    const result = copyApi.guardWithRulesOnly(
+      { headline: '仅售28元', subhead: '', itemBlurbs: { latte: '仅售28元。' }, closing: '' },
+      { facts: ['28元'] },
+    )
+    expect(result.copy).toMatchObject({ headline: '仅售28元', itemBlurbs: { latte: '' } })
   })
 
   it('guardCopy removes the cross-item price and gives the judge field names and fact paths', async () => {

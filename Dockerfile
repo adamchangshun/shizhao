@@ -19,11 +19,12 @@ RUN pnpm install --frozen-lockfile
 
 # --- build ---
 FROM deps AS build
-COPY . .
-# Backstop for .dockerignore: refuse to build if an env file (e.g. deploy/.env) got into the context.
-RUN leaked="$(find . -name node_modules -prune -o -name '.env*' ! -name '.env.example' -print)" \
-  && if [ -n "$leaked" ]; then echo "env files in build context: $leaked" >&2; exit 1; fi \
-  && pnpm build
+# Env files (e.g. deploy/.env) never enter a layer, even if .dockerignore is overridden;
+# only the committed, value-free templates are copied back.
+COPY --exclude=**/.env* . .
+COPY .env.example ./
+COPY deploy/.env.example deploy/
+RUN pnpm build
 
 # --- runtime ---
 FROM base AS runtime

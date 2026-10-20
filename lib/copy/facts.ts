@@ -40,20 +40,23 @@ export function buildFactCorpus(input: FactSheet): CopyCorpus {
 /**
  * Evidence for one copy field. `itemBlurbs.<id>` rests only on that item's facts plus shop facts
  * and extraClaims, so a blurb cannot borrow another item's price or spec. Other fields describe
- * the whole page and keep the full corpus. Facts without a path stay global.
+ * the whole page and keep the full corpus. Fails closed: a blurb never rests on a fact whose path
+ * is missing, so a corpus without paths gives item blurbs no ordinary facts at all.
  */
 export function fieldCorpus<T extends FactCorpus>(corpus: T, field: string): T {
-  if (!field.startsWith('itemBlurbs.') || !corpus.paths) return corpus
+  if (!field.startsWith('itemBlurbs.')) return corpus
   const own = `items.${field.slice('itemBlurbs.'.length)}.`
-  const keep = corpus.facts.map((_, i) => {
+  // Exact suffixes: with ids "a" and "a.b", "items.a.b.price" must not count as item "a".
+  const usable = (path: string | undefined) =>
+    path !== undefined &&
+    (!path.startsWith('items.') ||
+      (path.startsWith(own) &&
+        /^(?:name|spec|description|price|tags\.\d+)$/.test(path.slice(own.length))))
+  const kept = corpus.facts.flatMap((fact, i) => {
     const path = corpus.paths?.[i]
-    return path === undefined || !path.startsWith('items.') || path.startsWith(own)
+    return usable(path) ? [[fact, path!] as const] : []
   })
-  return {
-    ...corpus,
-    facts: corpus.facts.filter((_, i) => keep[i]),
-    paths: corpus.paths.filter((_, i) => keep[i]),
-  }
+  return { ...corpus, facts: kept.map(([fact]) => fact), paths: kept.map(([, path]) => path) }
 }
 
 export function copyFields(copy: CopyDraft): Record<string, string> {
