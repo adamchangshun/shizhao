@@ -1,7 +1,7 @@
 import { ApiError } from '../core/errors'
 import { newId } from '../core/ids'
 import { FactItem, Price, Shop, type FactSource } from '../core/schemas'
-import { findTextPrice, normalizePrice } from './price'
+import { findTextAmounts, findTextOffer, normalizePrice } from './price'
 import type { ModelDraft, ModelPrice } from './schema'
 
 export interface FactConflict {
@@ -146,7 +146,8 @@ function formatPrice(p: Price): string {
  * - otherwise, if there are images, it is `image_ocr` and reported in `lowConfidenceFields`;
  * - otherwise it has no source in the material and is dropped.
  * Prices and phone numbers the merchant wrote are re-read from the text by code and always win;
- * a differing image reading is reported in `conflicts`. Descriptions and extra claims must be
+ * a differing image reading is reported in `conflicts`. An item left without a price while the
+ * text has an amount no item took is also listed in `lowConfidenceFields`. Descriptions and extra claims must be
  * the merchant's own words. Ids are generated here, never taken from the model.
  */
 export function groundDraft(model: ModelDraft, ctx: GroundingContext): GroundedDraft {
@@ -180,6 +181,7 @@ export function groundDraft(model: ModelDraft, ctx: GroundingContext): GroundedD
   // Items
   const items: FactItem[] = []
   const seen = new Set<string>()
+  const takenAmounts = new Set<number>()
   for (const raw of model.items) {
     if (items.length >= MAX_ITEMS) break
     const name = raw.name.trim()
@@ -193,7 +195,9 @@ export function groundDraft(model: ModelDraft, ctx: GroundingContext): GroundedD
     if (nameSource === 'image_ocr') low.push(path('name'))
 
     let price: Price | undefined
-    const textPrice = findTextPrice(name, ctx.merchantText)
+    const offer = findTextOffer(name, ctx.merchantText)
+    const textPrice = offer?.price
+    if (textPrice) takenAmounts.add(textPrice.amount)
     const modelPrice = toPrice(raw.price)
     if (textPrice) {
       price = textPrice
@@ -215,7 +219,11 @@ export function groundDraft(model: ModelDraft, ctx: GroundingContext): GroundedD
 
     let spec: string | undefined
     const specValue = raw.spec?.trim()
-    if (specValue && FactItem.shape.spec.safeParse(specValue).success) {
+    if (offer?.spec && FactItem.shape.spec.safeParse(offer.spec).success) {
+      // The size the merchant wrote right before this item's price.
+      spec = offer.spec
+      sources.spec = 'merchant_text'
+    } else if (specValue && FactItem.shape.spec.safeParse(specValue).success) {
       const s = sourceOf(specValue)
       if (s) {
         spec = specValue
@@ -252,6 +260,15 @@ export function groundDraft(model: ModelDraft, ctx: GroundingContext): GroundedD
         sources,
       }),
     )
+  }
+  // An amount the merchant wrote that no item took (e.g. a price after words the code does not
+  // read as a size) may be a price the code missed: every item left without a price is flagged
+  // so the confirm page asks the merchant to check it.
+  if (findTextAmounts(ctx.merchantText).some((a) => !takenAmounts.has(a))) {
+    items.forEach((item, i) => {
+      const p = `items[${i}].price`
+      if (!item.price && !low.includes(p)) low.push(p)
+    })
   }
   if (items.length === 0) {
     throw new ApiError(
