@@ -189,7 +189,7 @@ queued → designing → writing → guarding → rendering → checking → suc
 | GET | `/api/jobs/:id` | `{ status, stage, etaSeconds: [lo, hi], error? }` | 08 |
 | GET | `/api/projects/:id/versions` | 版本列表 | 08 |
 | GET | `/api/versions/:id/preview` | 预览 HTML（需管理口令） | 08 |
-| POST | `/api/projects/:id/publish` | `{ versionId }` 发布 | 09 |
+| POST | `/api/projects/:id/publish` | `{"versionId":"<版本ID>","factsConfirmed":true}` 发布；`factsConfirmed` 只有在商家核对过该版本页面上的事实后才能设为 `true`，缺少或不为 `true` 返回 400 | 09 |
 | POST | `/api/projects/:id/unpublish` | 下线 | 09 |
 | GET | `/api/projects/:id/qr` | 二维码 PNG / SVG（`?format=svg`） | 09 |
 | GET | `/p/:slug` | 公开宣传页 | 10 |
@@ -202,7 +202,7 @@ queued → designing → writing → guarding → rendering → checking → suc
 | POST | `/api/guard` | 营销文案事实检查 API（无 Key 仅规则层，有 Key 可用模型判定与行业规则包） | 16 |
 | GET | `/check` | 文案检查页（公开） | 16 |
 
-除 `/p/:slug`、`/api/track`、`POST /api/corrections`、`/api/guard`、`/check` 外，所有路由都要求管理口令（见第 7 节 `ADMIN_TOKEN`）。错误响应统一为 `{ error: { code: string, message: string } }`，`message` 为中文且不泄露内部细节。
+除 `/p/:slug`、`/api/track`、`POST /api/corrections`、`/api/guard`、`/check` 外，所有路由都要求管理口令（见第 7 节 `ADMIN_TOKEN`），请求头写作 `Authorization: Bearer <ADMIN_TOKEN>`。各请求体与可串联的 curl 示例见 [API-quickstart.md](API-quickstart.md)。错误响应统一为 `{ error: { code: string, message: string } }`，`message` 为中文且不泄露内部细节。
 
 ## 7. 环境变量（`.env.example`）
 
