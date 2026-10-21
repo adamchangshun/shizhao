@@ -43,6 +43,10 @@ describe('personal information', () => {
     '支付宝 abc def，QQ tian 88abc',
     'QQ：t i a n x 8',
     '支付宝账号 tian  88abc',
+    'QQ：tian    88abc',
+    'QQ：t i a n x    8',
+    '支付宝账号 tian\t\t\t\t88abc',
+    'QQ abcdefghijklmnopqrst QQ tian 88abc',
   ])('refuses %s', (text) => {
     expect(containsPersonalInfo(text)).toBe(true)
   })
@@ -78,6 +82,12 @@ describe('personal information', () => {
     '支持支付宝付款，会员账号年费是 12800人民币',
     '支付宝 RMB 12800',
     '支付宝 cny 12 800',
+    '支付宝付了 ¥ 12800',
+    '支持支付宝付款，会员账号年费是 RMB  12800',
+    '支付宝付了 12800  人民币',
+    '支付宝付了 12800\t元',
+    '支付宝 payment method 2 is unavailable',
+    'QQ login option 2 is broken',
   ])('allows %s', (text) => {
     expect(containsPersonalInfo(text)).toBe(false)
   })
