@@ -35,26 +35,40 @@ const ID_TOKEN = /(?<![a-z0-9_-])(?=[a-z][-_a-z0-9]{5,19}(?![a-z0-9_-]))[a-z]*[-
 // "支付宝付了 12800 元", "QQ糖" and "QQ音乐" are not accounts, nor is a number in another clause
 // unless that clause says it is one ("支付宝收款，账号写在这里 2088…").
 const ACCOUNT_CUE = String.raw`(?:q\s?q(?!\s?(?:糖|音乐))|扣\s?扣|企鹅号|q号|支\s?付\s?宝|alipay|zfb)(?:号码|号|账号|帐号|账户|id)?`
+// A 5–20 digit number that is not written as an amount: no ¥ / RMB / CNY in front and no
+// 元 / 块 / 人民币 after it ("支付宝付了 ¥12800", "年费是 RMB 12800", "12800 人民币").
+const NOT_AMOUNT = String.raw`(?<![\d¥])(?<!(?:rmb|cny)\s?)[1-9]\d{4,19}(?!\d|\s?(?:元|块|人民币))`
+// An id-shaped token that is not an amount written as one word ("CNY12800").
+const ACCOUNT_ID = String.raw`(?!(?:rmb|cny)\d+(?![-_a-z0-9]))${ID_TOKEN.source}`
 const ACCOUNT_DIRECT = new RegExp(`${ACCOUNT_CUE}[\\s:=是为]{0,3}[1-9]\\d{4,19}(?!\\d)`, 'i')
 const ACCOUNT_NEARBY = new RegExp(
-  `${ACCOUNT_CUE}[^,.;!?\\n。、]{0,20}?(?:(?<!\\d)[1-9]\\d{4,19}(?!\\d|\\s?(?:元|块))|${ID_TOKEN.source})`,
+  `${ACCOUNT_CUE}[^,.;!?\\n。、]{0,20}?(?:${NOT_AMOUNT}|${ACCOUNT_ID})`,
   'i',
 )
 const ACCOUNT_NEXT_CLAUSE = new RegExp(
-  `${ACCOUNT_CUE}[^,.;!?\\n。、]{0,20}[,.;!?\\n。、][^,.;!?\\n。、]{0,10}?(?:账号|帐号|账户|号码)[^,.;!?\\n。、]{0,10}?(?:(?<!\\d)[1-9]\\d{4,19}(?!\\d|\\s?(?:元|块))|${ID_TOKEN.source})`,
+  `${ACCOUNT_CUE}[^,.;!?\\n。、]{0,20}[,.;!?\\n。、][^,.;!?\\n。、]{0,10}?(?:账号|帐号|账户|号码)[^,.;!?\\n。、]{0,10}?(?:${NOT_AMOUNT}|${ACCOUNT_ID})`,
   'i',
 )
-// "支付宝账号 tian 88abc": an id split by plain spaces. Only the few words right after the cue
-// are joined, then the whole run must have the shape of an id.
+// "支付宝账号 tian 88abc", "QQ：t i a n x 8": an id split by spaces. After every cue, the words
+// that follow are joined one at a time (up to 20 characters, the longest id), and the text is
+// refused as soon as the joined words have the shape of an id, whatever follows them
+// ("QQ：tian 88 abc please confirm").
 const ACCOUNT_SPACED = new RegExp(
-  `${ACCOUNT_CUE}[\\s:=是为]{0,3}([a-z0-9][-_a-z0-9]*(?: [-_a-z0-9]+){1,4})(?![-_a-z0-9])`,
-  'i',
+  `${ACCOUNT_CUE}[\\s:=是为]{0,3}([-_a-z0-9]+(?:\\s{1,3}[-_a-z0-9]+){1,19})`,
+  'gi',
 )
-const WHOLE_ID = new RegExp(`^(?:[1-9]\\d{4,19}|${ID_TOKEN.source})$`, 'i')
+const WHOLE_ID = new RegExp(`^(?:[1-9]\\d{4,19}|${ACCOUNT_ID})$`, 'i')
 
 function spacedAccount(text: string): boolean {
-  const run = ACCOUNT_SPACED.exec(text)?.[1]
-  return run !== undefined && WHOLE_ID.test(run.replace(/ /g, ''))
+  for (const match of text.matchAll(ACCOUNT_SPACED)) {
+    let joined = ''
+    for (const word of match[1]!.split(/\s+/)) {
+      joined += word
+      if (joined.length > 20) break
+      if (joined !== word && WHOLE_ID.test(joined)) return true
+    }
+  }
+  return false
 }
 
 /** True when the text carries a phone number, e-mail, WeChat, QQ or Alipay id, or ID card number. */
@@ -63,8 +77,9 @@ export function containsPersonalInfo(text: string): boolean {
   // Digits split by any run of separators that are neither letters nor digits
   // ("138 0013 8000", "138/0013/8000", "138----0013----8000", "(021)64881234") still count.
   const digits = n.replace(/(?<=\d)[^\p{L}\p{N}]+(?=\d)/gu, '')
-  // "tian _ 88abc": spaces around "_" and "-" inside an account id.
-  const ids = digits.replace(/\s*([-_])\s*/g, '$1')
+  // "tian _ 88abc": spaces around "_" and "-" inside an account id. Each run of spaces is
+  // matched from its first space only, so a long run cannot make this quadratic.
+  const ids = digits.replace(/(?<!\s)\s+(?=[-_])|(?<=[-_])\s+/g, '')
   // "someone @ example . com"
   const compact = n.replace(/\s*([@.])\s*/g, '$1')
   return (
