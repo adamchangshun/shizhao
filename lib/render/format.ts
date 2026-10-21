@@ -33,7 +33,10 @@ export function safeMapUrl(mapUrl: string | undefined): string | null {
  * Navigation target: the merchant's map link; an AMap search for name + address when no
  * link was given. A link that fails re-validation hides the button instead of falling back.
  */
-export function navigationHref(shop: Pick<Shop, 'name' | 'address'>, mapUrl: string | undefined): string | null {
+export function navigationHref(
+  shop: Pick<Shop, 'name' | 'address'>,
+  mapUrl: string | undefined,
+): string | null {
   if (mapUrl !== undefined && mapUrl !== '') return safeMapUrl(mapUrl)
   if (!shop.address) return null
   const keyword = `${shop.name} ${shop.address}`

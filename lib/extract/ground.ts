@@ -1,7 +1,7 @@
 import { ApiError } from '../core/errors'
 import { newId } from '../core/ids'
 import { FactItem, Price, Shop, type FactSource } from '../core/schemas'
-import { findTextAmounts, findTextOffer, normalizePrice } from './price'
+import { findTextAmounts, findTextOffers, normalizePrice, type TextOffer } from './price'
 import type { ModelDraft, ModelPrice } from './schema'
 
 export interface FactConflict {
@@ -181,7 +181,8 @@ export function groundDraft(model: ModelDraft, ctx: GroundingContext): GroundedD
   // Items
   const items: FactItem[] = []
   const seen = new Set<string>()
-  const takenAmounts = new Set<number>()
+  const offersOf = textOffersByName(model, ctx.merchantText)
+  const taken = new Set<number>() // positions of the prices items took
   for (const raw of model.items) {
     if (items.length >= MAX_ITEMS) break
     const name = raw.name.trim()
@@ -195,9 +196,9 @@ export function groundDraft(model: ModelDraft, ctx: GroundingContext): GroundedD
     if (nameSource === 'image_ocr') low.push(path('name'))
 
     let price: Price | undefined
-    const offer = findTextOffer(name, ctx.merchantText)
+    const offer = offersOf.get(name)?.[0]
     const textPrice = offer?.price
-    if (textPrice) takenAmounts.add(textPrice.amount)
+    if (offer) taken.add(offer.at)
     const modelPrice = toPrice(raw.price)
     if (textPrice) {
       price = textPrice
@@ -264,7 +265,7 @@ export function groundDraft(model: ModelDraft, ctx: GroundingContext): GroundedD
   // An amount the merchant wrote that no item took (e.g. a price after words the code does not
   // read as a size) may be a price the code missed: every item left without a price is flagged
   // so the confirm page asks the merchant to check it.
-  if (findTextAmounts(ctx.merchantText).some((a) => !takenAmounts.has(a))) {
+  if (findTextAmounts(ctx.merchantText).some((a) => !taken.has(a.at))) {
     items.forEach((item, i) => {
       const p = `items[${i}].price`
       if (!item.price && !low.includes(p)) low.push(p)
@@ -293,6 +294,26 @@ export function groundDraft(model: ModelDraft, ctx: GroundingContext): GroundedD
     conflicts,
     lowConfidenceFields: low,
   }
+}
+
+/**
+ * The prices written after each item name, each price given only to the longest name it follows:
+ * in '拿铁\n燕麦拿铁 25元' the 25 is 燕麦拿铁's, not also 拿铁's.
+ */
+function textOffersByName(model: ModelDraft, text: string): Map<string, TextOffer[]> {
+  // Bounded like the item list itself, so a runaway draft cannot make this quadratic.
+  const names = [...new Set(model.items.map((raw) => raw.name.trim()))]
+    .filter((name) => FactItem.shape.name.safeParse(name).success)
+    .slice(0, MAX_ITEMS * 4)
+  const len = (name: string) => [...name.normalize('NFKC').trim()].length
+  const all = new Map(names.map((name) => [name, findTextOffers(name, text)] as const))
+  const owner = new Map<number, number>() // price position → longest name length
+  for (const [name, offers] of all) {
+    for (const o of offers) owner.set(o.at, Math.max(owner.get(o.at) ?? 0, len(name)))
+  }
+  return new Map(
+    [...all].map(([name, offers]) => [name, offers.filter((o) => owner.get(o.at) === len(name))]),
+  )
 }
 
 /**

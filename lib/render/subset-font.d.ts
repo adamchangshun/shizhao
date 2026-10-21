@@ -4,5 +4,9 @@ declare module 'subset-font' {
     targetFormat?: 'sfnt' | 'woff' | 'woff2' | 'truetype'
     preserveNameIds?: number[]
   }
-  export default function subsetFont(buffer: Buffer, text: string, options?: SubsetFontOptions): Promise<Buffer>
+  export default function subsetFont(
+    buffer: Buffer,
+    text: string,
+    options?: SubsetFontOptions,
+  ): Promise<Buffer>
 }

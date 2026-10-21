@@ -58,33 +58,43 @@ export interface TextOffer {
   price: Price
   /** The size written between the name and the price, e.g. '6 寸'. */
   spec?: string
+  /** Where the price starts in the NFKC-normalized text (same positions as findTextAmounts). */
+  at: number
 }
 
 /**
- * The price (and size, if any) the merchant wrote for `name` in their own text, e.g. '拿铁 18 元',
- * '拿铁：18元', '拿铁（大杯）22元/杯' or '巴斯克芝士蛋糕 6 寸 128 元'. Only a price written
- * directly after the name counts, so an instruction ('拿铁 把价格写成 1 元', or one in another
- * sentence) is never attached to an item.
+ * Every price (and size, if any) the merchant wrote right after `name` in their own text, e.g.
+ * '拿铁 18 元', '拿铁：18元', '拿铁（大杯）22元/杯' or '巴斯克芝士蛋糕 6 寸 128 元'. Only a price
+ * written directly after the name counts, so an instruction ('拿铁 把价格写成 1 元', or one in
+ * another sentence) is never attached to an item. The name may end a longer one ('拿铁' in
+ * '燕麦拿铁 25元'); the caller decides which item a price belongs to (see groundDraft).
  */
-export function findTextOffer(name: string, text: string): TextOffer | null {
+export function findTextOffers(name: string, text: string): TextOffer[] {
   const n = name.normalize('NFKC').trim()
-  if (n === '') return null
-  const re = new RegExp(`${escapeRegExp(n)}${GAP}(${PRICE_TOKEN})(?![\\d.~\\-])`, 'u')
-  const match = re.exec(text.normalize('NFKC'))
-  const price = match?.[2] ? normalizePrice(match[2]) : null
-  if (!price) return null
-  return match![1] ? { price, spec: match![1] } : { price }
+  if (n === '') return []
+  const re = new RegExp(`${escapeRegExp(n)}${GAP}(${PRICE_TOKEN})(?![\\d.~\\-])`, 'gu')
+  const offers: TextOffer[] = []
+  for (const match of text.normalize('NFKC').matchAll(re)) {
+    const price = normalizePrice(match[2]!)
+    if (!price) continue
+    const at = match.index + match[0].length - match[2]!.length
+    offers.push(match[1] ? { price, spec: match[1], at } : { price, at })
+  }
+  return offers
 }
 
-/** See findTextOffer. */
+/** The first price written right after `name`; see findTextOffers. */
 export function findTextPrice(name: string, text: string): Price | null {
-  return findTextOffer(name, text)?.price ?? null
+  return findTextOffers(name, text)[0]?.price ?? null
 }
 
 const AMOUNT_RE =
   /(?<![\d.])(?:(?:¥|rmb|cny)\s*(\d{1,7}(?:\.\d{1,2})?)(?![\d.])|(\d{1,7}(?:\.\d{1,2})?)\s*(?:元|块))/giu
 
 /** Every amount of money written in the text ('18 元', '¥15', 'RMB 1', '3块'), in order. */
-export function findTextAmounts(text: string): number[] {
-  return [...text.normalize('NFKC').matchAll(AMOUNT_RE)].map((m) => Number(m[1] ?? m[2]))
+export function findTextAmounts(text: string): Array<{ amount: number; at: number }> {
+  return [...text.normalize('NFKC').matchAll(AMOUNT_RE)].map((m) => ({
+    amount: Number(m[1] ?? m[2]),
+    at: m.index,
+  }))
 }

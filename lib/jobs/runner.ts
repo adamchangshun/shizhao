@@ -51,7 +51,10 @@ export class JobRunner {
     const jobs = listNonTerminalJobs().sort((a, b) => a.createdAt.localeCompare(b.createdAt))
     for (const job of jobs) {
       if (job.status !== 'queued' && now - Date.parse(job.startedAt) > totalMs) {
-        transitionJob(job.id, job.status, 'timed_out', { stage: job.status, error: TIMEOUT_MESSAGE })
+        transitionJob(job.id, job.status, 'timed_out', {
+          stage: job.status,
+          error: TIMEOUT_MESSAGE,
+        })
         await removeStaging(job.projectId, job.id).catch((err: unknown) => {
           console.error(`[jobs] could not remove staging dir of job ${job.id}`, err)
         })

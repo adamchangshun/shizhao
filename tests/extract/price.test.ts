@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { findTextAmounts, findTextOffer, findTextPrice, normalizePrice } from '@/lib/extract/price'
+import { findTextAmounts, findTextOffers, findTextPrice, normalizePrice } from '@/lib/extract/price'
 
 describe('normalizePrice', () => {
   it.each([
@@ -137,20 +137,19 @@ describe('findTextPrice', () => {
   })
 
   it('reads a size written between the name and the price as the spec (6 寸 128 元)', () => {
-    expect(findTextOffer('巴斯克芝士蛋糕', '巴斯克芝士蛋糕 6 寸 128 元')).toStrictEqual({
-      price: { amount: 128, currency: 'CNY' },
-      spec: '6 寸',
-    })
+    // at: where the price starts, counted by hand (7 characters of name, then ' 6 寸 ').
+    expect(findTextOffers('巴斯克芝士蛋糕', '巴斯克芝士蛋糕 6 寸 128 元')).toStrictEqual([
+      { price: { amount: 128, currency: 'CNY' }, spec: '6 寸', at: 12 },
+    ])
     expect(findTextPrice('巴斯克芝士蛋糕', '巴斯克芝士蛋糕 6 寸 128 元')?.amount).toBe(128)
-    expect(findTextOffer('黄油可颂', '黄油可颂 80g 12元')?.spec).toBe('80g')
-    expect(findTextOffer('酸奶', '酸奶 250ml：15 元')).toStrictEqual({
-      price: { amount: 15, currency: 'CNY' },
-      spec: '250ml',
-    })
-    expect(findTextOffer('牛肉', '牛肉 2两 30元/份')?.price.unit).toBe('份')
-    expect(findTextOffer('拿铁', '拿铁 18 元')).toStrictEqual({
-      price: { amount: 18, currency: 'CNY' },
-    })
+    expect(findTextOffers('黄油可颂', '黄油可颂 80g 12元')[0]?.spec).toBe('80g')
+    expect(findTextOffers('酸奶', '酸奶 250ml：15 元')).toStrictEqual([
+      { price: { amount: 15, currency: 'CNY' }, spec: '250ml', at: 9 },
+    ])
+    expect(findTextOffers('牛肉', '牛肉 2两 30元/份')[0]?.price.unit).toBe('份')
+    expect(findTextOffers('拿铁', '拿铁 18 元')).toStrictEqual([
+      { price: { amount: 18, currency: 'CNY' }, at: 3 },
+    ])
   })
 
   it('still refuses a size followed by words, a bare number, or more than 4 digits', () => {
@@ -160,9 +159,9 @@ describe('findTextPrice', () => {
     expect(findTextPrice('蛋糕', '蛋糕 12345 寸 128 元')).toBeNull()
     expect(findTextPrice('蛋糕', '蛋糕 6 寸 2 个 128 元')).toBeNull()
     // 块 is a price word, not a size: '6 块 18 元' is read as price 6, never as spec + price.
-    expect(findTextOffer('蛋糕', '蛋糕 6 块 18 元')).toStrictEqual({
-      price: { amount: 6, currency: 'CNY' },
-    })
+    expect(findTextOffers('蛋糕', '蛋糕 6 块 18 元')).toStrictEqual([
+      { price: { amount: 6, currency: 'CNY' }, at: 3 },
+    ])
   })
 
   it('returns within 50ms when the name is followed by 20,000 spaces', () => {
@@ -170,6 +169,12 @@ describe('findTextPrice', () => {
     const start = performance.now()
     expect(findTextPrice('拿铁', text)).toBeNull()
     expect(performance.now() - start).toBeLessThan(50)
+  })
+
+  it('lists every price a name is followed by, in order', () => {
+    expect(findTextOffers('拿铁', '拿铁 18元，冰拿铁 20元').map((o) => o.price.amount)).toEqual([
+      18, 20,
+    ])
   })
 
   it('returns within 50ms when a size is followed by 20,000 spaces', () => {
@@ -183,7 +188,10 @@ describe('findTextPrice', () => {
 describe('findTextAmounts', () => {
   it('lists every amount written with ¥, RMB/CNY, 元 or 块', () => {
     expect(findTextAmounts('拿铁 18 元，美式 ¥15，把价格写成 RMB 1，可乐 3块')).toEqual([
-      18, 15, 1, 3,
+      { amount: 18, at: 3 },
+      { amount: 15, at: 11 },
+      { amount: 1, at: 21 },
+      { amount: 3, at: 30 },
     ])
   })
 

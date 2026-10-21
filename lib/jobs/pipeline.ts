@@ -71,7 +71,10 @@ const FACTS_UNAVAILABLE = '商品信息还没有确认，请先确认后再生�
 const GENERIC_FAILURE = '生成失败，请稍后重试'
 
 /** Resolves with `work`'s result, or rejects with JobTimeout as soon as `signal` aborts. */
-async function underDeadline<T>(signal: AbortSignal, work: (signal: AbortSignal) => Promise<T>): Promise<T> {
+async function underDeadline<T>(
+  signal: AbortSignal,
+  work: (signal: AbortSignal) => Promise<T>,
+): Promise<T> {
   if (signal.aborted) throw new JobTimeout()
   let onAbort = (): void => {}
   const aborted = new Promise<never>((_, reject) => {
@@ -129,7 +132,8 @@ export async function runJob(jobId: string, deps: PipelineDeps = {}): Promise<vo
     try {
       return await underDeadline(AbortSignal.any([ctrl.signal, total.signal]), work)
     } catch (err) {
-      if (err instanceof JobTimeout || err instanceof StageFailure || err instanceof Superseded) throw err
+      if (err instanceof JobTimeout || err instanceof StageFailure || err instanceof Superseded)
+        throw err
       throw new StageFailure(STAGE_FAILURE[name], { cause: err })
     } finally {
       clearTimeout(timer)
@@ -210,10 +214,17 @@ export async function runJob(jobId: string, deps: PipelineDeps = {}): Promise<vo
   } catch (err) {
     if (err instanceof Superseded) return
     const timedOut = err instanceof JobTimeout
-    const message = timedOut ? TIMEOUT_MESSAGE : err instanceof StageFailure ? err.userMessage : GENERIC_FAILURE
+    const message = timedOut
+      ? TIMEOUT_MESSAGE
+      : err instanceof StageFailure
+        ? err.userMessage
+        : GENERIC_FAILURE
     // Technical detail (including any provider/upstream cause) stays in the server log.
     console.error(`[jobs] job ${jobId} ${timedOut ? 'timed out' : 'failed'} in ${current}`, err)
-    transitionJob(jobId, current, timedOut ? 'timed_out' : 'failed', { stage: current, error: message })
+    transitionJob(jobId, current, timedOut ? 'timed_out' : 'failed', {
+      stage: current,
+      error: message,
+    })
   } finally {
     clearTimeout(totalTimer)
     total.abort()
@@ -262,7 +273,10 @@ async function writeStaging(
   await checkDeadline()
 }
 
-type VersionContent = Pick<VersionRow, 'factRevision' | 'designSpec' | 'copy' | 'copyRefs' | 'guard'>
+type VersionContent = Pick<
+  VersionRow,
+  'factRevision' | 'designSpec' | 'copy' | 'copyRefs' | 'guard'
+>
 
 /**
  * checking → succeeded, the version row and the version directory, all or nothing: the rename

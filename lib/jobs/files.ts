@@ -36,7 +36,11 @@ export function versionHtmlPath(projectId: string, versionId: string): string {
 }
 
 /** Absolute path of a media file inside a version directory, or null for a bad file name. */
-export function versionMediaPath(projectId: string, versionId: string, file: string): string | null {
+export function versionMediaPath(
+  projectId: string,
+  versionId: string,
+  file: string,
+): string | null {
   if (!MEDIA_FILE.test(file)) return null
   return path.join(versionDir(projectId, versionId), 'media', file)
 }

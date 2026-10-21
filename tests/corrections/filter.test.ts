@@ -37,6 +37,8 @@ describe('personal information', () => {
     '支付宝账号 2088102134567890 元',
     'Q Q：12345678',
     '支 付 宝 2088 1021 3456 7890',
+    '支付宝账号 tian 88abc',
+    'QQ：tian 88 abc',
   ])('refuses %s', (text) => {
     expect(containsPersonalInfo(text)).toBe(true)
   })
@@ -62,6 +64,8 @@ describe('personal information', () => {
     '价格 13，不是 15',
     '支持支付宝付款，商品编号 12345 写错了',
     'QQ音乐可以播放，订单号 abc_123 有误',
+    '支持支付宝付款，会员账号年费是 12800 元',
+    '支付宝付款 tian 写错了',
   ])('allows %s', (text) => {
     expect(containsPersonalInfo(text)).toBe(false)
   })
