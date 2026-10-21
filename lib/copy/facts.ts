@@ -2,8 +2,8 @@ import { FactSheet, type CopyDraft, type CopyRefs } from '../core/schemas'
 import {
   computeDocumentRefs,
   normalizeText,
+  splitSentences,
   type FactCorpus,
-  type Rule,
 } from '../../packages/fact-guard/src/index'
 
 export interface CopyCorpus extends FactCorpus {
@@ -64,31 +64,59 @@ export function fieldCorpus<T extends FactCorpus>(corpus: T, field: string): T {
   return { ...corpus, facts: kept.map(([fact]) => fact), paths: kept.map(([, path]) => path) }
 }
 
+/** Letters and digits only, after NFKC and fact-guard folding; hits and support share it. */
+function canonical(text: string): string {
+  return normalizeText(text.normalize('NFKC')).text.replace(/[^\p{L}\p{N}]/gu, '')
+}
+function occurrences(text: string, word: string): number[] {
+  const starts: number[] = []
+  for (let i = text.indexOf(word); i !== -1; i = text.indexOf(word, i + 1)) starts.push(i)
+  return starts
+}
+// A negated mention ("不加糖" next to another item's "加糖") does not repeat that item's claim.
+const negated = /(?:不是|并非|不含|没有|非|不|未)$/u
+
 /**
- * Rule against an item blurb repeating another item's spec, description or tag, with or without
- * numbers. Every item's wording is a term; guards resolve support from `fieldCorpus`, so only
- * wording outside the blurb's own item, shop facts and extraClaims is a hit, and page-level
- * fields (full corpus) never hit. Item names are exempt: a blurb may compare with another item.
- * Terms match normalized text with any whitespace between characters.
+ * The other item's wording that an `itemBlurbs.<id>` sentence repeats, or undefined. Candidates
+ * are every item's spec, tags and description sentences (split like the guard splits copy);
+ * support is `fieldCorpus`, so only wording outside the blurb's own item, shop facts and
+ * extraClaims counts, and page-level fields never hit. Mentions inside an item name are exempt:
+ * a blurb may compare with another item. Checked deterministically because the live judge does
+ * not honor `evidence[i]` for this (A4 W5).
  */
-export function crossItemRule(corpus: FactCorpus): Rule {
-  const texts = (pattern: RegExp) =>
-    corpus.facts.filter((fact, i) => fact && pattern.test(corpus.paths?.[i] ?? ''))
-  // A negated mention ("不加糖" next to another item's "加糖") does not repeat that item's claim.
-  const patterns = new Set(
-    texts(/^items\..+\.(?:spec|description|tags\.\d+)$/).flatMap((fact) => {
-      const chars = [...normalizeText(fact).text.replace(/\s/gu, '')]
-      if (chars.length === 0) return []
-      const body = chars.map((char) => char.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&')).join('\\s*')
-      return [`(?<!(?:不是|并非|不含|没有|非|不|未)\\s*)${body}`]
-    }),
-  )
-  return {
-    id: 'cross-item',
-    reason: 'unsupported_claim',
-    patterns: [...patterns],
-    whitelist: texts(/^items\..+\.name$/),
+export function crossItemBorrowing(
+  sentence: string,
+  field: string,
+  corpus: FactCorpus,
+): string | undefined {
+  if (!field.startsWith('itemBlurbs.')) return undefined
+  const own = fieldCorpus(corpus, field)
+  const support = [...own.facts, ...(own.spanFacts ?? [])].map(canonical)
+  const text = canonical(sentence)
+  const isPath = (i: number, pattern: RegExp) => pattern.test(corpus.paths?.[i] ?? '')
+  const names = corpus.facts
+    .filter((fact, i) => isPath(i, /^items\..+\.name$/))
+    .map(canonical)
+    .filter(Boolean)
+  const inName = (start: number, end: number) =>
+    names.some((name) =>
+      occurrences(text, name).some((left) => left <= start && end <= left + name.length),
+    )
+  const affirmed = (source: string, word: string, exempt?: (start: number) => boolean) =>
+    occurrences(source, word).some(
+      (start) => !negated.test(source.slice(0, start)) && !exempt?.(start),
+    )
+  for (const [i, fact] of corpus.facts.entries()) {
+    if (!isPath(i, /^items\..+\.(?:spec|description|tags\.\d+)$/)) continue
+    for (const piece of splitSentences(fact)) {
+      const word = canonical(piece)
+      // Single characters are too common to identify another item's wording.
+      if (word.length < 2 || support.some((source) => affirmed(source, word))) continue
+      if (affirmed(text, word, (start) => inName(start, start + word.length)))
+        return piece.replace(/[。！？；!?;\s]+$/u, '').trim()
+    }
   }
+  return undefined
 }
 
 export function copyFields(copy: CopyDraft): Record<string, string> {

@@ -379,13 +379,6 @@ describe('item blurbs rest only on their own item facts (A4 H2)', () => {
         reason: 'unsupported_number',
         evidence: '28元',
       },
-      // A's spec wording is also a cross-item hit (v0.1.1), alongside its number.
-      {
-        field: 'itemBlurbs.americano',
-        sentence: '约450ml。',
-        reason: 'unsupported_claim',
-        evidence: '约450ml',
-      },
       {
         field: 'itemBlurbs.americano',
         sentence: '约450ml。',
@@ -446,7 +439,6 @@ describe('item blurbs rest only on their own item facts (A4 H2)', () => {
     expect(result.copy.itemBlurbs).toEqual({ latte: '仅售28元。约450ml。', americano: '慢慢喝。' })
     expect(result.violations.map((v) => [v.field, v.sentence, v.reason])).toEqual([
       ['itemBlurbs.americano', '仅售28元。', 'unsupported_number'],
-      ['itemBlurbs.americano', '约450ml。', 'unsupported_claim'],
       ['itemBlurbs.americano', '约450ml。', 'unsupported_number'],
     ])
     expect(result.copyRefs).toEqual(copyApi.computeCopyRefs(result.copy, sheet))
@@ -575,11 +567,10 @@ describe('item blurbs cannot borrow another item’s wording (v0.1.1 cross-item)
     expect(result.removed).toBe(1)
   })
 
-  it("②③ A's spec and price stay blocked; the spec also counts as cross-item wording", () => {
+  it("②③ A's spec and price stay blocked by the number rule", () => {
     const spec = recheck(blurbB('约450ml。'))
     expect(spec.copy.itemBlurbs.americano).toBe('')
     expect(spec.violations.map((v) => [v.reason, v.evidence])).toEqual([
-      ['unsupported_claim', '约450ml'],
       ['unsupported_number', '450ml'],
     ])
     const price = recheck(blurbB('仅售28元。'))
@@ -649,11 +640,43 @@ describe('item blurbs cannot borrow another item’s wording (v0.1.1 cross-item)
     expect(recheck(blurbB('不加糖。加糖。'), sheet).copy.itemBlurbs.americano).toBe('不加糖。')
   })
 
-  it('matches across spaces and full-width letters', () => {
-    expect(recheck(blurbB('燕麦奶 可选。')).copy.itemBlurbs.americano).toBe('')
+  it('matches across spaces, full-width letters, zero-width characters, punctuation and mapped traditional characters', () => {
+    for (const sentence of ['燕麦奶 可选。', '燕麦奶，可选。', '燕麦奶​可选。', '燕麥奶可選。'])
+      expect(recheck(blurbB(sentence)).copy.itemBlurbs.americano).toBe('')
     const base = w5Sheet()
     const sheet = { ...base, items: [{ ...base.items[0]!, tags: ['Oat Milk'] }, base.items[1]!] }
-    expect(recheck(blurbB('ＯＡＴＭＩＬＫ。'), sheet).copy.itemBlurbs.americano).toBe('')
+    for (const sentence of ['ＯＡＴＭＩＬＫ。', 'Oat​Milk。', 'oat-milk。'])
+      expect(recheck(blurbB(sentence), sheet).copy.itemBlurbs.americano).toBe('')
+  })
+
+  it('a re-spaced variant of B’s own, a shared or a page-level text still passes (review 1)', () => {
+    const base = w5Sheet()
+    const sheet = {
+      ...base,
+      items: [
+        { ...base.items[0]!, tags: ['Oat Milk', '燕麦奶可选'] },
+        { ...base.items[1]!, tags: ['Oat Milk'] },
+      ],
+    }
+    const copy: CopyDraft = {
+      headline: '燕麦奶，可选',
+      subhead: 'OatMilk。',
+      itemBlurbs: { latte: 'OatMilk。', americano: 'OatMilk。' },
+      closing: '',
+    }
+    const result = recheck(copy, sheet)
+    expect(result.copy).toEqual(copy)
+    expect(result.violations).toEqual([])
+  })
+
+  it("splits A's description like the guard does, so one copied sentence of it is caught (review 1)", () => {
+    const base = w5Sheet()
+    const sheet = {
+      ...base,
+      items: [{ ...base.items[0]!, description: '奶香浓郁。顺滑如丝' }, base.items[1]!],
+    }
+    expect(recheck(blurbB('顺滑如丝。慢慢喝。'), sheet).copy.itemBlurbs.americano).toBe('慢慢喝。')
+    expect(recheck(blurbB('奶香浓郁。'), sheet).copy.itemBlurbs.americano).toBe('')
   })
 
   it('guardCopy keeps the borrowed sentence from the judge and rejects a rewrite that repeats it', async () => {
