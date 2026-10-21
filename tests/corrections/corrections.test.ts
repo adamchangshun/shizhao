@@ -99,11 +99,14 @@ async function published() {
   return { projectId: project.id, slug: project.slug, versionId: staged.versionId }
 }
 
-function submit(body: Record<string, unknown>) {
+function submit(
+  body: Record<string, unknown>,
+  headers: Record<string, string> = { 'content-type': 'application/json' },
+) {
   return postCorrection(
     new Request(`${BASE}/api/corrections`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers,
       body: JSON.stringify(body),
     }),
   )
@@ -354,6 +357,68 @@ describe('customer correction → merchant merge', () => {
       needsValue: true,
       suggestedValue: '',
     })
+  })
+})
+
+describe('only JSON requests from the page itself are accepted', () => {
+  const json = 'application/json'
+
+  async function report() {
+    const p = await published()
+    const body = {
+      slug: p.slug,
+      versionId: p.versionId,
+      field: 'items.tart02.price',
+      suggestedValue: '9元',
+    }
+    const stored = () =>
+      getDb().select().from(corrections).where(eq(corrections.projectId, p.projectId)).all()
+    return { body, stored }
+  }
+
+  it('refuses text/plain and a missing Content-Type without storing anything', async () => {
+    const { body, stored } = await report()
+    // What a cross-site no-cors fetch can send without a preflight.
+    expect((await submit(body, { 'content-type': 'text/plain;charset=UTF-8' })).status).toBe(415)
+    expect((await submit(body, {})).status).toBe(415)
+    expect((await submit(body, { 'content-type': 'application/jsonx' })).status).toBe(415)
+    expect(stored()).toEqual([])
+  })
+
+  it('accepts JSON with a charset parameter', async () => {
+    const { body, stored } = await report()
+    expect((await submit(body, { 'content-type': 'Application/JSON; charset=utf-8' })).status).toBe(
+      201,
+    )
+    expect(stored()).toHaveLength(1)
+  })
+
+  it('refuses cross-site requests with 403', async () => {
+    const { body, stored } = await report()
+    const crossSite = await submit(body, { 'content-type': json, 'sec-fetch-site': 'cross-site' })
+    expect(crossSite.status).toBe(403)
+    expect(
+      (await submit(body, { 'content-type': json, origin: 'https://evil.example' })).status,
+    ).toBe(403)
+    expect(
+      (await submit(body, { 'content-type': json, origin: 'http://localhost:6688.evil.example' }))
+        .status,
+    ).toBe(403)
+    expect((await submit(body, { 'content-type': json, origin: 'null' })).status).toBe(403)
+    expect(stored()).toEqual([])
+  })
+
+  it('accepts the published page itself, and refused requests do not use up the budget', async () => {
+    const { body, stored } = await report()
+    const evil = { 'content-type': json, origin: 'https://evil.example' }
+    for (let i = 0; i < 5; i++) expect((await submit(body, evil)).status).toBe(403)
+    const page = {
+      'content-type': json,
+      origin: 'http://localhost:6688',
+      'sec-fetch-site': 'same-origin',
+    }
+    for (let i = 0; i < 3; i++) expect((await submit(body, page)).status).toBe(201)
+    expect(stored()).toHaveLength(3)
   })
 })
 

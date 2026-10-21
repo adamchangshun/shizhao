@@ -1,6 +1,7 @@
 import { createHash, createHmac, timingSafeEqual } from 'node:crypto'
 import { Errors } from './core/errors'
 import { getEnv } from './env'
+import { isSameOriginRequest } from './http'
 import { FixedWindowLimiter } from './rate-limit'
 import { loadOrCreateSessionKey } from './session-key'
 
@@ -111,26 +112,6 @@ function readBearer(request: Request): string | undefined {
 }
 
 const SAFE_METHODS = new Set(['GET', 'HEAD', 'OPTIONS'])
-
-/**
- * Cookie-authenticated state changes must come from our own origin (CSRF defence on top of
- * SameSite=Lax). Requests without Origin/Sec-Fetch-Site are non-browser clients and pass.
- */
-function isSameOriginRequest(request: Request): boolean {
-  if (request.headers.get('sec-fetch-site') === 'cross-site') return false
-  const origin = request.headers.get('origin')
-  if (!origin) return true
-  let originHost: string
-  try {
-    originHost = new URL(origin).host
-  } catch {
-    return false
-  }
-  const allowed = new Set([new URL(getEnv().PUBLIC_BASE_URL).host])
-  const host = request.headers.get('host')
-  if (host) allowed.add(host)
-  return allowed.has(originHost)
-}
 
 /** Throws ApiError(401/403/429) unless the request carries the admin token or a valid session cookie. */
 export function requireAdmin(request: Request): void {
