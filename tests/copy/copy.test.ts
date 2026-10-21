@@ -379,6 +379,13 @@ describe('item blurbs rest only on their own item facts (A4 H2)', () => {
         reason: 'unsupported_number',
         evidence: '28元',
       },
+      // A's spec wording is also a cross-item hit (v0.1.1), alongside its number.
+      {
+        field: 'itemBlurbs.americano',
+        sentence: '约450ml。',
+        reason: 'unsupported_claim',
+        evidence: '约450ml',
+      },
       {
         field: 'itemBlurbs.americano',
         sentence: '约450ml。',
@@ -439,6 +446,7 @@ describe('item blurbs rest only on their own item facts (A4 H2)', () => {
     expect(result.copy.itemBlurbs).toEqual({ latte: '仅售28元。约450ml。', americano: '慢慢喝。' })
     expect(result.violations.map((v) => [v.field, v.sentence, v.reason])).toEqual([
       ['itemBlurbs.americano', '仅售28元。', 'unsupported_number'],
+      ['itemBlurbs.americano', '约450ml。', 'unsupported_claim'],
       ['itemBlurbs.americano', '约450ml。', 'unsupported_number'],
     ])
     expect(result.copyRefs).toEqual(copyApi.computeCopyRefs(result.copy, sheet))
@@ -509,5 +517,168 @@ describe('item blurbs rest only on their own item facts (A4 H2)', () => {
     const evidence = provider.requests[0]!.input.evidence as Array<{ facts: string[] } | null>
     expect(evidence[0]).toBeNull()
     expect(evidence[1]!.facts).toEqual(['午后小店', '拿铁', '约450ml', '28元', '¥28'])
+  })
+})
+
+describe('item blurbs cannot borrow another item’s wording (v0.1.1 cross-item)', () => {
+  // W5 sheet. A: 拿铁 ¥28 约450ml, tag 燕麦奶可选; B: 美式 ¥18 约300ml.
+  // Shop hours 每天8:00-22:00; extraClaims 可外带.
+  function w5Sheet(): FactSheet {
+    return {
+      projectId: insertProject({ type: 'menu', title: '午后小店' }).id,
+      revision: 1,
+      shop: { name: '午后小店', hours: '每天8:00-22:00' },
+      items: [
+        {
+          id: 'latte',
+          name: '拿铁',
+          price: { amount: 28, currency: 'CNY' },
+          spec: '约450ml',
+          tags: ['燕麦奶可选'],
+          imageAssetIds: [],
+          sources: {},
+        },
+        {
+          id: 'americano',
+          name: '美式',
+          price: { amount: 18, currency: 'CNY' },
+          spec: '约300ml',
+          tags: [],
+          imageAssetIds: [],
+          sources: {},
+        },
+      ],
+      extraClaims: ['可外带'],
+      confirmedAt: '2026-10-21T08:00:00.000Z',
+    }
+  }
+  const blurbB = (americano: string): CopyDraft => ({
+    headline: '午后',
+    subhead: '',
+    itemBlurbs: { latte: '', americano },
+    closing: '',
+  })
+  const recheck = (copy: CopyDraft, sheet: FactSheet = w5Sheet()) =>
+    copyApi.guardWithRulesOnly(copy, copyApi.buildFactCorpus(sheet))
+
+  it("① removes B's blurb that repeats A's tag, which carries no number", () => {
+    const result = recheck(blurbB('燕麦奶可选。慢慢喝。'))
+    expect(result.copy.itemBlurbs.americano).toBe('慢慢喝。')
+    expect(result.violations).toEqual([
+      {
+        field: 'itemBlurbs.americano',
+        sentence: '燕麦奶可选。',
+        reason: 'unsupported_claim',
+        evidence: '燕麦奶可选',
+      },
+    ])
+    expect(result.removed).toBe(1)
+  })
+
+  it("②③ A's spec and price stay blocked; the spec also counts as cross-item wording", () => {
+    const spec = recheck(blurbB('约450ml。'))
+    expect(spec.copy.itemBlurbs.americano).toBe('')
+    expect(spec.violations.map((v) => [v.reason, v.evidence])).toEqual([
+      ['unsupported_claim', '约450ml'],
+      ['unsupported_number', '450ml'],
+    ])
+    const price = recheck(blurbB('仅售28元。'))
+    expect(price.copy.itemBlurbs.americano).toBe('')
+    expect(price.violations.map((v) => [v.reason, v.evidence])).toEqual([
+      ['unsupported_number', '28元'],
+    ])
+    expect(spec.removed + price.removed).toBe(2)
+  })
+
+  it('④⑤⑥ shop hours, extraClaims and B’s own price pass', () => {
+    for (const sentence of ['每天8点开门。', '可外带。', '仅售18元。']) {
+      const result = recheck(blurbB(sentence))
+      expect(result.copy.itemBlurbs.americano).toBe(sentence)
+      expect(result.violations).toEqual([])
+    }
+  })
+
+  it("lets B compare itself with A by name, even when A's name contains A's tag", () => {
+    expect(recheck(blurbB('比拿铁更清爽。')).copy.itemBlurbs.americano).toBe('比拿铁更清爽。')
+    const base = w5Sheet()
+    const sheet = {
+      ...base,
+      items: [{ ...base.items[0]!, name: '燕麦拿铁', tags: ['燕麦'] }, base.items[1]!],
+    }
+    expect(recheck(blurbB('比燕麦拿铁更清爽。燕麦香气。'), sheet).copy.itemBlurbs.americano).toBe(
+      '比燕麦拿铁更清爽。',
+    )
+  })
+
+  it('a tag both items carry is not borrowing; the same tag on A alone is', () => {
+    const base = w5Sheet()
+    const shared = {
+      ...base,
+      extraClaims: [],
+      items: [
+        { ...base.items[0]!, tags: ['可外带'] },
+        { ...base.items[1]!, tags: ['可外带'] },
+      ],
+    }
+    expect(recheck(blurbB('可外带。'), shared).copy.itemBlurbs.americano).toBe('可外带。')
+    const aOnly = { ...shared, items: [shared.items[0]!, { ...base.items[1]!, tags: [] }] }
+    expect(recheck(blurbB('可外带。'), aOnly).copy.itemBlurbs.americano).toBe('')
+  })
+
+  it("leaves page-level fields and A's own blurb free to use A's tag", () => {
+    const copy: CopyDraft = {
+      headline: '燕麦奶可选',
+      subhead: '燕麦奶可选。',
+      itemBlurbs: { latte: '燕麦奶可选。', americano: '' },
+      closing: '燕麦奶可选。',
+    }
+    const result = recheck(copy)
+    expect(result.copy).toEqual(copy)
+    expect(result.violations).toEqual([])
+  })
+
+  it("does not read B's own negated tag as A's positive one", () => {
+    const base = w5Sheet()
+    const sheet = {
+      ...base,
+      items: [
+        { ...base.items[0]!, tags: ['加糖'] },
+        { ...base.items[1]!, tags: ['不加糖'] },
+      ],
+    }
+    expect(recheck(blurbB('不加糖。加糖。'), sheet).copy.itemBlurbs.americano).toBe('不加糖。')
+  })
+
+  it('matches across spaces and full-width letters', () => {
+    expect(recheck(blurbB('燕麦奶 可选。')).copy.itemBlurbs.americano).toBe('')
+    const base = w5Sheet()
+    const sheet = { ...base, items: [{ ...base.items[0]!, tags: ['Oat Milk'] }, base.items[1]!] }
+    expect(recheck(blurbB('ＯＡＴＭＩＬＫ。'), sheet).copy.itemBlurbs.americano).toBe('')
+  })
+
+  it('guardCopy keeps the borrowed sentence from the judge and rejects a rewrite that repeats it', async () => {
+    const provider = new ScriptedProvider((stage, input) =>
+      stage === 'guard-judge'
+        ? sentencesIn(input).map(() => ({ unsupported: false }))
+        : (input.items as unknown[]).map(() => '燕麦奶可选，慢慢喝。'),
+    )
+    const result = await copyApi.guardCopy(
+      { copy: blurbB('燕麦奶可选。慢慢喝。'), factSheet: w5Sheet() },
+      { provider },
+    )
+    expect(result.copy.itemBlurbs.americano).toBe('慢慢喝。')
+    expect(result).toMatchObject({ rewritten: 0, removed: 1 })
+    expect(result.violations).toEqual([
+      {
+        field: 'itemBlurbs.americano',
+        sentence: '燕麦奶可选。',
+        reason: 'unsupported_claim',
+        evidence: '燕麦奶可选',
+      },
+    ])
+    const judged = provider.requests
+      .filter((r) => r.stage === 'guard-judge')
+      .flatMap((r) => sentencesIn(r.input))
+    expect(judged).toEqual(['午后', '慢慢喝。'])
   })
 })

@@ -14,10 +14,10 @@ import {
 import { CopyDraft, DesignSpec, FactSheet, GuardResult, type CopyRefs } from '../core/schemas'
 import { getDb } from '../db/client'
 import { getProvider, recordUsage, type GenerateJSONRequest, type LLMProvider } from '../providers'
-import { buildFactCorpus, copyFields, fieldCorpus, type CopyCorpus } from './facts'
+import { buildFactCorpus, copyFields, crossItemRule, fieldCorpus, type CopyCorpus } from './facts'
 import { COPY_SYSTEM, JUDGE_SYSTEM, REWRITE_SYSTEM } from './prompt'
 
-export { buildFactCorpus, computeCopyRefs, fieldCorpus } from './facts'
+export { buildFactCorpus, computeCopyRefs, crossItemRule, fieldCorpus } from './facts'
 export type { CopyCorpus } from './facts'
 export interface CopyOptions {
   provider?: LLMProvider
@@ -26,6 +26,9 @@ export interface CopyOptions {
 }
 export type CopyGuardResult = GuardResult & { copyRefs: CopyRefs }
 const foodRules = mergeRules(defaultRules, rulePacks.food)
+/** Cross-item wording depends on the sheet, so it joins whatever rule set a guard runs. */
+const withCrossItem = (rules: RuleSet, corpus: FactCorpus) =>
+  mergeRules(rules, { rules: [crossItemRule(corpus)] })
 
 function schemaFor(sheet: FactSheet) {
   return CopyDraft.extend({
@@ -111,9 +114,10 @@ export async function guardCopy(
     copy = schemaFor(sheet).parse(input.copy),
     corpus = buildFactCorpus(sheet)
   const call = caller(sheet, opts),
-    fields = copyFields(copy)
+    fields = copyFields(copy),
+    rules = withCrossItem(foodRules, corpus)
   const result = await guardDocument(fields, corpus, {
-    rules: foodRules,
+    rules,
     corpusFor: (field) => fieldCorpus(corpus, field),
     maxFieldLengths: Object.fromEntries(
       Object.keys(fields).map((field) => [
@@ -142,7 +146,7 @@ export async function guardCopy(
         schema: z.array(z.string().max(60)).length(input.items.length),
       }),
   })
-  return finish(copy, result.fields, corpus, result.hits, result.rewritten, result.removed)
+  return finish(copy, result.fields, corpus, result.hits, result.rewritten, result.removed, rules)
 }
 
 /** Synchronous, deterministic correction-time recheck. Never opens a database or provider. */
@@ -153,6 +157,7 @@ export function guardWithRulesOnly(
 ): CopyGuardResult {
   const copy = CopyDraft.parse(input),
     fields = copyFields(copy),
+    checked = withCrossItem(rules, corpus),
     hits: DocumentResult['hits'] = []
   let removed = 0
   const cleaned = Object.fromEntries(
@@ -160,7 +165,7 @@ export function guardWithRulesOnly(
       field,
       splitSentences(text)
         .filter((sentence) => {
-          const sentenceHits = checkSentence(sentence, fieldCorpus(corpus, field), rules)
+          const sentenceHits = checkSentence(sentence, fieldCorpus(corpus, field), checked)
           if (sentenceHits.length === 0) return true
           hits.push(
             ...sentenceHits.map((hit) => ({ ...hit, field, sentence, phase: 'original' as const })),
@@ -171,5 +176,5 @@ export function guardWithRulesOnly(
         .join(''),
     ]),
   )
-  return finish(copy, cleaned, corpus, hits, 0, removed, rules)
+  return finish(copy, cleaned, corpus, hits, 0, removed, checked)
 }

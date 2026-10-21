@@ -1,5 +1,10 @@
 import { FactSheet, type CopyDraft, type CopyRefs } from '../core/schemas'
-import { computeDocumentRefs, type FactCorpus } from '../../packages/fact-guard/src/index'
+import {
+  computeDocumentRefs,
+  normalizeText,
+  type FactCorpus,
+  type Rule,
+} from '../../packages/fact-guard/src/index'
 
 export interface CopyCorpus extends FactCorpus {
   shopName?: string
@@ -57,6 +62,33 @@ export function fieldCorpus<T extends FactCorpus>(corpus: T, field: string): T {
     return usable(path) ? [[fact, path!] as const] : []
   })
   return { ...corpus, facts: kept.map(([fact]) => fact), paths: kept.map(([, path]) => path) }
+}
+
+/**
+ * Rule against an item blurb repeating another item's spec, description or tag, with or without
+ * numbers. Every item's wording is a term; guards resolve support from `fieldCorpus`, so only
+ * wording outside the blurb's own item, shop facts and extraClaims is a hit, and page-level
+ * fields (full corpus) never hit. Item names are exempt: a blurb may compare with another item.
+ * Terms match normalized text with any whitespace between characters.
+ */
+export function crossItemRule(corpus: FactCorpus): Rule {
+  const texts = (pattern: RegExp) =>
+    corpus.facts.filter((fact, i) => fact && pattern.test(corpus.paths?.[i] ?? ''))
+  // A negated mention ("不加糖" next to another item's "加糖") does not repeat that item's claim.
+  const patterns = new Set(
+    texts(/^items\..+\.(?:spec|description|tags\.\d+)$/).flatMap((fact) => {
+      const chars = [...normalizeText(fact).text.replace(/\s/gu, '')]
+      if (chars.length === 0) return []
+      const body = chars.map((char) => char.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&')).join('\\s*')
+      return [`(?<!(?:不是|并非|不含|没有|非|不|未)\\s*)${body}`]
+    }),
+  )
+  return {
+    id: 'cross-item',
+    reason: 'unsupported_claim',
+    patterns: [...patterns],
+    whitelist: texts(/^items\..+\.name$/),
+  }
 }
 
 export function copyFields(copy: CopyDraft): Record<string, string> {
