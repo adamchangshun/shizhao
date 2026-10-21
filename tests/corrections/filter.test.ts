@@ -17,6 +17,18 @@ describe('personal information', () => {
     '微信号是：tianxin_88',
     '我的微信号是这个 abc12345',
     'someone @ example . com',
+    '138----0013----8000',
+    '电话 138 —— 0013 —— 8000',
+    '138 / / / / 0013 / / / / 8000',
+    'QQ 12345678',
+    'qq：1234 5678 9',
+    '扣扣号是 987654321',
+    '我的QQ是这个 123456789',
+    'Q号: 10001',
+    '支付宝账号：tian_88abc',
+    '支付宝 2088 1021 3456 7890',
+    'zfb 12345678',
+    '支付宝收款，账号写在这里 2088102134567890',
   ])('refuses %s', (text) => {
     expect(containsPersonalInfo(text)).toBe(true)
   })
@@ -31,6 +43,15 @@ describe('personal information', () => {
     '约 450g，8 寸',
     'Americano 改成 Latte',
     '一百三十八',
+    'QQ糖 5 元一包',
+    'QQ 音乐里放的歌很好听',
+    '可以用支付宝付款',
+    '支付宝付了 128 元',
+    '支付宝付了 12800 元',
+    '营业 8:00 ---- 20:00',
+    '大杯 18 元 / 中杯 15 元',
+    '2 杯 ---- 3 杯',
+    '价格 13，不是 15',
   ])('allows %s', (text) => {
     expect(containsPersonalInfo(text)).toBe(false)
   })

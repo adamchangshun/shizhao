@@ -28,13 +28,18 @@ const WECHAT_DIRECT = new RegExp(
   'i',
 )
 const ID_TOKEN = /(?<![a-z0-9_-])(?=[a-z][-_a-z0-9]{5,19}(?![a-z0-9_-]))[a-z]*[-_0-9][-_a-z0-9]*/i
+// QQ numbers and Alipay accounts are also only recognisable next to a cue word: a text that names
+// the service and carries a 5–20 digit number or an id-shaped token ("QQ：12345678", "我的QQ是这个
+// 123456789", "支付宝账号 tian_88abc"). An amount ("支付宝付了 12800 元") is not an account.
+const ACCOUNT_CUE = /qq|扣扣|企鹅号|q号|支付宝|alipay|zfb/i
+const ACCOUNT_NUMBER = /(?<!\d)[1-9]\d{4,19}(?!\d|\s?(?:元|块))/
 
-/** True when the text carries a phone number, e-mail, WeChat id or ID card number. */
+/** True when the text carries a phone number, e-mail, WeChat, QQ or Alipay id, or ID card number. */
 export function containsPersonalInfo(text: string): boolean {
   const n = text.normalize('NFKC')
-  // Digits split by up to three separators that are neither letters nor digits
-  // ("138 0013 8000", "138/0013/8000", "(021)64881234") still count.
-  const digits = n.replace(/(?<=\d)[^\p{L}\p{N}]{1,3}(?=\d)/gu, '')
+  // Digits split by any run of separators that are neither letters nor digits
+  // ("138 0013 8000", "138/0013/8000", "138----0013----8000", "(021)64881234") still count.
+  const digits = n.replace(/(?<=\d)[^\p{L}\p{N}]+(?=\d)/gu, '')
   // "someone @ example . com"
   const compact = n.replace(/\s*([@.])\s*/g, '$1')
   return (
@@ -43,7 +48,8 @@ export function containsPersonalInfo(text: string): boolean {
     ID_CARD.test(digits) ||
     EMAIL.test(compact) ||
     WECHAT_DIRECT.test(n) ||
-    (WECHAT_CUE.test(n) && ID_TOKEN.test(n))
+    (WECHAT_CUE.test(n) && ID_TOKEN.test(n)) ||
+    (ACCOUNT_CUE.test(n) && (ACCOUNT_NUMBER.test(digits) || ID_TOKEN.test(n)))
   )
 }
 
