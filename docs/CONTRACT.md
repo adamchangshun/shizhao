@@ -202,7 +202,7 @@ queued → designing → writing → guarding → rendering → checking → suc
 | POST | `/api/guard` | 营销文案事实检查 API（无 Key 仅规则层，有 Key 可用模型判定与行业规则包） | 16 |
 | GET | `/check` | 文案检查页（公开） | 16 |
 
-除 `/p/:slug`、`/api/track`、`POST /api/corrections`、`/api/guard`、`/check` 外，所有路由都要求管理口令（见第 7 节 `ADMIN_TOKEN`），请求头写作 `Authorization: Bearer <ADMIN_TOKEN>`。各请求体与可串联的 curl 示例见 [API-quickstart.md](API-quickstart.md)。错误响应统一为 `{ error: { code: string, message: string } }`，`message` 为中文且不泄露内部细节。
+除 `/p/:slug`、`/api/track`、`POST /api/corrections`、`/api/guard`、`/check` 外，所有路由都要求管理口令（见第 7 节 `ADMIN_TOKEN`；匿名例外另见 R6 等修订，登录与登出接口除外）。脚本调用时在请求头写 `Authorization: Bearer <ADMIN_TOKEN>`，商家后台登录后用 Cookie。各请求体与可串联的 curl 示例见 [API-quickstart.md](API-quickstart.md)。错误响应统一为 `{ error: { code: string, message: string } }`，`message` 为中文且不泄露内部细节。
 
 ## 7. 环境变量（`.env.example`）
 

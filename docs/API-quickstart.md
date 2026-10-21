@@ -54,6 +54,20 @@ curl -sS -X POST "$BASE/api/projects/$PROJECT_ID/assets" -H "$AUTH" \
   -F 'text=<eval/samples/bakery-dessert-menu/input.txt'
 ```
 
+同一次请求上传的多张图片创建时间相同，之后按素材 id 排列，不保证保持上传顺序。Mock 按素材顺序把图片配给商品，所以上面的写法下，商品配图可能对调（事实表的文字和价格不受影响）。需要固定顺序时，改为每张图片单独上传一次，最后单独上传文字（`pnpm demo` 就是这样做的），用它代替上面的命令：
+
+Images uploaded in one request share a creation time and are then listed by asset id, so their upload order is not guaranteed. The mock assigns images to products in asset order, so with the command above two product photos may swap (fact text and prices are unaffected). If order matters, upload one image per request and the text last (as `pnpm demo` does), instead of the command above:
+
+```bash
+# 替代写法 / alternative
+for img in egg-tart menu; do
+  curl -sS -X POST "$BASE/api/projects/$PROJECT_ID/assets" -H "$AUTH" \
+    -F "images=@eval/samples/bakery-dessert-menu/images/$img.png"
+done
+curl -sS -X POST "$BASE/api/projects/$PROJECT_ID/assets" -H "$AUTH" \
+  -F 'text=<eval/samples/bakery-dessert-menu/input.txt'
+```
+
 ## 3. 抽取事实 / Extract facts
 
 没有请求体。返回 201 `{ factSheet, conflicts, lowConfidenceFields }`，`factSheet` 是新 revision（第一次为 1）的**未确认**事实表。
