@@ -13,7 +13,12 @@ interface FactTextProps {
 
 type ShopTextField = 'name' | 'phone' | 'wechat' | 'address' | 'hours'
 
-export function ShopText({ shop, field, as: Tag = 'span', className }: FactTextProps & { shop: Shop; field: ShopTextField }): ReactElement | null {
+export function ShopText({
+  shop,
+  field,
+  as: Tag = 'span',
+  className,
+}: FactTextProps & { shop: Shop; field: ShopTextField }): ReactElement | null {
   const value = shop[field]
   if (!value) return null
   return (
@@ -25,7 +30,12 @@ export function ShopText({ shop, field, as: Tag = 'span', className }: FactTextP
 
 type ItemTextField = 'name' | 'spec' | 'description'
 
-export function ItemText({ item, field, as: Tag = 'span', className }: FactTextProps & { item: FactItem; field: ItemTextField }): ReactElement | null {
+export function ItemText({
+  item,
+  field,
+  as: Tag = 'span',
+  className,
+}: FactTextProps & { item: FactItem; field: ItemTextField }): ReactElement | null {
   const value = item[field]
   if (!value) return null
   return (
@@ -35,7 +45,13 @@ export function ItemText({ item, field, as: Tag = 'span', className }: FactTextP
   )
 }
 
-export function ItemPrice({ item, className }: { item: FactItem; className?: string }): ReactElement | null {
+export function ItemPrice({
+  item,
+  className,
+}: {
+  item: FactItem
+  className?: string
+}): ReactElement | null {
   if (!item.price) return null
   return (
     <span className={className ? `price ${className}` : 'price'}>
@@ -86,8 +102,24 @@ interface ItemImageProps {
 /** Width/height give the box its aspect ratio before load; CSS crops with object-fit. */
 export function ItemImage({ image, alt, width, height, className }: ItemImageProps): ReactElement {
   return image.hero ? (
-    <img src={image.src} alt={alt} width={width} height={height} className={className} fetchPriority="high" decoding="async" />
+    <img
+      src={image.src}
+      alt={alt}
+      width={width}
+      height={height}
+      className={className}
+      fetchPriority="high"
+      decoding="async"
+    />
   ) : (
-    <img src={image.src} alt={alt} width={width} height={height} className={className} loading="lazy" decoding="async" />
+    <img
+      src={image.src}
+      alt={alt}
+      width={width}
+      height={height}
+      className={className}
+      loading="lazy"
+      decoding="async"
+    />
   )
 }

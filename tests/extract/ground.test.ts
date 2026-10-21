@@ -100,6 +100,23 @@ describe('groundDraft: prices', () => {
     }
   })
 
+  it('gives a price to the longest item name that ends right before it (燕麦拿铁, not 拿铁)', () => {
+    const d = draft({ items: [{ name: '拿铁' }, { name: '燕麦拿铁' }] })
+    const out = groundDraft(d, ctx('拿铁\n燕麦拿铁 25元', []))
+    expect(out.items[0]!.price).toBeUndefined()
+    expect(out.items[1]!.price?.amount).toBe(25)
+    // Each written price still goes to its own item.
+    const both = groundDraft(d, ctx('拿铁 18元\n燕麦拿铁 25元', []))
+    expect(both.items.map((i) => i.price?.amount)).toEqual([18, 25])
+  })
+
+  it('flags a missing price when an equal amount elsewhere was not taken by any item', () => {
+    const d = draft({ items: [{ name: '拿铁' }, { name: '美式' }] })
+    const out = groundDraft(d, ctx('拿铁 18元，美式 今天18元', []))
+    expect(out.items[0]!.price?.amount).toBe(18)
+    expect(out.lowConfidenceFields).toContain('items[1].price')
+  })
+
   it('does not flag a missing price when every amount in the text belongs to an item', () => {
     const d = draft({ items: [{ name: '拿铁' }, { name: '美式' }] })
     const out = groundDraft(d, ctx('拿铁 18 元，美式', []))

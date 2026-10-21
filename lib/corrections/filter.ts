@@ -41,9 +41,21 @@ const ACCOUNT_NEARBY = new RegExp(
   'i',
 )
 const ACCOUNT_NEXT_CLAUSE = new RegExp(
-  `${ACCOUNT_CUE}[^,.;!?\\n。、]{0,20}[,.;!?\\n。、][^,.;!?\\n。、]{0,10}?(?:账号|帐号|账户|号码)[^,.;!?\\n。、]{0,10}?(?:(?<!\\d)[1-9]\\d{4,19}(?!\\d)|${ID_TOKEN.source})`,
+  `${ACCOUNT_CUE}[^,.;!?\\n。、]{0,20}[,.;!?\\n。、][^,.;!?\\n。、]{0,10}?(?:账号|帐号|账户|号码)[^,.;!?\\n。、]{0,10}?(?:(?<!\\d)[1-9]\\d{4,19}(?!\\d|\\s?(?:元|块))|${ID_TOKEN.source})`,
   'i',
 )
+// "支付宝账号 tian 88abc": an id split by plain spaces. Only the few words right after the cue
+// are joined, then the whole run must have the shape of an id.
+const ACCOUNT_SPACED = new RegExp(
+  `${ACCOUNT_CUE}[\\s:=是为]{0,3}([a-z0-9][-_a-z0-9]*(?: [-_a-z0-9]+){1,4})(?![-_a-z0-9])`,
+  'i',
+)
+const WHOLE_ID = new RegExp(`^(?:[1-9]\\d{4,19}|${ID_TOKEN.source})$`, 'i')
+
+function spacedAccount(text: string): boolean {
+  const run = ACCOUNT_SPACED.exec(text)?.[1]
+  return run !== undefined && WHOLE_ID.test(run.replace(/ /g, ''))
+}
 
 /** True when the text carries a phone number, e-mail, WeChat, QQ or Alipay id, or ID card number. */
 export function containsPersonalInfo(text: string): boolean {
@@ -64,7 +76,8 @@ export function containsPersonalInfo(text: string): boolean {
     (WECHAT_CUE.test(n) && ID_TOKEN.test(n)) ||
     ACCOUNT_DIRECT.test(ids) ||
     ACCOUNT_NEARBY.test(ids) ||
-    ACCOUNT_NEXT_CLAUSE.test(ids)
+    ACCOUNT_NEXT_CLAUSE.test(ids) ||
+    spacedAccount(ids)
   )
 }
 

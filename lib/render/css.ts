@@ -63,7 +63,9 @@ export interface BaseCssOptions {
 export function baseCss(design: DesignSpec, options: BaseCssOptions): string {
   const p = design.palette
   const { heading, body } = design.fontPair
-  const headingStack = options.headingSharesBody ? fontStack(body, 'body') : fontStack(heading, 'heading')
+  const headingStack = options.headingSharesBody
+    ? fontStack(body, 'body')
+    : fontStack(heading, 'heading')
   return `:root{--bg:${p.bg};--surface:${p.surface};--primary:${p.primary};--accent:${p.accent};--text:${p.text};
 --on-primary:${inkOn(p.primary)};--on-accent:${inkOn(p.accent)};
 --font-h:${headingStack};--font-b:${fontStack(body, 'body')};--fw-h:${fontWeight(heading, 'heading')}}

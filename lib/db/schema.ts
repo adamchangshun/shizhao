@@ -170,8 +170,7 @@ export const usageRecords = sqliteTable(
   {
     id: text('id').primaryKey(),
     jobId: text('job_id').references(() => jobs.id),
-    projectId: text('project_id')
-      .references(() => projects.id),
+    projectId: text('project_id').references(() => projects.id),
     provider: text('provider').notNull(),
     model: text('model').notNull(),
     stage: text('stage').notNull(),
@@ -185,11 +184,18 @@ export const usageRecords = sqliteTable(
 )
 
 // M19 public API daily request accounting: key fingerprints only, never submitted content.
-export const guardQuota = sqliteTable('guard_quota', {
-  keyHash: text('key_hash').notNull(),
-  day: text('day').notNull(),
-  count: integer('count').notNull().default(0),
-}, t => [primaryKey({columns:[t.keyHash,t.day]}), check('guard_quota_nonnegative',sql`${t.count} >= 0`)])
+export const guardQuota = sqliteTable(
+  'guard_quota',
+  {
+    keyHash: text('key_hash').notNull(),
+    day: text('day').notNull(),
+    count: integer('count').notNull().default(0),
+  },
+  (t) => [
+    primaryKey({ columns: [t.keyHash, t.day] }),
+    check('guard_quota_nonnegative', sql`${t.count} >= 0`),
+  ],
+)
 
 export const visitEvents = sqliteTable(
   'visit_events',
