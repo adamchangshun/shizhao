@@ -32,11 +32,16 @@ const ID_TOKEN = /(?<![a-z0-9_-])(?=[a-z][-_a-z0-9]{5,19}(?![a-z0-9_-]))[a-z]*[-
 // the cue are allowed: "Q Q", "支 付 宝"). Either a 5–20 digit number follows the cue directly
 // ("QQ：12345678", "支付宝账号 2088…", even with 元 after it), or the same clause carries a number
 // that is not an amount, or an id-shaped token ("我的QQ是这个 123456789", "支付宝账号：tian_88abc").
-// "支付宝付了 12800 元", "QQ糖" and "QQ音乐" are not accounts, nor is a number in another clause.
+// "支付宝付了 12800 元", "QQ糖" and "QQ音乐" are not accounts, nor is a number in another clause
+// unless that clause says it is one ("支付宝收款，账号写在这里 2088…").
 const ACCOUNT_CUE = String.raw`(?:q\s?q(?!\s?(?:糖|音乐))|扣\s?扣|企鹅号|q号|支\s?付\s?宝|alipay|zfb)(?:号码|号|账号|帐号|账户|id)?`
 const ACCOUNT_DIRECT = new RegExp(`${ACCOUNT_CUE}[\\s:=是为]{0,3}[1-9]\\d{4,19}(?!\\d)`, 'i')
 const ACCOUNT_NEARBY = new RegExp(
   `${ACCOUNT_CUE}[^,.;!?\\n。、]{0,20}?(?:(?<!\\d)[1-9]\\d{4,19}(?!\\d|\\s?(?:元|块))|${ID_TOKEN.source})`,
+  'i',
+)
+const ACCOUNT_NEXT_CLAUSE = new RegExp(
+  `${ACCOUNT_CUE}[^,.;!?\\n。、]{0,20}[,.;!?\\n。、][^,.;!?\\n。、]{0,10}?(?:账号|帐号|账户|号码)[^,.;!?\\n。、]{0,10}?(?:(?<!\\d)[1-9]\\d{4,19}(?!\\d)|${ID_TOKEN.source})`,
   'i',
 )
 
@@ -46,6 +51,8 @@ export function containsPersonalInfo(text: string): boolean {
   // Digits split by any run of separators that are neither letters nor digits
   // ("138 0013 8000", "138/0013/8000", "138----0013----8000", "(021)64881234") still count.
   const digits = n.replace(/(?<=\d)[^\p{L}\p{N}]+(?=\d)/gu, '')
+  // "tian _ 88abc": spaces around "_" and "-" inside an account id.
+  const ids = digits.replace(/\s*([-_])\s*/g, '$1')
   // "someone @ example . com"
   const compact = n.replace(/\s*([@.])\s*/g, '$1')
   return (
@@ -55,8 +62,9 @@ export function containsPersonalInfo(text: string): boolean {
     EMAIL.test(compact) ||
     WECHAT_DIRECT.test(n) ||
     (WECHAT_CUE.test(n) && ID_TOKEN.test(n)) ||
-    ACCOUNT_DIRECT.test(digits) ||
-    ACCOUNT_NEARBY.test(digits)
+    ACCOUNT_DIRECT.test(ids) ||
+    ACCOUNT_NEARBY.test(ids) ||
+    ACCOUNT_NEXT_CLAUSE.test(ids)
   )
 }
 
