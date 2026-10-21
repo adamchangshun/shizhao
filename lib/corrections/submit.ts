@@ -7,7 +7,7 @@ import { ID_PATTERN, SLUG_PATTERN, newId } from '../core/ids'
 import { getDb } from '../db/client'
 import { findFactSheet } from '../db/repo/fact-sheets'
 import { corrections, projects, versions } from '../db/schema'
-import { readJsonLimited } from '../http'
+import { isJsonRequest, isSameOriginRequest, readJsonLimited } from '../http'
 import { FixedWindowLimiter } from '../rate-limit'
 import { clientHash } from '../stats/limiter'
 import { containsPersonalInfo, looksLikeSpam, sanitizeText } from './filter'
@@ -33,6 +33,12 @@ const perProject = new FixedWindowLimiter(PROJECT_DAILY_LIMIT, 24 * 3600_000)
 const personalInfo = () => new ApiError(400, 'personal_info', '请勿填写个人信息')
 
 export async function submitCorrection(request: Request, now: number = Date.now()): Promise<void> {
+  // Only the published page's own form may post here. Otherwise any site could make its visitors
+  // send no-cors text/plain reports and use up a page's daily budget from their addresses.
+  if (!isSameOriginRequest(request)) throw Errors.forbidden()
+  if (!isJsonRequest(request)) {
+    throw new ApiError(415, 'unsupported_media_type', '请求格式不正确')
+  }
   const body = SubmitBody.parse(await readJsonLimited(request, MAX_BODY_BYTES))
 
   const project = getDb()
