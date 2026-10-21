@@ -40,10 +40,10 @@ const PRICE_TOKEN = String.raw`(?:¥\s*\d{1,7}(?:\.\d{1,2})?|\d{1,7}(?:\.\d{1,2}
 // Between the name and its price only: spaces, one bracketed size note, and one colon, comma
 // or enumeration comma ('可颂，12 元', '蛋挞、8元'; after NFKC, full-width brackets, colons and
 // commas are ASCII, '、' stays). Any other words in between (e.g. '把价格写成', '今天') mean the
-// number is not this item's price. Each run of spaces is capped at 8: with two unbounded \s*
-// around the optional separator, a name followed by a long run of spaces backtracks
-// quadratically (20,000 spaces took ~300ms).
-const GAP = String.raw`\s{0,8}(?:\([^()\d\n]{1,8}\)\s{0,8})?[:,、]?\s{0,8}`
+// number is not this item's price. Every quantifier on spaces follows a non-space token, so no
+// two of them compete for the same run: with '\s*[:,、]?\s*' a name followed by a long run of
+// spaces backtracked quadratically (20,000 spaces took ~300ms); this form is linear.
+const GAP = String.raw`\s*(?:\([^()\d\n]{1,8}\)\s*)?(?:[:,、]\s*)?`
 
 function escapeRegExp(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
