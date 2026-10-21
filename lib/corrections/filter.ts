@@ -28,11 +28,17 @@ const WECHAT_DIRECT = new RegExp(
   'i',
 )
 const ID_TOKEN = /(?<![a-z0-9_-])(?=[a-z][-_a-z0-9]{5,19}(?![a-z0-9_-]))[a-z]*[-_0-9][-_a-z0-9]*/i
-// QQ numbers and Alipay accounts are also only recognisable next to a cue word: a text that names
-// the service and carries a 5–20 digit number or an id-shaped token ("QQ：12345678", "我的QQ是这个
-// 123456789", "支付宝账号 tian_88abc"). An amount ("支付宝付了 12800 元") is not an account.
-const ACCOUNT_CUE = /qq|扣扣|企鹅号|q号|支付宝|alipay|zfb/i
-const ACCOUNT_NUMBER = /(?<!\d)[1-9]\d{4,19}(?!\d|\s?(?:元|块))/
+// QQ numbers and Alipay accounts are also only recognisable next to a cue word (spaces inside
+// the cue are allowed: "Q Q", "支 付 宝"). Either a 5–20 digit number follows the cue directly
+// ("QQ：12345678", "支付宝账号 2088…", even with 元 after it), or the same clause carries a number
+// that is not an amount, or an id-shaped token ("我的QQ是这个 123456789", "支付宝账号：tian_88abc").
+// "支付宝付了 12800 元", "QQ糖" and "QQ音乐" are not accounts, nor is a number in another clause.
+const ACCOUNT_CUE = String.raw`(?:q\s?q(?!\s?(?:糖|音乐))|扣\s?扣|企鹅号|q号|支\s?付\s?宝|alipay|zfb)(?:号码|号|账号|帐号|账户|id)?`
+const ACCOUNT_DIRECT = new RegExp(`${ACCOUNT_CUE}[\\s:=是为]{0,3}[1-9]\\d{4,19}(?!\\d)`, 'i')
+const ACCOUNT_NEARBY = new RegExp(
+  `${ACCOUNT_CUE}[^,.;!?\\n。、]{0,20}?(?:(?<!\\d)[1-9]\\d{4,19}(?!\\d|\\s?(?:元|块))|${ID_TOKEN.source})`,
+  'i',
+)
 
 /** True when the text carries a phone number, e-mail, WeChat, QQ or Alipay id, or ID card number. */
 export function containsPersonalInfo(text: string): boolean {
@@ -49,7 +55,8 @@ export function containsPersonalInfo(text: string): boolean {
     EMAIL.test(compact) ||
     WECHAT_DIRECT.test(n) ||
     (WECHAT_CUE.test(n) && ID_TOKEN.test(n)) ||
-    (ACCOUNT_CUE.test(n) && (ACCOUNT_NUMBER.test(digits) || ID_TOKEN.test(n)))
+    ACCOUNT_DIRECT.test(digits) ||
+    ACCOUNT_NEARBY.test(digits)
   )
 }
 

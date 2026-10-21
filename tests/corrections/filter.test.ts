@@ -28,7 +28,11 @@ describe('personal information', () => {
     '支付宝账号：tian_88abc',
     '支付宝 2088 1021 3456 7890',
     'zfb 12345678',
-    '支付宝收款，账号写在这里 2088102134567890',
+    '支付宝收款账号写在这里 2088102134567890',
+    'QQ账号 12345678元',
+    '支付宝账号 2088102134567890 元',
+    'Q Q：12345678',
+    '支 付 宝 2088 1021 3456 7890',
   ])('refuses %s', (text) => {
     expect(containsPersonalInfo(text)).toBe(true)
   })
@@ -52,6 +56,8 @@ describe('personal information', () => {
     '大杯 18 元 / 中杯 15 元',
     '2 杯 ---- 3 杯',
     '价格 13，不是 15',
+    '支持支付宝付款，商品编号 12345 写错了',
+    'QQ音乐可以播放，订单号 abc_123 有误',
   ])('allows %s', (text) => {
     expect(containsPersonalInfo(text)).toBe(false)
   })
