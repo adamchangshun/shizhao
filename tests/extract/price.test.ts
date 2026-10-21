@@ -128,4 +128,11 @@ describe('findTextPrice', () => {
     expect(findTextPrice('拿铁', '拿铁 28-35元')).toBeNull()
     expect(findTextPrice('摩卡', '拿铁 18 元')).toBeNull()
   })
+
+  it('returns within 50ms when the name is followed by 20,000 spaces', () => {
+    const text = `拿铁${' '.repeat(20_000)}x`
+    const start = performance.now()
+    expect(findTextPrice('拿铁', text)).toBeNull()
+    expect(performance.now() - start).toBeLessThan(50)
+  })
 })
