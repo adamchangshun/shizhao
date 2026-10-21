@@ -144,7 +144,7 @@ describe('07gap MEDIUM-2: narrow atmosphere exemptions', () => {
     ['招牌笑容，招牌可颂', '招牌'],
     ['限定的温柔，限定款可颂', '限定'],
     ['手工皂般细腻的奶油，手工制作', '手工'],
-    ['低温✨天气里的可颂', '低温'],
+    ['低温✨发酵的可颂', '低温'],
     ['手工皂奶油', '手工'],
   ])('does not exempt a factual or noncontiguous hit: %s', (sentence, term) => {
     expect(checkSentence(sentence, { facts: ['黄油可颂'] }, rules)).toContainEqual(
