@@ -20,10 +20,10 @@ Among the open-source projects we searched on GitHub and Gitee, we found none th
 
 | Metric | Result | Source |
 |---|---|---|
-| Time to generate one page | To be filled in after the 2026-10-14 rerun | [Evaluation and validation](#evaluation-and-validation) |
-| Comparison: AI writes the whole page vs Shizhao | To be filled in after the 2026-10-14 rerun | [Evaluation and validation](#evaluation-and-validation) |
+| Model time to generate one page | 19.12 s per run on average, end to end (qwen-plus + qwen3-vl-plus, 3 samples × 3 runs, 2026-10-20) | [Evaluation and validation](#evaluation-and-validation) |
+| Comparison: fact errors per page | AI writes the whole page: 0.14; Shizhao end to end: 0.33 (both from raw photos and text, merchant changes nothing; small sample, see below) | [Evaluation and validation](#evaluation-and-validation) |
 | Rule-layer holdout block rate / false-positive rate | 63.5% / 21.4% (80 cases, rule layer only) | [Evaluation and validation](#evaluation-and-validation) |
-| Automated tests | 795 tests, all passing (2026-10-14, commit `50c5639`) | `pnpm test` |
+| Automated tests | 1245 tests, all passing (2026-10-21, 58 test files) | `pnpm test` |
 
 ## Pipeline
 
@@ -59,7 +59,7 @@ flowchart LR
 
 ## Quick start
 
-With no model key configured, the built-in mock model (no network) is used, so the whole "create project → upload → extract → confirm → generate → publish" flow runs with **zero configuration**. The mock model does not read images: if the uploaded text exactly matches the text of a sample in `eval/samples/`, it returns that sample's hand-checked facts; any other input gets fixed demo data. So `pnpm demo` produces a page for the sample shop "麦香小铺", while your own uploads are not really recognized under the mock; to process real material, [use a real model](#using-a-real-model). The evaluation scripts do not use this echo under the mock, so they never score themselves against the answer key.
+With no model key configured, the built-in mock model (no network) is used, so the whole "create project → upload → extract → confirm → generate → publish" flow runs with **zero configuration**. The mock model does not read images: if the uploaded text exactly matches the text of a sample in `eval/samples/`, it uses that sample's labels as the draft; any other input gets fixed demo data. The mock returns a fixed model draft that still goes through fact extraction and validation; the merchant must check every field and fill in anything missing. So `pnpm demo` produces a page for the sample shop "麦香小铺", while your own uploads are not really recognized under the mock; to process real material, [use a real model](#using-a-real-model). The evaluation scripts do not use this echo under the mock, so they never score themselves against the answer key.
 
 ### Option 1: Docker (recommended)
 
@@ -75,6 +75,7 @@ docker compose up
 - Without `ADMIN_TOKEN`, the container generates a random admin token on first start, prints it in the log and keeps it in `data/admin-token`.
 - Data (database, uploads, generated pages) lives in the mounted `./data` directory.
 - To run the full demo, open another terminal and run `docker compose exec shizhao pnpm demo`.
+- To stop: press Ctrl+C in the `docker compose up` terminal, or run `docker compose down` to stop and remove this run's containers and network; the data in `./data` is kept. If you ran the local `pnpm demo` earlier, stop it with Ctrl+C first so the two do not compete for port 6688.
 
 So far this has only been verified with Docker Desktop on macOS (Apple silicon); Docker on Linux and Windows is untested, and issues are welcome.
 
@@ -112,14 +113,18 @@ Or call the copy-check API directly:
 ```bash
 curl -X POST http://localhost:6688/api/guard \
   -H 'Content-Type: application/json' \
-  -d '{"text":"全城销量第一，当天现烤。","facts":["当天现烤"]}'
+  -d '{"text":"全城销量第一。当天现烤。","facts":["当天现烤"]}'
 ```
 
-"全城销量第一" (best-selling in town) is blocked as an unsupported sales claim and an absolute claim; "当天现烤" (baked today) is backed by a fact and kept.
+The check works sentence by sentence, and the response lists each one under `sentences`: "全城销量第一。" (best-selling in town) is marked `blocked` as an unsupported sales claim and an absolute claim; "当天现烤。" (baked today) is backed by a fact and marked `ok`. One violation marks the whole sentence `blocked`; the offending clause is not cut out on its own, so "全城销量第一，当天现烤。" written as one sentence is blocked as a whole.
 
 To see all templates at once, run `pnpm render:demo`: it renders the 3 templates with fixed single-item and menu data into `data/demo/<template>-<dataset>/index.html`. Before the first run, install the headless browser once with `pnpm exec playwright install --only-shell chromium` (`pnpm test` does this automatically).
 
 Everyday commands: `pnpm typecheck`, `pnpm lint`, `pnpm test`.
+
+### Using the API
+
+Everything the merchant console does is also available through the admin API. Authentication, request bodies and a chain of curl commands you can copy in order, from creating a project to publishing, are in [docs/API-quickstart.md](docs/API-quickstart.md); the route table is in section 6 of [docs/CONTRACT.md](docs/CONTRACT.md).
 
 ## Using a real model
 
@@ -180,7 +185,7 @@ Scripts, sample format and how to add samples: [eval/README.md](eval/README.md).
 
 | Test set | Size | Block rate | False-positive rate | Nature |
 |---|---|---|---|---|
-| A1 adversarial set | 47 to block, 23 to pass | 93.6% (44/47) | 0% (0/23) | **In-sample**: A1 was consulted during development to tune rules, so it is only a regression set; without the A1-derived word lists it scores 78.7% (37/47) |
+| A1 adversarial set | 47 to block, 23 to pass | 95.7% (45/47) | 0% (0/23) | **In-sample**: A1 was consulted during development to tune rules, so it is only a regression set. Numbers are the A1 overall line printed by `pnpm test` on main, 2026-10-21. An earlier ablation (at 44/47) scored 78.7% (37/47) without the A1-derived word lists; it was not rerun |
 | A1b independent holdout | 52 to block, 28 to pass | 63.5% (33/52) | 21.4% (6/28) | Independent: written without seeing the implementation, unseen by the implementer before the test, run exactly once |
 
 About the A1b holdout: cases were written from the functional spec by someone who never saw the implementation, frozen and hashed before the run, and run exactly once against a fixed commit without any rule or case changes. No model was called. Block rate 63.5% (33/52, 95% CI 49.9%–75.2%); false-positive rate 21.4% (6/28, 95% CI 10.2%–39.5%). Misses were mostly paraphrased ingredient, origin, efficacy and implied-ranking claims; false positives came mostly from Chinese idioms containing numbers.
@@ -189,37 +194,47 @@ The rule layer only recognizes listed words and patterns, so paraphrases can sli
 
 ### Real-model experiments
 
-> The three tables below will be filled in after the 2026-10-14 rerun with a real model, with model name, version, date, runId and commit. The report currently in `eval/reports/2026-10-13/` was produced with the mock model to verify the pipeline; **its numbers are meaningless and must not be quoted**.
+Numbers below come from [eval/reports/2026-10-20/report.md](eval/reports/2026-10-20/report.md): text model `qwen-plus`, vision model `qwen3-vl-plus` (Alibaba Cloud Model Studio, openai-compatible), runId `openai-compatible-qwen-plus-1020`, commit `dafb379`. **Limits of the evidence**: only 3 samples (7 products), all with script-generated synthetic images, 3 runs per sample, so each row covers only 7–9 pages; the numbers describe these runs and do not generalize. The `eval/reports/2026-10-13/` report in the repository was produced with the mock model to check the pipeline; its numbers are meaningless and must not be quoted.
 
 **Experiment 1: fact extraction accuracy**
 
 | Field | Labeled | Extracted | Correct | Precision | Recall |
 |---|---:|---:|---:|---:|---:|
-| Product name | TBD | TBD | TBD | TBD | TBD |
-| Price | TBD | TBD | TBD | TBD | TBD |
-| Spec | TBD | TBD | TBD | TBD | TBD |
-| Shop phone | TBD | TBD | TBD | TBD | TBD |
-| Shop address | TBD | TBD | TBD | TBD | TBD |
+| Product name | 7 | 7 | 5 | 71.4% | 71.4% |
+| Price | 7 | 5 | 4 | 80.0% | 57.1% |
+| Spec | 3 | 2 | 1 | 50.0% | 33.3% |
+| Shop phone | 2 | 2 | 2 | 100.0% | 100.0% |
+| Shop address | 2 | 2 | 2 | 100.0% | 100.0% |
 
 **Experiment 2: AI writes the whole page (group A) vs Shizhao (group B)**
 
-| Group | Input | Pages | Fact errors per page | Of which price and name | Unsupported claims per page | Avg cost (CNY/run) | Avg model time (s/run) |
+| Group | Input | Pages | Fact errors per page | Of which price and name | Unsupported claims per page (rule-layer count) | Avg cost (CNY/run) | Avg model time (s/run) |
 |---|---|---:|---:|---:|---:|---:|---:|
-| A: AI writes the whole page | Raw photos and text | TBD | TBD | TBD | TBD | TBD | TBD |
-| B: Shizhao (end to end) | Raw photos and text → extract → merchant changes nothing → generate | TBD | TBD | TBD | TBD | TBD | TBD |
+| A: AI writes the whole page | Natural-language description of the gold fact sheet | 9/9 | 0.11 | 0.11 | 4.22 | 0.0051 | 54.27 |
+| A: AI writes the whole page | Raw photos and text | 7/9 | 0.14 | 0.14 | 3.14 | 0.0037 | 46.34 |
+| B: Shizhao (field consistency guaranteed by design) | Gold fact sheet (confirmed) | 8/9 | 0.00 | 0.00 | 0.00 | 0.0024 | 11.09 |
+| B: Shizhao (end to end) | Raw photos and text → extract → merchant changes nothing → generate | 9/9 | 0.33 | 0.33 | 0.44 | 0.0038 | 19.12 |
 
-**Experiment 3: guard block rate and false-positive rate**
+The zeros in the B gold row come from code filling in and checking every field; they are guaranteed by design, not a model result. Only the end-to-end row compares with group A's "raw photos and text" row: all 3 of its errors are the same missed price ("巴斯克芝士蛋糕 6 寸 128 元", see [Known limitations](#known-limitations)), which reaches the page when the merchant changes nothing.
+
+**Experiment 3: guard block rate and false-positive rate** (`packages/fact-guard/test/cases.zh.json`, 120 cases)
 
 | Judging | Judge model | To block | Blocked | Block rate | To pass | False positives | FP rate |
 |---|---|---:|---:|---:|---:|---:|---:|
-| Rule layer only | None | TBD | TBD | TBD | TBD | TBD | TBD |
-| Rules + model judge | TBD | TBD | TBD | TBD | TBD | TBD | TBD |
+| Rule layer only | None | 78 | 78 | 100.0% | 42 | 0 | 0.0% |
+| Rules + model judge | openai-compatible/qwen-plus | 78 | 78 | 100.0% | 42 | 0 | 0.0% |
+
+This case set was built by the same module as the rule layer, and the rules were written against it, so these scores are optimistic; for unseen claims, see the A1b holdout numbers above.
 
 With a real model configured, rerun all experiments (reports go to `eval/reports/<date>/`):
 
 ```bash
 pnpm eval:extract && pnpm eval:compare && pnpm eval:guard && pnpm eval:report
 ```
+
+## Known limitations
+
+- F1: when a spec sits between the product name and the price (e.g. "巴斯克芝士蛋糕 6 寸 128 元"), the price is missed; a fix is planned for v0.1.1. Until then, check every field and add the price before confirming the fact sheet.
 
 ## How it was built
 
