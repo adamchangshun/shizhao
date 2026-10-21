@@ -129,6 +129,13 @@ describe('findTextPrice', () => {
     expect(findTextPrice('摩卡', '拿铁 18 元')).toBeNull()
   })
 
+  it('still reads prices aligned with long runs of spaces', () => {
+    const pad = ' '.repeat(20)
+    expect(findTextPrice('拿铁', `拿铁${pad}18元`)?.amount).toBe(18)
+    expect(findTextPrice('拿铁', `拿铁${pad}:${pad}18元`)?.amount).toBe(18)
+    expect(findTextPrice('拿铁', `拿铁${pad}(大杯)${pad}22元/杯`)?.unit).toBe('杯')
+  })
+
   it('returns within 50ms when the name is followed by 20,000 spaces', () => {
     const text = `拿铁${' '.repeat(20_000)}x`
     const start = performance.now()
