@@ -136,7 +136,7 @@ describe('optional MEDIUM: points before the number', () => {
     expect(checkSentence(sentence, { facts: [sentence] }, rules)).toEqual([])
   })
 
-  it.each(['早上8点见', '8点准时开门', '22点前到店', '营业到22点', '积分活动早上8点见'])(
+  it.each(['早上8点见', '8点准时开门', '22点前到店', '营业到22点', '积分活动另行通知，早上8点见'])(
     'retains genuine clock references: %s',
     (sentence) => {
       expect(checkSentence(sentence, hours, rules)).toEqual([])

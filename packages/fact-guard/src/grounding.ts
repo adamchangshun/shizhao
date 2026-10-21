@@ -95,6 +95,17 @@ function overlaps(start: number, end: number, spans: ClockSpan[]): boolean {
   return spans.some((span) => start < span.end && end > span.start)
 }
 
+function clockClause(sentence: string, time: ClockSpan): Range {
+  // Colons belong to clock notation and may also introduce the same promotional claim.
+  const boundary = /[，。！？；、,.!?;\r\n]/u
+  let { start, end } = time
+  while (start > 0 && !boundary.test(sentence[start - 1]!)) start--
+  while (end < sentence.length && !boundary.test(sentence[end]!)) end++
+  while (start < end && /\s/u.test(sentence[start]!)) start++
+  while (end > start && /\s/u.test(sentence[end - 1]!)) end--
+  return [start, end]
+}
+
 /** Complete display-equivalent facts, mapped to original sentence offsets. */
 export function displayFactRanges(sentence: string, facts: string[]): Range[] {
   const normalized = displayText(sentence)
@@ -131,11 +142,24 @@ export function numberEvidence(sentence: string, facts: string[], spanFacts: str
     ...spanFacts.flatMap((fact) => clockSpans(displayText(fact))),
   ]
   const timeKeys = new Set(factTimes.flatMap((time) => [time.key, ...time.key.split('-')]))
+  const groundedFacts = displayFactRanges(sentence, [...facts, ...spanFacts])
   const groundedTimes: Range[] = times
-    .filter((time) => timeKeys.has(time.key))
+    .filter((time) => {
+      if (!timeKeys.has(time.key)) return false
+      const [start, end] = clockClause(sentence, time)
+      if (
+        !/(?:[开開][抢搶]|秒[杀殺]|[抢搶][购購]|限时|活[动動]|[结結]束)/u.test(
+          normalizeText(sentence.slice(start, end)).text,
+        )
+      )
+        return true
+      // A matching clock (even an entire range) is not evidence for a promotion.
+      // Require a complete display-equivalent fact covering this promotional clause.
+      return groundedFacts.some(([left, right]) => left <= start && right >= end)
+    })
     .map((time) => [time.start, time.end])
   return {
-    groundedFacts: displayFactRanges(sentence, [...facts, ...spanFacts]),
+    groundedFacts,
     groundedTimes,
     inTime: (start: number, end: number) => overlaps(start, end, times),
     factNumbers: evidence.flatMap(({ fact, times }) =>
