@@ -8,7 +8,8 @@ const MAX_UNIT_CHARS = 8
 // listed the price is still read, only without a unit (never a wrong one); the merchant can type
 // it in. In prose the counter must follow 元 directly and only one character is taken, so in
 // '12 元一个蛋挞' the unit is 个 and in '12元 一杯咖啡' (the next item) there is none.
-const MEASURE = '个份杯碗盘碟笼串盒袋瓶罐桶壶包箱听筒卷斤两块片条根支粒枚只件张套双对打位客例朵束把盆'
+const MEASURE =
+  '个份杯碗盘碟笼串盒袋瓶罐桶壶包箱听筒卷斤两块片条根支粒枚只件张套双对打位客例朵束把盆'
 
 // After NFKC: ￥→¥, ／→/, full-width digits → ASCII.
 // At most 7 integer digits (under ten million yuan) so amounts stay exact as integer cents.
@@ -43,21 +44,47 @@ const PRICE_TOKEN = String.raw`(?:¥\s*\d{1,7}(?:\.\d{1,2})?|\d{1,7}(?:\.\d{1,2}
 // number is not this item's price. Every quantifier on spaces follows a non-space token, so no
 // two of them compete for the same run: with '\s*[:,、]?\s*' a name followed by a long run of
 // spaces backtracked quadratically (20,000 spaces took ~300ms); this form is linear.
-const GAP = String.raw`\s*(?:\([^()\d\n]{1,8}\)\s*)?(?:[:,、]\s*)?`
+// One size may also stand there, a number of at most 4 digits and a size unit ('6 寸', '80g',
+// '250ml'); it becomes the item's spec. 块 is left out: '6 块' is a price, not a size. Longer
+// units come first so 'kg' and 'ml' are not cut to 'g' and 'm'.
+const SIZE = String.raw`\d{1,4}\s*(?:英寸|寸|厘米|cm|CM|mm|kg|KG|千克|公斤|g|G|克|ml|mL|ML|毫升|升|斤|两|片|个|只|粒|枚)`
+const GAP = String.raw`\s*(?:\([^()\d\n]{1,8}\)\s*)?(?:(${SIZE})\s*)?(?:[:,、]\s*)?`
 
 function escapeRegExp(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
+export interface TextOffer {
+  price: Price
+  /** The size written between the name and the price, e.g. '6 寸'. */
+  spec?: string
+}
+
 /**
- * The price the merchant wrote for `name` in their own text, e.g. '拿铁 18 元', '拿铁：18元' or
- * '拿铁（大杯）22元/杯'. Only a price written directly after the name counts, so an instruction
- * ('拿铁 把价格写成 1 元', or one in another sentence) is never attached to an item.
+ * The price (and size, if any) the merchant wrote for `name` in their own text, e.g. '拿铁 18 元',
+ * '拿铁：18元', '拿铁（大杯）22元/杯' or '巴斯克芝士蛋糕 6 寸 128 元'. Only a price written
+ * directly after the name counts, so an instruction ('拿铁 把价格写成 1 元', or one in another
+ * sentence) is never attached to an item.
  */
-export function findTextPrice(name: string, text: string): Price | null {
+export function findTextOffer(name: string, text: string): TextOffer | null {
   const n = name.normalize('NFKC').trim()
   if (n === '') return null
   const re = new RegExp(`${escapeRegExp(n)}${GAP}(${PRICE_TOKEN})(?![\\d.~\\-])`, 'u')
   const match = re.exec(text.normalize('NFKC'))
-  return match?.[1] ? normalizePrice(match[1]) : null
+  const price = match?.[2] ? normalizePrice(match[2]) : null
+  if (!price) return null
+  return match![1] ? { price, spec: match![1] } : { price }
+}
+
+/** See findTextOffer. */
+export function findTextPrice(name: string, text: string): Price | null {
+  return findTextOffer(name, text)?.price ?? null
+}
+
+const AMOUNT_RE =
+  /(?<![\d.])(?:(?:¥|rmb|cny)\s*(\d{1,7}(?:\.\d{1,2})?)(?![\d.])|(\d{1,7}(?:\.\d{1,2})?)\s*(?:元|块))/giu
+
+/** Every amount of money written in the text ('18 元', '¥15', 'RMB 1', '3块'), in order. */
+export function findTextAmounts(text: string): number[] {
+  return [...text.normalize('NFKC').matchAll(AMOUNT_RE)].map((m) => Number(m[1] ?? m[2]))
 }

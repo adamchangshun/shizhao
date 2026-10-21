@@ -347,7 +347,11 @@ export function FactsForm({ sheet, lowConfidence, onSubmit }: FactsFormProps) {
                       aria-describedby={flag('name') ? `${fid('name')}-flag` : undefined}
                     />
                   </Flagged>
-                  <Flagged on={flag('price')} id={fid('price')}>
+                  <Flagged
+                    on={flag('price')}
+                    id={fid('price')}
+                    note={item.base.price ? undefined : '文字里有价格没认出来，请核对补填'}
+                  >
                     <label htmlFor={fid('price')} className={s.label}>
                       价格（元）
                     </label>
@@ -459,11 +463,14 @@ function Flagged({
   on,
   id,
   wide,
+  note = 'AI 从图片识别，请核对',
   children,
 }: {
   on: boolean
   id: string
   wide?: boolean
+  /** Why the field is flagged; by default it was read only from an image. */
+  note?: string
   children: ReactNode
 }) {
   return (
@@ -471,7 +478,7 @@ function Flagged({
       {children}
       {on && (
         <span id={`${id}-flag`} className={w.flagNote}>
-          AI 从图片识别，请核对
+          {note}
         </span>
       )}
     </div>

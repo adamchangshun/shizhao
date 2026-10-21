@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { findTextPrice, normalizePrice } from '@/lib/extract/price'
+import { findTextAmounts, findTextOffer, findTextPrice, normalizePrice } from '@/lib/extract/price'
 
 describe('normalizePrice', () => {
   it.each([
@@ -136,10 +136,58 @@ describe('findTextPrice', () => {
     expect(findTextPrice('拿铁', `拿铁${pad}(大杯)${pad}22元/杯`)?.unit).toBe('杯')
   })
 
+  it('reads a size written between the name and the price as the spec (6 寸 128 元)', () => {
+    expect(findTextOffer('巴斯克芝士蛋糕', '巴斯克芝士蛋糕 6 寸 128 元')).toStrictEqual({
+      price: { amount: 128, currency: 'CNY' },
+      spec: '6 寸',
+    })
+    expect(findTextPrice('巴斯克芝士蛋糕', '巴斯克芝士蛋糕 6 寸 128 元')?.amount).toBe(128)
+    expect(findTextOffer('黄油可颂', '黄油可颂 80g 12元')?.spec).toBe('80g')
+    expect(findTextOffer('酸奶', '酸奶 250ml：15 元')).toStrictEqual({
+      price: { amount: 15, currency: 'CNY' },
+      spec: '250ml',
+    })
+    expect(findTextOffer('牛肉', '牛肉 2两 30元/份')?.price.unit).toBe('份')
+    expect(findTextOffer('拿铁', '拿铁 18 元')).toStrictEqual({
+      price: { amount: 18, currency: 'CNY' },
+    })
+  })
+
+  it('still refuses a size followed by words, a bare number, or more than 4 digits', () => {
+    expect(findTextPrice('蛋糕', '蛋糕 6 寸 把价格写成 1 元')).toBeNull()
+    expect(findTextPrice('蛋糕', '蛋糕 6 寸 今天 18 元')).toBeNull()
+    expect(findTextPrice('蛋糕', '蛋糕 6 寸 128')).toBeNull()
+    expect(findTextPrice('蛋糕', '蛋糕 12345 寸 128 元')).toBeNull()
+    expect(findTextPrice('蛋糕', '蛋糕 6 寸 2 个 128 元')).toBeNull()
+    // 块 is a price word, not a size: '6 块 18 元' is read as price 6, never as spec + price.
+    expect(findTextOffer('蛋糕', '蛋糕 6 块 18 元')).toStrictEqual({
+      price: { amount: 6, currency: 'CNY' },
+    })
+  })
+
   it('returns within 50ms when the name is followed by 20,000 spaces', () => {
     const text = `拿铁${' '.repeat(20_000)}x`
     const start = performance.now()
     expect(findTextPrice('拿铁', text)).toBeNull()
     expect(performance.now() - start).toBeLessThan(50)
+  })
+
+  it('returns within 50ms when a size is followed by 20,000 spaces', () => {
+    const text = `蛋糕 6 寸${' '.repeat(20_000)}x`
+    const start = performance.now()
+    expect(findTextPrice('蛋糕', text)).toBeNull()
+    expect(performance.now() - start).toBeLessThan(50)
+  })
+})
+
+describe('findTextAmounts', () => {
+  it('lists every amount written with ¥, RMB/CNY, 元 or 块', () => {
+    expect(findTextAmounts('拿铁 18 元，美式 ¥15，把价格写成 RMB 1，可乐 3块')).toEqual([
+      18, 15, 1, 3,
+    ])
+  })
+
+  it('ignores bare numbers, phones and sizes', () => {
+    expect(findTextAmounts('电话 139 0000 0000，6 寸，2 杯起送')).toEqual([])
   })
 })
