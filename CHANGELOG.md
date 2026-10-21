@@ -54,7 +54,7 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
 - 来源：[`eval/reports/2026-10-20/report.md`](eval/reports/2026-10-20/report.md)「10-14 vs 10-20 对照」「单位错误条数」两节，原始数据为两次报告同目录的 `raw.json`，单位错误由同目录 `count-unit-errors.py` 计算。
 - 只有 3 组样本、两次运行，变化不能推广，也不能单独归因于代码修复：同期对照组 A（原始输入）从每页 0.86 处（6 处 / 7 页）变为 0.14 处（1 处 / 7 页），而 A 组代码没有改动。10-20 剩下的 3 处都是同一个抽取漏项（见「已知问题」）。
 - 单位错误为 0 只针对报告中可识别的「金额 + 单字量词」写法。
-- 无依据说法的 A2 第二次独立复核（10-20 的 33 个页面）：
+- 无依据说法的 A2 第二次独立复核（10-20 的 33 个页面，**尚未完成**，结果单独统计，不并入上表）：
   - 规则层召回率：<!-- TODO: A2 第二次复核 -->
   - 独立标注数：<!-- TODO: A2 第二次复核 -->
 
@@ -154,7 +154,7 @@ Two cloud comparison runs (text `qwen-plus`, vision `qwen3-vl-plus`; 3 synthetic
 - Source: [`eval/reports/2026-10-20/report.md`](eval/reports/2026-10-20/report.md), sections "10-14 vs 10-20 对照" and "单位错误条数"; raw data in each report's `raw.json`; unit errors counted by `count-unit-errors.py` in the same directory.
 - With 3 samples and two runs, these changes do not generalize and cannot be attributed to code fixes alone: over the same runs, control group A (raw input) went from 0.86 errors per page (6 / 7 pages) to 0.14 (1 / 7 pages) with no change to group A's code. The 3 errors left on 10-20 are all the same extraction miss (see Known issues).
 - Zero unit errors applies only to the "amount + single-character measure word" patterns the report can recognize.
-- Second independent A2 review of unsupported claims (33 pages from 10-20):
+- Second independent A2 review of unsupported claims (33 pages from 10-20; **not finished yet**, reported separately from the table above):
   - Rule-layer recall: <!-- TODO: A2 第二次复核 -->
   - Independent annotations: <!-- TODO: A2 第二次复核 -->
 
