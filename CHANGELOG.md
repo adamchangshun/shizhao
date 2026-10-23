@@ -8,7 +8,7 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
 
 ### 中文
 
-第一个公开版本，内容为 `main` 截至提交 `3cbf12f`（2026-10-20）的代码。
+第一个公开版本，内容为 `main` 截至提交 `c62d89f`（2026-10-23）的代码。
 
 #### 模块
 
@@ -33,7 +33,7 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
 
 #### 测试
 
-- `pnpm test`：55 个测试文件、1077 个测试全部通过（在 `3cbf12f` 上实跑，2026-10-21）。
+- `pnpm test`：58 个测试文件、1245 个测试全部通过（在 `c62d89f` 上实跑，2026-10-23）。
 
 #### 评测数字
 
@@ -41,7 +41,7 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
 
 | 测试集 | 性质 | 样本量 | 拦截 | 误杀 | 来源 |
 |---|---|---|---|---|---|
-| A1 对抗集 | **样本内**：开发期间被实现方参考并用于调整规则，只作回归集 | 应拦截 47、应放行 23 | 45/47 | 0/23 | `pnpm test` 输出（`3cbf12f`）；[`docs/review-log.md`](docs/review-log.md)「07 规则补强」 |
+| A1 对抗集 | **样本内**：开发期间被实现方参考并用于调整规则，只作回归集 | 应拦截 47、应放行 23 | 45/47 | 0/23 | `pnpm test` 输出（`c62d89f`）；[`docs/review-log.md`](docs/review-log.md)「07 规则补强」 |
 | A1b 留出集 | **留出集**：出题方不接触实现，题目冻结后对提交 `1299c61`（2026-10-13）只运行一次；07 规则补强之后没有重测 | 应拦截 52、应放行 28 | 63.5%（33/52，95% CI 49.9%–75.2%） | 21.4%（6/28，95% CI 10.2%–39.5%） | [README「评测与验证」](README.md#评测与验证) |
 
 两次云端对比实验（文本 `qwen-plus`、视觉 `qwen3-vl-plus`；3 组合成样本共 7 个商品，每组每样本 N=3；被测提交 10-14 为 `65f0473`，10-20 为 `dafb379`；均为样本内，没有留出集）：
@@ -54,9 +54,11 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
 - 来源：[`eval/reports/2026-10-20/report.md`](eval/reports/2026-10-20/report.md)「10-14 vs 10-20 对照」「单位错误条数」两节，原始数据为两次报告同目录的 `raw.json`，单位错误由同目录 `count-unit-errors.py` 计算。
 - 只有 3 组样本、两次运行，变化不能推广，也不能单独归因于代码修复：同期对照组 A（原始输入）从每页 0.86 处（6 处 / 7 页）变为 0.14 处（1 处 / 7 页），而 A 组代码没有改动。10-20 剩下的 3 处都是同一个抽取漏项（见「已知问题」）。
 - 单位错误为 0 只针对报告中可识别的「金额 + 单字量词」写法。
-- 无依据说法的 A2 第二次独立复核（10-20 的 33 个页面，**尚未完成**，结果单独统计，不并入上表）：
-  - 规则层召回率：<!-- TODO: A2 第二次复核 -->
-  - 独立标注数：<!-- TODO: A2 第二次复核 -->
+- 无依据说法的 A2 第二次独立复核（10-20 的 33 个页面全量标注，结果单独统计，不并入上表；来源 [`eval/reports/2026-10-20/A2-review.md`](eval/reports/2026-10-20/A2-review.md)）：
+  - 规则层召回率（句级）：50/111 = 45.0%；10-14 为 21/89 = 23.6%。精确率 50/61 = 82.0%；页面计数一致率 10/33。
+  - 独立标注数：确定的无依据说法 111 条；另有 disputed 24 条，不计入上述指标。
+  - 单位错误 9 → 0 经复核确认：咖啡页面不再出现默认的「份」，但相应页面是省略了单位，并不是正确抽取出了「杯」。
+  - 只有 3 组样本、7 个商品，素材是合成图片，33 页不是 33 个独立商家；结果不能推广为泛化结论，也不能仅凭这些变化断言是代码修复带来了提升。
 
 #### 已知问题
 
@@ -81,10 +83,11 @@ MEDIUM：
 - M12 `Dockerfile`、`deploy/docker-compose.prod.yml`：基础镜像使用可变标签，没有固定 digest。
 - M13 `.github/workflows/ci.yml`：Actions 使用可变标签，没有固定提交 SHA。
 
-07 规则层（07 规则补强第 2 轮审查遗留，在 `3cbf12f` 上已复现；与上面 M8、M9 同源）：
+07 规则层（07 规则补强已合并（`db5f167`），以下为其最后一次增量核验遗留的 3 条 LOW；被测 `6dcd579`，在 main 上为同一补丁 `d48cdf1`）：
 
-- MEDIUM `packages/fact-guard/src/rules/index.ts`：白名单「慢烤的时光」会放行慢烤工艺声明，包括「慢烤的时光，……」这样跨逗号接结果的写法；影响 `unsupported_claim`，接入判定层时有一次兜底。修复分支 `fix/07-rules-gap`（未合并）已收窄前置词写法，跨逗号写法在该分支仍放行。
-- MEDIUM `packages/fact-guard/src/grounding.ts`：「N 点」形式的积分说法会借营业时间的时刻放行，数字在「积分」前后都一样；修复分支 `fix/07-rules-gap`（未合并）已覆盖两种顺序。
+- LOW `packages/fact-guard/src/rules/index.ts`、`rules/packs/base.zh.yaml`：天气豁免的线索词包含「新鲜」「烘焙」，与「低温天气」出现在同一分句时会误拦正常的天气或店名句子（如「低温天气里来杯新鲜果汁」「低温天里来麦香烘焙坐坐」）；属于保守误拦，不会放行无依据说法，用逗号隔开时仍放行。
+- LOW `packages/fact-guard/src/grounding.ts`：促销短句按子串匹配「活动」「结束」，有少量误拦（如「7:30开门开启生活动力」「忙完工作结束后19:00前来坐坐」）；与已声明的「19:00结束营业」保守拦截同类。
+- LOW `packages/fact-guard/src/rules/index.ts`：天气后缀只收回了列出的工艺线索词（发酵、保鲜、冷藏等），未列举的同义说法仍会放行（如「低温下也不变质的奶油」「低温天里静置一夜的面团」）；是上一轮同类问题的残留，不是本次引入。
 
 LOW：
 
@@ -103,12 +106,14 @@ LOW：
 
 其他：
 
-- 事实抽取：规格夹在商品名和价格之间的写法（如「巴斯克芝士蛋糕 6 寸 128 元」）会漏掉价格；商家不修改直接确认时，页面会缺这个价格。10-14、10-20 两次云端实验都出现（B 端到端每次 3 处）。商家在「核对信息」里补上即可。
+- F1 事实抽取：规格夹在商品名和价格之间的写法（如「巴斯克芝士蛋糕 6 寸 128 元」）会漏掉价格；商家不修改直接确认时，页面会缺这个价格。10-14、10-20 两次云端实验都出现（B 端到端每次 3 处）。0.1.0 中商家在「核对信息」里补上即可；已在 v0.1.1 分支修复，随 0.1.1 发布。
+- 文案判定层（judge）拦不住不带数字的跨商品借用：商品 B 的描述借用商品 A 的标签「燕麦奶可选」，云端 `qwen-plus` 3 次全部放行；带数字的借用（价格、规格）由规则层稳定拦截。在线验证 6 个用例各 3 次，一致率 15/18，不一致的 3 次都是这一例（A4 第 2 轮 W5）。计划在 v0.1.1 的规则层补确定性检查。
+- 顾客纠错的个人信息过滤（QQ 号、支付宝账号识别，见上面 M5）仍在 v0.1.1 分支修复中，0.1.0 的过滤只是尽力而为。
 - 判定层依赖云端模型：模型判定层和改写需要配置外部模型服务；不配置时只有规则层，规则层只能识别列出的词和模式，换说法的成分、产地、功效声明和隐含排名可能漏过（见 A1b 留出集结果）。
 
 ### English
 
-First public release, covering `main` as of commit `3cbf12f` (2026-10-20).
+First public release, covering `main` as of commit `c62d89f` (2026-10-23).
 
 #### Modules
 
@@ -133,7 +138,7 @@ Module numbers and names follow [`docs/CONTRACT.md`](docs/CONTRACT.md). Module 1
 
 #### Tests
 
-- `pnpm test`: 55 test files, 1077 tests, all passing (run on `3cbf12f`, 2026-10-21).
+- `pnpm test`: 58 test files, 1245 tests, all passing (run on `c62d89f`, 2026-10-23).
 
 #### Evaluation numbers
 
@@ -141,7 +146,7 @@ Rule layer only (no model calls):
 
 | Set | Nature | Size | Blocked | False positives | Source |
 |---|---|---|---|---|---|
-| A1 adversarial set | **In-sample**: consulted by the implementer and used to tune rules during development; regression use only | 47 to block, 23 to pass | 45/47 | 0/23 | `pnpm test` output (`3cbf12f`); [`docs/review-log.md`](docs/review-log.md), "07 rules gap" |
+| A1 adversarial set | **In-sample**: consulted by the implementer and used to tune rules during development; regression use only | 47 to block, 23 to pass | 45/47 | 0/23 | `pnpm test` output (`c62d89f`); [`docs/review-log.md`](docs/review-log.md), "07 rules gap" |
 | A1b holdout | **Holdout**: written without seeing the implementation, frozen, then run exactly once against commit `1299c61` (2026-10-13); not re-run after the 07 rule update | 52 to block, 28 to pass | 63.5% (33/52, 95% CI 49.9%–75.2%) | 21.4% (6/28, 95% CI 10.2%–39.5%) | [README, "Evaluation"](README.en.md) |
 
 Two cloud comparison runs (text `qwen-plus`, vision `qwen3-vl-plus`; 3 synthetic samples with 7 items in total, N=3 per sample per group; commit under test `65f0473` on 10-14 and `dafb379` on 10-20; both in-sample, no holdout):
@@ -154,9 +159,11 @@ Two cloud comparison runs (text `qwen-plus`, vision `qwen3-vl-plus`; 3 synthetic
 - Source: [`eval/reports/2026-10-20/report.md`](eval/reports/2026-10-20/report.md), sections "10-14 vs 10-20 对照" and "单位错误条数"; raw data in each report's `raw.json`; unit errors counted by `count-unit-errors.py` in the same directory.
 - With 3 samples and two runs, these changes do not generalize and cannot be attributed to code fixes alone: over the same runs, control group A (raw input) went from 0.86 errors per page (6 / 7 pages) to 0.14 (1 / 7 pages) with no change to group A's code. The 3 errors left on 10-20 are all the same extraction miss (see Known issues).
 - Zero unit errors applies only to the "amount + single-character measure word" patterns the report can recognize.
-- Second independent A2 review of unsupported claims (33 pages from 10-20; **not finished yet**, reported separately from the table above):
-  - Rule-layer recall: <!-- TODO: A2 第二次复核 -->
-  - Independent annotations: <!-- TODO: A2 第二次复核 -->
+- Second independent A2 review of unsupported claims (all 33 pages from 10-20 annotated, reported separately from the table above; source [`eval/reports/2026-10-20/A2-review.md`](eval/reports/2026-10-20/A2-review.md)):
+  - Rule-layer recall (sentence level): 50/111 = 45.0%, versus 21/89 = 23.6% on 10-14. Precision 50/61 = 82.0%; per-page count agreement 10/33.
+  - Independent annotations: 111 definite unsupported claims, plus 24 disputed ones that are excluded from the metrics above.
+  - Unit errors 9 → 0, confirmed by the review: coffee pages no longer show the default 「份」, but those pages omit the unit; this does not mean 「杯」 is now extracted correctly.
+  - Only 3 samples and 7 items, with synthetic images; the 33 pages are not 33 independent merchants. The results do not generalize, and these changes alone cannot show that the code fixes caused the improvement.
 
 #### Known issues
 
@@ -181,10 +188,11 @@ MEDIUM:
 - M12 `Dockerfile`, `deploy/docker-compose.prod.yml`: base images use mutable tags without pinned digests.
 - M13 `.github/workflows/ci.yml`: Actions use mutable tags rather than pinned commit SHAs.
 
-07 rule layer (left over from round 2 of the 07 rules-gap review, reproduced on `3cbf12f`; same root causes as M8 and M9 above):
+07 rule layer (the 07 rules-gap fixes are merged in `db5f167`; these 3 LOW findings are left over from their last incremental review, run on `6dcd579`, which is the same patch as `d48cdf1` on main):
 
-- MEDIUM `packages/fact-guard/src/rules/index.ts`: the whitelist phrase 「慢烤的时光」 lets slow-roast process claims through, including the form where the result follows after a comma; affects `unsupported_claim`, with one more check when the model judge is enabled. The unmerged fix branch `fix/07-rules-gap` narrows the leading-word forms; the comma-separated form still passes on that branch.
-- MEDIUM `packages/fact-guard/src/grounding.ts`: points claims written as "N 点" are grounded by opening-hour clock values, whichever side of 「积分」 the number is on; the unmerged fix branch `fix/07-rules-gap` covers both orders.
+- LOW `packages/fact-guard/src/rules/index.ts`, `rules/packs/base.zh.yaml`: the weather exemption's cue words include 「新鲜」 and 「烘焙」, so ordinary weather or shop-name sentences that put them in the same clause as 「低温天气」 are blocked (e.g. 「低温天气里来杯新鲜果汁」, 「低温天里来麦香烘焙坐坐」). This errs on the safe side and never lets an unsupported claim through; separating with a comma still passes.
+- LOW `packages/fact-guard/src/grounding.ts`: promotion phrases match 「活动」 and 「结束」 as substrings, causing a few false blocks (e.g. 「7:30开门开启生活动力」, 「忙完工作结束后19:00前来坐坐」); same kind as the documented conservative block of 「19:00结束营业」.
+- LOW `packages/fact-guard/src/rules/index.ts`: the weather suffix only re-blocks the listed process cue words (fermenting, keeping fresh, chilling and so on); unlisted synonyms still pass (e.g. 「低温下也不变质的奶油」, 「低温天里静置一夜的面团」). This is left over from the previous round, not introduced by this change.
 
 LOW:
 
@@ -203,5 +211,7 @@ LOW:
 
 Other:
 
-- Fact extraction: when a spec sits between the item name and the price (e.g. 「巴斯克芝士蛋糕 6 寸 128 元」), the price is missed; if the merchant confirms without editing, the page lacks that price. This happened in both cloud runs (3 errors in group B end-to-end each time). The merchant can add it on the fact review screen.
+- F1 Fact extraction: when a spec sits between the item name and the price (e.g. 「巴斯克芝士蛋糕 6 寸 128 元」), the price is missed; if the merchant confirms without editing, the page lacks that price. This happened in both cloud runs (3 errors in group B end-to-end each time). In 0.1.0 the merchant can add it on the fact review screen; fixed on the v0.1.1 branch and will ship with 0.1.1.
+- The model judge cannot stop cross-item borrowing without numbers: when item B's blurb borrows item A's tag 「燕麦奶可选」, cloud `qwen-plus` let it through in all 3 runs; borrowing with numbers (price, spec) is reliably blocked by the rule layer. In the online check of 6 cases × 3 runs, agreement was 15/18, and all 3 misses were this case (A4 round 2, W5). A deterministic rule-layer check is planned for v0.1.1.
+- The personal-info filter for customer corrections (recognizing QQ numbers and Alipay accounts, see M5 above) is still being fixed on the v0.1.1 branch; in 0.1.0 the filter is best effort only.
 - The model judge depends on a cloud model: the judge and rewrite need an external model service. Without one, only the rule layer runs, which recognizes listed words and patterns only; paraphrased ingredient, origin, efficacy and implied-ranking claims may get through (see the A1b holdout result).
