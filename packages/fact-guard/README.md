@@ -80,3 +80,9 @@ Unicode format controls (Cf, including zero-width characters) are removed at eve
 去掉格式控制字符后，按字素簇做 NFKC，再执行现有繁简映射和大小写折叠。「𝟙𝟡元」等兼容数字会识别为价格；展开或合成出的字符映射至整个原文字素簇，位置仍为 UTF-16 偏移。NFKC 不是完整语义校验，也不提供完整繁简转换。
 
 After removing format controls, NFKC runs on grapheme clusters before the existing limited traditional-character mapping and lowercasing. Compatibility digits such as “𝟙𝟡元” are recognized as prices. Expanded or composed characters map to the complete original grapheme cluster using UTF-16 offsets. This is neither complete semantic validation nor full traditional-to-simplified conversion.
+
+### 限定修辞 / Limited-edition metaphor
+
+「限定的温柔」「把限定的温柔留给你」只在独立分句中豁免；供应、商品款式等前后文不再借该短语放行，真实声明仍可由事实表支持。M8 的慢烤工艺前后文已有修复；M9 的同分句促销时刻仍要求完整事实依据。
+
+“限定的温柔” and “把限定的温柔留给你” are exempt only as standalone clauses. Product or availability context cannot borrow that metaphor; actual merchant facts still provide evidence. The earlier slow-roasting context fix and complete-fact requirement for promotional clocks remain in force.

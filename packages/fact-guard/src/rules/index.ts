@@ -111,7 +111,8 @@ export const defaultRules: RuleSet = {
       id: 'positioning',
       reason: 'unsupported_claim',
       terms: ['招牌', '热销', '人气', '必点', '限量', '限定', '本周限定', '新鲜出炉'],
-      whitelist: ['招牌笑容', '限定的温柔'],
+      whitelist: ['招牌笑容'],
+      whitelistPatterns: ["(?:^|(?<=[，。！？；、,.!?;：:\\r\\n]))(?:把)?限定的温柔(?:留给你)?(?=$|[，。！？；、,.!?;：:\\r\\n])"],
     },
     {
       id: 'effects',
