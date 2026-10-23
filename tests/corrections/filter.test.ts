@@ -47,6 +47,9 @@ describe('personal information', () => {
     'QQ：t i a n x    8',
     '支付宝账号 tian\t\t\t\t88abc',
     'QQ abcdefghijklmnopqrst QQ tian 88abc',
+    '支付宝账号 RMB123abc',
+    '支付宝账号 abc123元旦后停用',
+    'QQ：tian_88¥5',
   ])('refuses %s', (text) => {
     expect(containsPersonalInfo(text)).toBe(true)
   })

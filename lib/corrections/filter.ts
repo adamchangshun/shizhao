@@ -48,9 +48,10 @@ const ACCOUNT_NEXT_CLAUSE = new RegExp(
   'i',
 )
 // Amounts, with any spaces around the number: "¥ 12800", "RMB  12800", "CNY12800", "12800 人民币".
-// The number may only start where a run of digits starts, so a failed match is not retried from
-// every digit of the run.
-const AMOUNT = /(?:¥|rmb|cny)\s*\d+|(?<!\d)\d+\s*(?:元|块|人民币)/gi
+// An amount never starts or ends inside an id ("RMB123abc", "abc123元旦" stay ids). The number may
+// only start where a run of digits starts, so a failed match is not retried from every digit.
+const AMOUNT =
+  /(?<![-_a-z0-9])(?:¥|rmb|cny)\s*\d+(?![-_a-z0-9])|(?<![-_a-z0-9])\d+\s*(?:元|块|人民币)/gi
 
 // "支付宝账号 tian 88abc", "QQ：t i a n x 8": an id split by spaces. After every cue, the words
 // that follow are joined one at a time (up to 20 characters, the longest id), and the text is

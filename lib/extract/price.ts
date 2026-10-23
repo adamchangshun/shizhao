@@ -58,8 +58,9 @@ export interface TextOffer {
   price: Price
   /** The size written between the name and the price, e.g. '6 寸'. */
   spec?: string
-  /** Where the price starts in the NFKC-normalized text (same positions as findTextAmounts). */
+  /** Where the price starts and ends in the NFKC-normalized text (as in findTextAmounts). */
   at: number
+  end: number
 }
 
 /**
@@ -77,8 +78,9 @@ export function findTextOffers(name: string, text: string): TextOffer[] {
   for (const match of text.normalize('NFKC').matchAll(re)) {
     const price = normalizePrice(match[2]!)
     if (!price) continue
-    const at = match.index + match[0].length - match[2]!.length
-    offers.push(match[1] ? { price, spec: match[1], at } : { price, at })
+    const end = match.index + match[0].length
+    const at = end - match[2]!.length
+    offers.push(match[1] ? { price, spec: match[1], at, end } : { price, at, end })
   }
   return offers
 }
@@ -92,9 +94,10 @@ const AMOUNT_RE =
   /(?<![\d.])(?:(?:¥|rmb|cny)\s*(\d{1,7}(?:\.\d{1,2})?)(?![\d.])|(\d{1,7}(?:\.\d{1,2})?)\s*(?:元|块))/giu
 
 /** Every amount of money written in the text ('18 元', '¥15', 'RMB 1', '3块'), in order. */
-export function findTextAmounts(text: string): Array<{ amount: number; at: number }> {
+export function findTextAmounts(text: string): Array<{ amount: number; at: number; end: number }> {
   return [...text.normalize('NFKC').matchAll(AMOUNT_RE)].map((m) => ({
     amount: Number(m[1] ?? m[2]),
     at: m.index,
+    end: m.index + m[0].length,
   }))
 }
