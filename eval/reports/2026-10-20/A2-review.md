@@ -8,12 +8,12 @@
 
 ## 输入、范围与独立性
 
-- 本轮被测提交：`dafb379f0cdce793cbea221a6e25977e448bea2e`；报告标记日期 2026-10-20。
+- 本轮被测提交：`dafb379f0cdc`；报告标记日期 2026-10-20。
 - 运行编号：`openai-compatible-qwen-plus-1020`；`provider=openai-compatible`、`mock=false`；文本 `qwen-plus`，视觉 `qwen3-vl-plus`；`codeHash=2d84acb81cfa1126`。这些字段在盲标后与 `raw.json` 内嵌 config 核对一致。
-- 复核分支：`docs/a2-1020`；基线 `3cbf12f05210d95428f18eba56390fe627974e76`；工作目录 `/Users/adam/projects/shizhao-a2`。被测提交与文档工作基线明确区分。
-- 只读输入仓库 `/Users/adam/projects/shizhao`。未切换或修改 `/Users/adam/projects/shizhao-codex`，未访问 holdout，未运行模型调用、未执行任何被测 HTML。
+- 复核分支：`docs/a2-1020`；基线 `3cbf12f05210`；工作目录 `.`。被测提交与文档工作基线明确区分。
+- 只读输入仓库 `../shizhao`。未切换或修改 `../shizhao-codex`，未访问 holdout，未运行模型调用、未执行任何被测 HTML。
 - 本轮输入是 `eval/reports/2026-10-20/review-sheet.csv` 的 33 行及三个样本 `eval/samples/<sampleId>/gold.json`。`input.txt` 仅用来标注“商家原文已声明”，不扩大 gold 的证据范围。
-- `/Users/adam/projects/shizhao/eval/runs/openai-compatible-qwen-plus-1020/` 在现场不存在。因此按提示词修订允许的路径使用已提取 `visible_text`；无法重新核验 HTML 到可见文本的提取、隐藏元素或卡片 DOM 归属。未把旧运行的 `config.json` 当成本轮配置。
+- `../shizhao/eval/runs/openai-compatible-qwen-plus-1020/` 在现场不存在。因此按提示词修订允许的路径使用已提取 `visible_text`；无法重新核验 HTML 到可见文本的提取、隐藏元素或卡片 DOM 归属。未把旧运行的 `config.json` 当成本轮配置。
 - 先完整读指定 A2 提示词及其文末修订。为遵守“先独立标注、后对比”，盲标前仅从本轮报告读取第 60–62 行复核口径及实验配置段，未读取本轮结果、`raw.json` 或 `done.json`；冻结后才读完整报告及规则明细。任务提示和用户本身已透露“33 页”“单位 9 → 0”和历史 23.6%，故不声称对这些总体信息完全不知情。
 - 历史口径依据：`eval/reports/2026-10-14/report.md` 的 A2 分歧附录，以及 `eval/runs/openai-compatible-qwen-plus/independent-review/` 下原始报告、逐句标签、填表。10-14 报告目录本身没有另一个 A2 文件，已追溯其引用的原始复核。
 - 在知道本轮规则结果之前，先将所有标注写入 `A2-review-sheet.csv` 并记录 SHA-256，随后只做匹配与统计，没有根据规则结果回改标注。提交检查发现CSV记录结束符为CRLF，于是只将34处记录结束符统一为LF；转换前后33行全部10字段逐值相同，原始冻结散列与交付散列均列在下文。
@@ -173,7 +173,7 @@ Pro确认了价格/规格并列、电话不蕴含预订、版权元信息排除�
 
 Pro对话：https://chatgpt.com/c/6ad83938-63a0-83e9-b236-8c3e13af2ec9
 
-接收的可见对话文本SHA-256：`a09e0ec124590d329df88cb19d4f83880b3ca2ae6d839fcb17d0ed0f018744b0`。正文记录替代Skill默认的额外 `CODEX_REVIEW_SUMMARY.md`，以遵守本轮只新增两个仓库文件的范围。
+接收的可见对话文本SHA-256：`sha256-a09e0ec124590d329df88cb19d4f83880b3ca2ae6d839fcb17d0ed0f018744b0`。正文记录替代Skill默认的额外 `CODEX_REVIEW_SUMMARY.md`，以遵守本轮只新增两个仓库文件的范围。
 
 | 要求 | 对应任务 | 已验证证据 |
 |---|---|---|
@@ -192,15 +192,15 @@ Pro对话：https://chatgpt.com/c/6ad83938-63a0-83e9-b236-8c3e13af2ec9
 |---|---|
 | 盲标冻结时间（UTC） | 2026-10-21T04:08:03.091249+00:00 |
 | 盲标冻结时间（Asia/Shanghai） | 2026-10-21 12:08:03 |
-| 输入review-sheet.csv | bb3d9e3184da91bd3d3b5a46964ba4eac21d8e5280c79c30d648b1d63521a22d |
-| 盲标冻结CSV（CRLF记录结束符） | 1a954c5ea0375ce29c3d4de0cd26b141ac05d0320984d23a36d2853cbbfd3821 |
-| 交付A2-review-sheet.csv（LF记录结束符） | 031bd74e98bd38147e4e3b517ef9c1eb41ad53a38702d544d7b9f1c95e71c0e8 |
-| 转换前后相同的规范化CSV行JSON | df0b09deb7ba813841a0183703e1cc031e0fb5031dbfc58c3c5dc8cb99e04d4b |
-| 本轮raw.json | d1a4e9b4c441d4b0a6e4db95b296677d81927cb9f1949b827fa790cde9707341 |
-| 10-14 labels.jsonl | ada8087632fe3f3529e27a6c265f984c00af5b76f6bccfd6b31163dcd0820608 |
-| eval/samples/bakery-croissant-single/gold.json | 751f2d841d54bc89199897b11eac0e1756aaed8449f00e150741355a8d550d17 |
-| eval/samples/bakery-dessert-menu/gold.json | 2c7f009dff9a40e1da7c65850101fc254b070ebfe2ee1a620adaf83765449ecd |
-| eval/samples/drink-cafe-menu/gold.json | 0f43bb251b371ee7e117689ec086b7dfe2b9203f4aae49eaf8149aa944168e89 |
+| 输入review-sheet.csv | sha256-bb3d9e3184da91bd3d3b5a46964ba4eac21d8e5280c79c30d648b1d63521a22d |
+| 盲标冻结CSV（CRLF记录结束符） | sha256-1a954c5ea0375ce29c3d4de0cd26b141ac05d0320984d23a36d2853cbbfd3821 |
+| 交付A2-review-sheet.csv（LF记录结束符） | sha256-031bd74e98bd38147e4e3b517ef9c1eb41ad53a38702d544d7b9f1c95e71c0e8 |
+| 转换前后相同的规范化CSV行JSON | sha256-df0b09deb7ba813841a0183703e1cc031e0fb5031dbfc58c3c5dc8cb99e04d4b |
+| 本轮raw.json | sha256-d1a4e9b4c441d4b0a6e4db95b296677d81927cb9f1949b827fa790cde9707341 |
+| 10-14 labels.jsonl | sha256-ada8087632fe3f3529e27a6c265f984c00af5b76f6bccfd6b31163dcd0820608 |
+| eval/samples/bakery-croissant-single/gold.json | sha256-751f2d841d54bc89199897b11eac0e1756aaed8449f00e150741355a8d550d17 |
+| eval/samples/bakery-dessert-menu/gold.json | sha256-2c7f009dff9a40e1da7c65850101fc254b070ebfe2ee1a620adaf83765449ecd |
+| eval/samples/drink-cafe-menu/gold.json | sha256-0f43bb251b371ee7e117689ec086b7dfe2b9203f4aae49eaf8149aa944168e89 |
 
 ## 附录A：全部规则句的一对一映射
 
