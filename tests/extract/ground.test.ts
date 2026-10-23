@@ -125,6 +125,12 @@ describe('groundDraft: prices', () => {
     expect(out.lowConfidenceFields).not.toContain('items[1].price')
   })
 
+  it('does not flag a missing price for a number inside a code (编号RMB123abc)', () => {
+    const d = draft({ items: [{ name: '美式' }] })
+    const out = groundDraft(d, ctx('美式今天营业，编号RMB123abc已停用', []))
+    expect(out.lowConfidenceFields).not.toContain('items[0].price')
+  })
+
   it('does not flag a missing price when every amount in the text belongs to an item', () => {
     const d = draft({ items: [{ name: '拿铁' }, { name: '美式' }] })
     const out = groundDraft(d, ctx('拿铁 18 元，美式', []))

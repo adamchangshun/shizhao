@@ -45,9 +45,9 @@ const PRICE_TOKEN = String.raw`(?:¥\s*\d{1,7}(?:\.\d{1,2})?|\d{1,7}(?:\.\d{1,2}
 // two of them compete for the same run: with '\s*[:,、]?\s*' a name followed by a long run of
 // spaces backtracked quadratically (20,000 spaces took ~300ms); this form is linear.
 // One size may also stand there, a number of at most 4 digits and a size unit ('6 寸', '80g',
-// '250ml'); it becomes the item's spec. 块 is left out: '6 块' is a price, not a size. Longer
-// units come first so 'kg' and 'ml' are not cut to 'g' and 'm'.
-const SIZE = String.raw`\d{1,4}\s*(?:英寸|寸|厘米|cm|CM|mm|kg|KG|千克|公斤|g|G|克|ml|mL|ML|毫升|升|斤|两|片|个|只|粒|枚)`
+// '250ml', in any case: '2Kg'); it becomes the item's spec. 块 is left out: '6 块' is a price,
+// not a size. Longer units come first so 'kg' and 'ml' are not cut to 'g' and 'm'.
+const SIZE = String.raw`\d{1,4}\s*(?:英寸|寸|厘米|[cC][mM]|[mM][mM]|[kK][gG]|千克|公斤|[gG]|克|[mM][lL]|毫升|升|斤|两|片|个|只|粒|枚)`
 const GAP = String.raw`\s*(?:\([^()\d\n]{1,8}\)\s*)?(?:(${SIZE})\s*)?(?:[:,、]\s*)?`
 
 function escapeRegExp(s: string): string {
@@ -90,8 +90,9 @@ export function findTextPrice(name: string, text: string): Price | null {
   return findTextOffers(name, text)[0]?.price ?? null
 }
 
+// An amount never starts or ends inside a code or word: 'RMB123abc' and 'abc123元' are not amounts.
 const AMOUNT_RE =
-  /(?<![\d.])(?:(?:¥|rmb|cny)\s*(\d{1,7}(?:\.\d{1,2})?)(?![\d.])|(\d{1,7}(?:\.\d{1,2})?)\s*(?:元|块))/giu
+  /(?<![-_a-z0-9.])(?:(?:¥|rmb|cny)\s*(\d{1,7}(?:\.\d{1,2})?)(?![-_a-z0-9.])|(\d{1,7}(?:\.\d{1,2})?)\s*(?:元|块))/giu
 
 /** Every amount of money written in the text ('18 元', '¥15', 'RMB 1', '3块'), in order. */
 export function findTextAmounts(text: string): Array<{ amount: number; at: number; end: number }> {

@@ -39,6 +39,13 @@ const ACCOUNT_WORD = String.raw`(?:号码|号|账号|帐号|账户|id)`
 const ACCOUNT_CUE = `${ACCOUNT_SERVICE}${ACCOUNT_WORD}?`
 const ACCOUNT_DIRECT = new RegExp(`${ACCOUNT_CUE}[\\s:=是为]{0,3}[1-9]\\d{4,19}(?!\\d)`, 'i')
 const ACCOUNT_NUMBER = String.raw`(?<!\d)[1-9]\d{4,19}(?!\d)`
+// After a cue that names an account ("QQ账号", "支付宝账户"), a number in the same clause is the
+// account even when written like an amount ("我的QQ账号是这个 12345元旦后停用"), so this rule
+// runs on the text before amounts are set aside.
+const ACCOUNT_WORDED = new RegExp(
+  `${ACCOUNT_SERVICE}${ACCOUNT_WORD}[^,.;!?\\n。、]{0,20}?${ACCOUNT_NUMBER}`,
+  'i',
+)
 const ACCOUNT_NEARBY = new RegExp(
   `${ACCOUNT_CUE}[^,.;!?\\n。、]{0,20}?(?:${ACCOUNT_NUMBER}|${ID_TOKEN.source})`,
   'i',
@@ -108,6 +115,7 @@ export function containsPersonalInfo(text: string): boolean {
     WECHAT_DIRECT.test(n) ||
     (WECHAT_CUE.test(n) && ID_TOKEN.test(n)) ||
     ACCOUNT_DIRECT.test(ids) ||
+    ACCOUNT_WORDED.test(ids) ||
     ACCOUNT_NEARBY.test(noAmounts) ||
     ACCOUNT_NEXT_CLAUSE.test(noAmounts) ||
     spacedAccount(noAmounts)
