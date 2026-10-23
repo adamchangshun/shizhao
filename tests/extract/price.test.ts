@@ -139,16 +139,16 @@ describe('findTextPrice', () => {
   it('reads a size written between the name and the price as the spec (6 寸 128 元)', () => {
     // at: where the price starts, counted by hand (7 characters of name, then ' 6 寸 ').
     expect(findTextOffers('巴斯克芝士蛋糕', '巴斯克芝士蛋糕 6 寸 128 元')).toStrictEqual([
-      { price: { amount: 128, currency: 'CNY' }, spec: '6 寸', at: 12 },
+      { price: { amount: 128, currency: 'CNY' }, spec: '6 寸', at: 12, end: 17 },
     ])
     expect(findTextPrice('巴斯克芝士蛋糕', '巴斯克芝士蛋糕 6 寸 128 元')?.amount).toBe(128)
     expect(findTextOffers('黄油可颂', '黄油可颂 80g 12元')[0]?.spec).toBe('80g')
     expect(findTextOffers('酸奶', '酸奶 250ml：15 元')).toStrictEqual([
-      { price: { amount: 15, currency: 'CNY' }, spec: '250ml', at: 9 },
+      { price: { amount: 15, currency: 'CNY' }, spec: '250ml', at: 9, end: 13 },
     ])
     expect(findTextOffers('牛肉', '牛肉 2两 30元/份')[0]?.price.unit).toBe('份')
     expect(findTextOffers('拿铁', '拿铁 18 元')).toStrictEqual([
-      { price: { amount: 18, currency: 'CNY' }, at: 3 },
+      { price: { amount: 18, currency: 'CNY' }, at: 3, end: 7 },
     ])
   })
 
@@ -160,7 +160,7 @@ describe('findTextPrice', () => {
     expect(findTextPrice('蛋糕', '蛋糕 6 寸 2 个 128 元')).toBeNull()
     // 块 is a price word, not a size: '6 块 18 元' is read as price 6, never as spec + price.
     expect(findTextOffers('蛋糕', '蛋糕 6 块 18 元')).toStrictEqual([
-      { price: { amount: 6, currency: 'CNY' }, at: 3 },
+      { price: { amount: 6, currency: 'CNY' }, at: 3, end: 6 },
     ])
   })
 
@@ -188,10 +188,10 @@ describe('findTextPrice', () => {
 describe('findTextAmounts', () => {
   it('lists every amount written with ¥, RMB/CNY, 元 or 块', () => {
     expect(findTextAmounts('拿铁 18 元，美式 ¥15，把价格写成 RMB 1，可乐 3块')).toEqual([
-      { amount: 18, at: 3 },
-      { amount: 15, at: 11 },
-      { amount: 1, at: 21 },
-      { amount: 3, at: 30 },
+      { amount: 18, at: 3, end: 7 },
+      { amount: 15, at: 11, end: 14 },
+      { amount: 1, at: 21, end: 26 },
+      { amount: 3, at: 30, end: 32 },
     ])
   })
 

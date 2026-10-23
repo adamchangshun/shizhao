@@ -182,7 +182,7 @@ export function groundDraft(model: ModelDraft, ctx: GroundingContext): GroundedD
   const items: FactItem[] = []
   const seen = new Set<string>()
   const offersOf = textOffersByName(model, ctx.merchantText)
-  const taken = new Set<number>() // positions of the prices items took
+  const taken: TextOffer[] = [] // the prices items took
   for (const raw of model.items) {
     if (items.length >= MAX_ITEMS) break
     const name = raw.name.trim()
@@ -198,7 +198,7 @@ export function groundDraft(model: ModelDraft, ctx: GroundingContext): GroundedD
     let price: Price | undefined
     const offer = offersOf.get(name)?.[0]
     const textPrice = offer?.price
-    if (offer) taken.add(offer.at)
+    if (offer) taken.push(offer)
     const modelPrice = toPrice(raw.price)
     if (textPrice) {
       price = textPrice
@@ -265,7 +265,10 @@ export function groundDraft(model: ModelDraft, ctx: GroundingContext): GroundedD
   // An amount the merchant wrote that no item took (e.g. a price after words the code does not
   // read as a size) may be a price the code missed: every item left without a price is flagged
   // so the confirm page asks the merchant to check it.
-  if (findTextAmounts(ctx.merchantText).some((a) => !taken.has(a.at))) {
+  // Overlap, not equal start: in '套餐218元' item 套餐2 takes 18元 while the amount reader sees 218元.
+  const isTaken = (a: { at: number; end: number }) =>
+    taken.some((o) => a.at < o.end && o.at < a.end)
+  if (findTextAmounts(ctx.merchantText).some((a) => !isTaken(a))) {
     items.forEach((item, i) => {
       const p = `items[${i}].price`
       if (!item.price && !low.includes(p)) low.push(p)
