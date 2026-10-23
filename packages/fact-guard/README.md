@@ -74,3 +74,9 @@ Global numeric and matched-term grounding does not establish which product a cla
 Unicode 格式控制字符（Cf，包括零宽字符）无论位置和数量均删除；命中范围仍指向原文 UTF-16 偏移。可见干扰字符仍只在两个汉字之间连续不超过 3 个时删除。
 
 Unicode format controls (Cf, including zero-width characters) are removed at every position without a run-length limit. Hit ranges retain original UTF-16 offsets. Visible interference is still removed only in runs of at most three characters between Han characters.
+
+### Unicode 兼容规范化 / Unicode compatibility normalization
+
+去掉格式控制字符后，按字素簇做 NFKC，再执行现有繁简映射和大小写折叠。「𝟙𝟡元」等兼容数字会识别为价格；展开或合成出的字符映射至整个原文字素簇，位置仍为 UTF-16 偏移。NFKC 不是完整语义校验，也不提供完整繁简转换。
+
+After removing format controls, NFKC runs on grapheme clusters before the existing limited traditional-character mapping and lowercasing. Compatibility digits such as “𝟙𝟡元” are recognized as prices. Expanded or composed characters map to the complete original grapheme cluster using UTF-16 offsets. This is neither complete semantic validation nor full traditional-to-simplified conversion.
