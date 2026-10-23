@@ -91,6 +91,11 @@ export function normalizeText(input: string): NormalizedText {
   const tokens: Array<{ text: string; start: number; end: number }> = []
   let offset = 0
   for (const char of input) {
+    // Invisible formatting controls never separate a word or a number.
+    if (/^\p{Cf}$/u.test(char)) {
+      offset += char.length
+      continue
+    }
     const point = char.codePointAt(0)!
     const half =
       point >= 0xff01 && point <= 0xff5e
