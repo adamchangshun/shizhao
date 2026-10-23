@@ -50,6 +50,8 @@ describe('personal information', () => {
     '支付宝账号 RMB123abc',
     '支付宝账号 abc123元旦后停用',
     'QQ：tian_88¥5',
+    '我的QQ账号是这个 12345元旦后停用',
+    '支付宝账号是这个 2088102134567890 元',
   ])('refuses %s', (text) => {
     expect(containsPersonalInfo(text)).toBe(true)
   })

@@ -147,6 +147,10 @@ describe('findTextPrice', () => {
       { price: { amount: 15, currency: 'CNY' }, spec: '250ml', at: 9, end: 13 },
     ])
     expect(findTextOffers('牛肉', '牛肉 2两 30元/份')[0]?.price.unit).toBe('份')
+    // Latin units in any case.
+    expect(findTextOffers('牛肉', '牛肉 2Kg 30元')[0]?.spec).toBe('2Kg')
+    expect(findTextOffers('酸奶', '酸奶 250Ml 15元')[0]?.spec).toBe('250Ml')
+    expect(findTextOffers('蛋糕', '蛋糕 8Cm 12元')[0]?.spec).toBe('8Cm')
     expect(findTextOffers('拿铁', '拿铁 18 元')).toStrictEqual([
       { price: { amount: 18, currency: 'CNY' }, at: 3, end: 7 },
     ])
@@ -197,5 +201,7 @@ describe('findTextAmounts', () => {
 
   it('ignores bare numbers, phones and sizes', () => {
     expect(findTextAmounts('电话 139 0000 0000，6 寸，2 杯起送')).toEqual([])
+    // Not amounts: a number inside a code or a word ('RMB123abc', 'abc123元旦').
+    expect(findTextAmounts('编号RMB123abc已停用，abc123元旦后恢复')).toEqual([])
   })
 })
