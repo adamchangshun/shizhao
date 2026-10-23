@@ -68,3 +68,9 @@ Global numeric and matched-term grounding does not establish which product a cla
 - [houbb/sensitive-word](https://github.com/houbb/sensitive-word)（Apache-2.0）
 - [humingzhang/wordfilter](https://gitee.com/humingzhang/wordfilter)（Apache-2.0）
 - [cn2an](https://github.com/Ailln/cn2an)（MIT）
+
+### 隐形字符 / Invisible characters
+
+Unicode 格式控制字符（Cf，包括零宽字符）无论位置和数量均删除；命中范围仍指向原文 UTF-16 偏移。可见干扰字符仍只在两个汉字之间连续不超过 3 个时删除。
+
+Unicode format controls (Cf, including zero-width characters) are removed at every position without a run-length limit. Hit ranges retain original UTF-16 offsets. Visible interference is still removed only in runs of at most three characters between Han characters.
