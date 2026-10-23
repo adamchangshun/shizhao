@@ -76,8 +76,8 @@ MEDIUM：
 - M5 `lib/corrections/filter.ts`：个人信息过滤对加了较多分隔符的手机号不生效，也不覆盖 QQ、支付宝号；纠错内容可能留存顾客自己写的联系方式。
 - M6 `packages/fact-guard/src/normalize.ts`：干扰字符只在部分位置被归一，夹带零宽等字符的文案可能漏过规则层（含 `/api/guard` 的规则模式）。
 - M7 `packages/fact-guard/src/normalize.ts`：规范化只处理全角 ASCII，其他 Unicode 数字形式不会被识别为数字，数字核对可能漏检。
-- M8 `packages/fact-guard/src/rules/index.ts`：氛围白名单短语（如「慢烤的时光」「限定的温柔」）会连带放行同一句里的工艺或定位声明。
-- M9 `packages/fact-guard/src/grounding.ts`：营业时间端点只按时刻值匹配，与营业时刻相同的数字可以支撑无依据的促销说法。
+- M8 `packages/fact-guard/src/rules/index.ts`：氛围白名单短语（如「慢烤的时光」「限定的温柔」）会连带放行同一句里的工艺或定位声明。`db5f167` 后「每块都经慢烤的时光」这类前置词写法已拦截，「慢烤的时光，最终烤出金黄」这样跨逗号接结果的写法仍放行（在 `c62d89f` 上实测）。
+- M9 `packages/fact-guard/src/grounding.ts`：营业时间端点只按时刻值匹配，与营业时刻相同的数字可以支撑无依据的促销说法。已在 `db5f167` 修复：列出的促销说法（如「7:30开抢」「19:00秒杀结束」）和「N 点」积分说法不再借营业时间放行；未列出的促销同义词（如「7:30开售」）和跨分句写法仍放行，见包 README 的说明。
 - M10 `lib/extract/price.ts`（`GAP`）：价格抽取正则在超长空白输入下耗时随空格数平方增长；只有管理员能上传文字。
 - M11 `lib/guard-api/handler.ts`、`lib/stats/limiter.ts`：开启 `TRACK_TRUST_PROXY` 时，限流按完整 IPv6 地址分桶，同一网段换地址可绕过匿名限流。
 - M12 `Dockerfile`、`deploy/docker-compose.prod.yml`：基础镜像使用可变标签，没有固定 digest。
@@ -181,8 +181,8 @@ MEDIUM:
 - M5 `lib/corrections/filter.ts`: the personal-info filter misses phone numbers with many separators and does not cover QQ or Alipay IDs; corrections may retain contact details the customer typed.
 - M6 `packages/fact-guard/src/normalize.ts`: noise characters are normalized only in some positions, so copy containing zero-width and similar characters may slip past the rule layer (including the rules mode of `/api/guard`).
 - M7 `packages/fact-guard/src/normalize.ts`: normalization only handles full-width ASCII; other Unicode digit forms are not read as numbers, so number checks may miss them.
-- M8 `packages/fact-guard/src/rules/index.ts`: mood whitelist phrases (such as 「慢烤的时光」「限定的温柔」) also let through process or positioning claims in the same sentence.
-- M9 `packages/fact-guard/src/grounding.ts`: opening-hour endpoints are matched by clock value only, so a number equal to an opening time can support an unsupported promotion.
+- M8 `packages/fact-guard/src/rules/index.ts`: mood whitelist phrases (such as 「慢烤的时光」「限定的温柔」) also let through process or positioning claims in the same sentence. Since `db5f167` the leading-word form (e.g. 「每块都经慢烤的时光」) is blocked, but the form where the result follows after a comma (e.g. 「慢烤的时光，最终烤出金黄」) still passes (tested on `c62d89f`).
+- M9 `packages/fact-guard/src/grounding.ts`: opening-hour endpoints are matched by clock value only, so a number equal to an opening time can support an unsupported promotion. Fixed in `db5f167`: listed promotion phrases (e.g. 「7:30开抢」, 「19:00秒杀结束」) and "N 点" points claims are no longer grounded by opening hours; unlisted promotion synonyms (e.g. 「7:30开售」) and cross-clause forms still pass, as the package README states.
 - M10 `lib/extract/price.ts` (`GAP`): the price regex takes time quadratic in the amount of whitespace on very long input; only the admin can upload text.
 - M11 `lib/guard-api/handler.ts`, `lib/stats/limiter.ts`: with `TRACK_TRUST_PROXY` on, rate limits are keyed by full IPv6 address, so rotating addresses within one prefix bypasses the anonymous limit.
 - M12 `Dockerfile`, `deploy/docker-compose.prod.yml`: base images use mutable tags without pinned digests.
