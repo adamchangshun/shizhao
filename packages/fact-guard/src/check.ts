@@ -39,7 +39,7 @@ function patternRanges(
         // Context must pass on the normalized sentence first. Then allow horizontal spaces
         // only if the same pattern explicitly matches the original, character-folded span.
         const literal = [...sentence.slice(span.start, span.end)]
-          .map((char) => /^\p{Cf}$/u.test(char) ? char : normalizeText(char).text)
+          .map((char) => (/^\p{Cf}$/u.test(char) ? char : normalizeText(char).text))
           .join('')
         return (
           literal.replace(/[ \t]/gu, '') === match[0].replace(/[ \t]/gu, '') &&
