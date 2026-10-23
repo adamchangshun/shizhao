@@ -31,6 +31,7 @@ type Body = {
   }>
   seed?: number
   temperature: number
+  max_tokens?: number
   response_format?: unknown
 }
 const cleanups: Array<() => Promise<unknown>> = []
@@ -97,6 +98,33 @@ async function image() {
 }
 
 describe('OpenAI compatible provider HTTP boundary', () => {
+  it.each([
+    ['generic', 'extract', 8192],
+    ['qwen', 'design', 1024],
+    ['glm', 'copy', 4096],
+    ['deepseek', 'guard-judge', 8192],
+    ['generic', 'guard-rewrite', 4096],
+    ['ollama', 'extract', 4096],
+    ['generic', 'unknown', 2048],
+    ['generic', 'toString', 2048],
+  ] as const)(
+    '%s caps %s output at %i on format fallback and JSON repair',
+    async (profile, stage, limit) => {
+      const server = await serve((_, res, __, count) => {
+        if (profile !== 'ollama' && count === 1) {
+          res.statusCode = 400
+          res.end('response_format unsupported')
+        } else reply(res, count === (profile === 'ollama' ? 1 : 2) ? '{}' : '{"answer":"ok"}')
+      })
+      const result = await provider(server.baseUrl, profile).generateJSON({ ...request, stage })
+      expect(result.data.answer).toBe('ok')
+      expect(server.bodies).toHaveLength(profile === 'ollama' ? 2 : 3)
+      expect(server.bodies.map((body) => body.max_tokens)).toEqual(
+        Array(profile === 'ollama' ? 2 : 3).fill(limit),
+      )
+    },
+  )
+
   it.each(['ollama', 'qwen', 'glm'] as const)(
     '%s sends decodable image bytes with the correct MIME without changing the source',
     async (profile) => {
