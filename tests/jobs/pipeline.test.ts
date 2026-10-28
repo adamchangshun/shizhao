@@ -314,6 +314,34 @@ describe('styleBrief', () => {
     expect(designSpec.moodKeywords).toEqual(['日式', '极简'])
   })
 
+  it('accepts an empty body without content-length (curl -X POST with no data)', async () => {
+    const { projectId } = await prepareProject()
+    const res = await postJob(
+      new Request(`${BASE}/api/projects/${projectId}/jobs`, {
+        method: 'POST',
+        headers: bearer,
+        body: '',
+      }),
+      ctx(projectId),
+    )
+    expect(res.status).toBe(202)
+    await startJobRunner().idle()
+  })
+
+  it('rejects a body that is not JSON', async () => {
+    const { projectId } = await prepareProject()
+    const res = await postJob(
+      new Request(`${BASE}/api/projects/${projectId}/jobs`, {
+        method: 'POST',
+        headers: bearer,
+        body: '{"styleBrief":',
+      }),
+      ctx(projectId),
+    )
+    expect(res.status).toBe(400)
+    expect(listJobStatuses(projectId)).toEqual([])
+  })
+
   it('an empty brief is the same as none', async () => {
     const { projectId } = await prepareProject()
     const res = await postJob(

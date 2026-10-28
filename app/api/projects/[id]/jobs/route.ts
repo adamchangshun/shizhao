@@ -3,7 +3,7 @@ import { requireAdmin } from '@/lib/auth'
 import { Errors, toErrorResponse } from '@/lib/core/errors'
 import { isValidId } from '@/lib/core/ids'
 import { parseStyleBrief } from '@/lib/design/brief'
-import { readJsonLimited } from '@/lib/http'
+import { readOptionalJsonLimited } from '@/lib/http'
 import { createGenerationJob } from '@/lib/jobs'
 
 interface Ctx {
@@ -22,8 +22,7 @@ export async function POST(request: Request, { params }: Ctx): Promise<Response>
     requireAdmin(request)
     const { id } = await params
     if (!isValidId(id)) throw Errors.notFound('项目')
-    const hasBody = request.headers.get('content-length') !== '0' && request.body !== null
-    const body = JobRequest.parse(hasBody ? await readJsonLimited(request, 1024) : {})
+    const body = JobRequest.parse((await readOptionalJsonLimited(request, 1024)) ?? {})
     return Response.json(createGenerationJob(id, parseStyleBrief(body.styleBrief)), {
       status: 202,
     })
