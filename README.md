@@ -150,7 +150,7 @@ LLM_PRICE_OUTPUT_PER_1K=0
 
 `PROVIDER=anthropic` 时，成本统计按 Anthropic 定价页的缓存倍率折算输入单价：缓存写入 5 分钟 1.25 倍、1 小时 2 倍，缓存读取 0.1 倍（部分新模型更低，此时是上限）。
 
-出于安全考虑，`LLM_BASE_URL` 只有本机、局域网 IP 或 `.local` 地址可以用 http，公网地址必须用 https，否则启动时报错。
+出于安全考虑，`LLM_BASE_URL` 只有本机、局域网 IP、`.local` 地址或 Docker 的 `host.docker.internal` 可以用 http，公网地址必须用 https，否则启动时报错（`host.docker.internal` 只对模型地址放行，`PUBLIC_BASE_URL` 不放行）。
 
 用 Docker 运行时，容器里的 `localhost` 指向容器自身，连接本机的 Ollama 要把地址写成 `http://host.docker.internal:11434/v1`（Docker Desktop 提供该主机名）。
 

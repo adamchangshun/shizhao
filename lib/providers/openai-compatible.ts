@@ -2,8 +2,7 @@ import { readFile } from 'node:fs/promises'
 import sharp from 'sharp'
 import { z } from 'zod'
 import type { Usage } from '../core/schemas'
-import { HTTPS_REQUIRED_MESSAGE, isLocalHost } from '../env'
-import { createCallControl } from './control'
+import { createCallControl, llmEndpoint, readResponse, upstreamFailure } from './control'
 import { ProviderError } from './errors'
 import { extractJSON } from './json'
 import { PROFILE_CAPABILITIES, outputTokenLimit, type LLMProfile } from './profiles'
@@ -50,25 +49,6 @@ const textOf = (message: Message) =>
         .map((p) => p.text)
         .join('')
 
-/** Redact before truncating; an upstream may reflect the entire request in its error. */
-export function safeExcerpt(body: string, secrets: string[]): string {
-  let safe = body
-  try {
-    safe = JSON.stringify(JSON.parse(body))
-  } catch {
-    /* Plain error text. */
-  }
-  // Plain-text error pages may embed slash-escaped JSON without being JSON.
-  // Normalize those escapes before matching exact secrets and image data URLs.
-  safe = safe.replace(/\\+\//g, '/')
-  for (const secret of secrets) if (secret) safe = safe.split(secret).join('[redacted]')
-  safe = safe
-    .replace(/data:image\/[^\s"'<>]+/gi, '[image redacted]')
-    .replace(/Bearer\s+[^\s"'<>]+/gi, 'Bearer [redacted]')
-    .replace(/[\u0000-\u001f\u007f]/g, ' ')
-  return safe.slice(0, 200)
-}
-
 // Never downgrade for generic validation or authentication errors.
 function rejectsResponseFormat(body: string): boolean {
   // Some services echo the full request beside the actual error. Inspect only
@@ -87,29 +67,6 @@ function rejectsResponseFormat(body: string): boolean {
   )
 }
 
-/** Bound memory while reading, rather than trusting Content-Length. */
-export async function readResponse(response: Response): Promise<string> {
-  if (!response.body) return ''
-  const reader = response.body.getReader()
-  const chunks: Uint8Array[] = []
-  let bytes = 0
-  try {
-    while (true) {
-      const next = await reader.read()
-      if (next.done) break
-      bytes += next.value.byteLength
-      if (bytes > 2 * 1024 * 1024) {
-        await reader.cancel()
-        throw new ProviderError('bad_response')
-      }
-      chunks.push(next.value)
-    }
-    return Buffer.concat(chunks).toString('utf8')
-  } finally {
-    reader.releaseLock()
-  }
-}
-
 export class OpenAICompatibleProvider implements LLMProvider {
   readonly name = 'openai-compatible'
   readonly profile: LLMProfile
@@ -123,25 +80,7 @@ export class OpenAICompatibleProvider implements LLMProvider {
     const capabilities = PROFILE_CAPABILITIES[this.profile]
     if (!capabilities) throw new ProviderError('bad_response')
     this.etaMultiplier = capabilities.etaMultiplier
-    let base: URL
-    try {
-      base = new URL(options.baseUrl)
-      if (
-        !['http:', 'https:'].includes(base.protocol) ||
-        base.username ||
-        base.password ||
-        base.search ||
-        base.hash
-      )
-        throw new Error('Invalid URL')
-    } catch {
-      throw new ProviderError('bad_response')
-    }
-    // Keys and merchant data must not cross a public network in plain text.
-    if (base.protocol !== 'https:' && !isLocalHost(base.hostname))
-      throw new ProviderError('bad_response', HTTPS_REQUIRED_MESSAGE)
-    base.pathname = `${base.pathname.replace(/\/+$/, '')}/chat/completions`
-    this.endpoint = base.toString()
+    this.endpoint = llmEndpoint(options.baseUrl, 'chat/completions')
     if (
       !options.textModel?.trim() ||
       !options.visionModel?.trim() ||
@@ -245,10 +184,10 @@ export class OpenAICompatibleProvider implements LLMProvider {
         }
         control.check()
         if (!response.ok) {
-          console.warn('Provider request failed', {
-            status: response.status,
-            body: safeExcerpt(raw, secrets),
-          })
+          console.warn(
+            'Provider request failed',
+            upstreamFailure(response, raw, secrets, [req.system, req.prompt]),
+          )
           if ([400, 422].includes(response.status) && format && rejectsResponseFormat(raw)) {
             format = false
             continue

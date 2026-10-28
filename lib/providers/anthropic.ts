@@ -1,11 +1,9 @@
 import { readFile } from 'node:fs/promises'
 import { z } from 'zod'
 import type { Usage } from '../core/schemas'
-import { HTTPS_REQUIRED_MESSAGE, isLocalHost } from '../env'
-import { createCallControl } from './control'
+import { createCallControl, llmEndpoint, readResponse, upstreamFailure } from './control'
 import { ProviderError } from './errors'
 import { extractJSON } from './json'
-import { readResponse, safeExcerpt } from './openai-compatible'
 import type { GenerateJSONRequest, LLMProvider } from './types'
 
 export interface AnthropicOptions {
@@ -116,25 +114,7 @@ export class AnthropicProvider implements LLMProvider {
 
   constructor(options: AnthropicOptions) {
     this.options = { ...options }
-    let base: URL
-    try {
-      base = new URL(options.baseUrl)
-      if (
-        !['http:', 'https:'].includes(base.protocol) ||
-        base.username ||
-        base.password ||
-        base.search ||
-        base.hash
-      )
-        throw new Error('Invalid URL')
-    } catch {
-      throw new ProviderError('bad_response')
-    }
-    // Keys and merchant data must not cross a public network in plain text.
-    if (base.protocol !== 'https:' && !isLocalHost(base.hostname))
-      throw new ProviderError('bad_response', HTTPS_REQUIRED_MESSAGE)
-    base.pathname = `${base.pathname.replace(/\/+$/, '')}/messages`
-    this.endpoint = base.toString()
+    this.endpoint = llmEndpoint(options.baseUrl, 'messages')
     if (
       !options.textModel?.trim() ||
       !options.visionModel?.trim() ||
@@ -219,10 +199,10 @@ export class AnthropicProvider implements LLMProvider {
         }
         control.check()
         if (!response.ok) {
-          console.warn('Provider request failed', {
-            status: response.status,
-            body: safeExcerpt(raw, secrets),
-          })
+          console.warn(
+            'Provider request failed',
+            upstreamFailure(response, raw, secrets, [req.system, req.prompt]),
+          )
           if (response.status === 400 && forced && rejectsForcedTool(raw)) {
             forced = false
             continue

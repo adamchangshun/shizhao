@@ -363,11 +363,43 @@ describe('Anthropic Messages provider HTTP boundary', () => {
     expect(logged).not.toContain(bytes.toString('base64'))
     expect((error as Error).message).not.toContain(key)
   })
+  it('logs only the redacted error type and message, never an echoed prompt or image', async () => {
+    const system = 'MERCHANT-SYSTEM-PROMPT 老王面馆 13800000000'
+    const prompt = 'MERCHANT-USER-PROMPT 招牌牛肉面 18 元'
+    const bytes = Buffer.from('echoed-image-bytes-should-never-be-logged')
+    const encoded = bytes.toString('base64')
+    const img = await image(bytes)
+    const log = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const server = await serve((_, res, body) => {
+      res.statusCode = 400
+      res.setHeader('Content-Type', 'application/json')
+      res.end(
+        JSON.stringify({
+          type: 'error',
+          error: { type: 'invalid_request_error', message: `rejected: ${system} ${encoded}` },
+          request: { system: body.system, messages: body.messages },
+        }),
+      )
+    })
+    const error = await provider(server.baseUrl)
+      .generateJSON({ ...request, system, prompt, images: [img] })
+      .catch((e: unknown) => e as Error)
+    expect(log.mock.calls[0]![1]).toEqual({
+      status: 400,
+      type: 'invalid_request_error',
+      message: 'rejected: [redacted] [redacted]',
+    })
+    const visible =
+      JSON.stringify(log.mock.calls) + (error as Error).message + JSON.stringify(error)
+    for (const secret of [system, prompt, encoded, '老王面馆', 'MERCHANT-USER-PROMPT'])
+      expect(visible).not.toContain(secret)
+  })
   it('rejects a public plain-http endpoint before any request', () => {
     expect(() => provider('http://api.example.com/v1')).toThrow(
       expect.objectContaining({ code: 'bad_response', message: expect.stringContaining('https') }),
     )
     expect(provider('http://192.168.1.20:8080/v1')).toBeInstanceOf(AnthropicProvider)
+    expect(provider('http://host.docker.internal:8080/v1')).toBeInstanceOf(AnthropicProvider)
   })
   it('rejects a public plain-http LLM_BASE_URL at startup', () => {
     const base = { ADMIN_TOKEN: 'test-admin-012345', PUBLIC_BASE_URL: 'http://localhost:6690' }
@@ -396,6 +428,15 @@ describe('Anthropic Messages provider HTTP boundary', () => {
         LLM_BASE_URL: 'http://localhost:11434/v1',
       }).LLM_BASE_URL,
     ).toBe('http://localhost:11434/v1')
+    // The Docker host alias is an LLM endpoint exception only, not a public site address.
+    const docker = 'http://host.docker.internal:11434/v1'
+    expect(
+      parseEnv({ ...base, ...llm, PROVIDER: 'openai-compatible', LLM_BASE_URL: docker })
+        .LLM_BASE_URL,
+    ).toBe(docker)
+    expect(() =>
+      parseEnv({ ...base, PUBLIC_BASE_URL: 'http://host.docker.internal:6690' }),
+    ).toThrow(/PUBLIC_BASE_URL/)
   })
   it('is selected by PROVIDER=anthropic and requires the LLM settings', () => {
     const base = { ADMIN_TOKEN: 'test-admin-012345', PUBLIC_BASE_URL: 'http://localhost:6690' }

@@ -239,7 +239,7 @@ describe('OpenAI compatible provider HTTP boundary', () => {
     expect(server.bodies).toHaveLength(1)
     expect(server.bodies[0]).not.toHaveProperty('response_format')
   })
-  it('redacts slash-escaped image data URLs and raw base64 in non-JSON error bodies', async () => {
+  it('never logs non-JSON error bodies, only status and content type', async () => {
     const img = await image()
     await writeFile(img.path, Buffer.from([255, 255, 255, 251]))
     const log = vi.spyOn(console, 'warn').mockImplementation(() => {})
@@ -255,12 +255,7 @@ describe('OpenAI compatible provider HTTP boundary', () => {
     await expect(
       provider(server.baseUrl, 'qwen').generateJSON({ ...request, images: [img] }),
     ).rejects.toMatchObject({ code: 'upstream_error', status: 400 })
-    const logged = (log.mock.calls[0]![1] as { status: number; body: string }).body
-    expect(logged).not.toContain('////+w==')
-    expect(logged).not.toContain('\\/\\/\\/\\/+w==')
-    expect(logged).not.toContain('data:image')
-    expect(logged).toContain('[redacted]')
-    expect(logged.length).toBeLessThanOrEqual(200)
+    expect(log.mock.calls[0]![1]).toEqual({ status: 400, contentType: '' })
     expect(server.bodies).toHaveLength(1)
   })
   it('repairs unparseable JSON once and accumulates usage for both replies', async () => {
@@ -644,7 +639,7 @@ describe('OpenAI compatible provider HTTP boundary', () => {
     expect(logs).not.toContain('iVBORw==')
     expect(logs).not.toContain('data:image')
     expect(log.mock.calls[0]![1]).toMatchObject({ status: 400 })
-    expect((log.mock.calls[0]![1] as { body: string }).body.length).toBeLessThanOrEqual(200)
+    expect((log.mock.calls[0]![1] as { message: string }).message.length).toBeLessThanOrEqual(200)
     expect(JSON.stringify(error)).not.toContain(key)
   })
   it.each(['qwen', 'glm', 'ollama'] as const)(
@@ -694,6 +689,28 @@ describe('OpenAI compatible provider HTTP boundary', () => {
       expect(server.bodies).toHaveLength(1)
     },
   )
+  it('logs only OpenAI error code and message with prompts redacted', async () => {
+    const system = 'MERCHANT-SYSTEM-PROMPT 老王面馆'
+    const log = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const server = await serve((_, res, body) => {
+      res.statusCode = 400
+      res.end(
+        JSON.stringify({
+          error: { code: 'invalid_parameter', message: `bad: ${system}` },
+          echoed: body.messages,
+        }),
+      )
+    })
+    await expect(
+      provider(server.baseUrl).generateJSON({ ...request, system }),
+    ).rejects.toMatchObject({ code: 'upstream_error', status: 400 })
+    expect(log.mock.calls[0]![1]).toEqual({
+      status: 400,
+      type: 'invalid_parameter',
+      message: 'bad: [redacted]',
+    })
+    expect(JSON.stringify(log.mock.calls)).not.toContain('老王面馆')
+  })
   it('rejects a public plain-http endpoint but keeps LAN and loopback http', () => {
     expect(() => provider('http://api.example.com/v1')).toThrow(
       expect.objectContaining({ code: 'bad_response', message: expect.stringContaining('https') }),

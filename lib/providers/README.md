@@ -22,7 +22,8 @@ recordUsage(db, result.usage, { projectId, jobId })
 - 普通 4xx 不重试；只有 400/422 明确表示不支持 `response_format` 时移除它一次。system 从第一次请求起带「只输出 JSON」。修正请求保留原消息与模型回复；提取失败时要求仅输出符合要求的 JSON（jsonMode 开启时要求对象），schema 不符时增加 zod 错误路径/代码摘要。
 - 回复支持字符串或 `[{type:'text',text:...}]`；先解析完整 JSON，再提取第一个 JSON 代码块或第一个平衡对象，正确跳过字符串中的括号和转义字符。JSON 提取失败与 schema 不符共享一次修正额度；修正后仍无法解析报 `bad_response`，能够解析但仍不符合 schema 则报 `schema_mismatch`。HTTP 成功响应本身不是合法协议 envelope 时仍立即报 `bad_response`。
 - 读响应限制为 2 MiB，超出即取消响应并报 `bad_response`。不跟随重定向，以免向另一个目标转发凭据。
-- 失败日志仅输出 HTTP 状态与脱敏后的前 200 字符；先处理转义 JSON 和纯文本中转义的斜杠，再删除配置密钥及已发送图片的 base64，最后截断。错误对象不附带响应正文、请求或底层 cause。
+- 失败日志不写响应正文：只解析 JSON 的 `error.type`（OpenAI 兼容接口为 `error.code`）与 `error.message`（`error` 是字符串时按 message 处理），各自经 `safeExcerpt` 脱敏后截取前 200 字符；脱敏先处理转义 JSON 和转义的斜杠，再删除配置密钥、已发送图片的 base64，以及本次的 system 与 prompt 原文（不少于 8 个字符时）。正文不是 JSON 时只记 HTTP 状态与 content-type。错误对象不附带响应正文、请求或底层 cause。
+- 端点校验统一由 `control.ts` 的 `llmEndpoint()` 完成，两个适配器与 `lib/env.ts` 共用：只接受不含用户名、密码、查询参数或锚点的 http(s) 网址；公网地址必须用 https，http 只允许本机、局域网 IP、`.local` 与 `host.docker.internal`。
 - 对外错误代码：`timeout`、`aborted`、`rate_limited`、`bad_response`、`schema_mismatch`、`upstream_error`；提示信息为简体中文。
 
 ## 配置与 profile
@@ -52,7 +53,7 @@ recordUsage(db, result.usage, { projectId, jobId })
 
 ## Anthropic Messages 协议
 
-`PROVIDER=anthropic` 使用 `lib/providers/anthropic.ts`，复用同一组 `LLM_*` 变量，`LLM_BASE_URL` 填到 `/v1`，请求发往 `<base>/messages`，带 `x-api-key`（Key 为空时不发送）与 `anthropic-version: 2023-06-01`。超时、取消、重试次数与退避、2 MiB 响应上限、不跟随重定向、脱敏日志、错误代码和 usage 计费规则与 openai-compatible 完全一致，`readResponse`/`safeExcerpt` 直接复用。
+`PROVIDER=anthropic` 使用 `lib/providers/anthropic.ts`，复用同一组 `LLM_*` 变量，`LLM_BASE_URL` 填到 `/v1`，请求发往 `<base>/messages`，带 `x-api-key`（Key 为空时不发送）与 `anthropic-version: 2023-06-01`。超时、取消、重试次数与退避、2 MiB 响应上限、不跟随重定向、脱敏日志、错误代码和 usage 计费规则与 openai-compatible 完全一致，共用 `control.ts` 的 `llmEndpoint`/`readResponse`/`upstreamFailure`。
 
 - 结构化输出：请求带一个 `submit_json` 工具（`input_schema` 只约束 `result` 字段存在；zod 3 无法导出 JSON Schema，具体形状仍由提示词描述、zod 校验），`tool_choice` 强制调用该工具且关闭并行调用。Claude Opus 5.5、Sonnet 5.5、Fable 5.1 等新模型对强制 `tool_choice` 返回 400，此时只在错误体提到 `tool_choice` 不支持的情况下降级为 `auto` 一次，与 openai-compatible 的 `response_format` 降级共享同一套重试预算。
 - 取结果：优先读取 `submit_json` 的 `result`（若为字符串则按 `json.ts` 解析）；模型没有调用工具时退回 `json.ts` 从文本提取。提取失败或 schema 不符共享一次修正：上一轮 assistant 内容原样回传（含 thinking 块），工具调用以 `is_error` 的 `tool_result` 回复修正提示，否则以普通文本回复。
