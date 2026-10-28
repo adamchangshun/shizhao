@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { containsPersonalInfo, looksLikeSpam, sanitizeText } from '@/lib/corrections/filter'
+import {
+  containsPersonalInfo,
+  looksLikeSpam,
+  sanitizeLines,
+  sanitizeText,
+} from '@/lib/corrections/filter'
 
 describe('personal information', () => {
   it.each([
@@ -123,6 +128,15 @@ describe('personal information', () => {
       containsPersonalInfo(text)
       expect(performance.now() - start).toBeLessThan(30)
     }
+  })
+})
+
+describe('line breaks end a sentence', () => {
+  it('keeps line breaks for the check, so a cue does not reach the next line', () => {
+    expect(sanitizeLines(' a <b>QQ</b>\r\n\u2028 订单号  12345 ')).toBe('a QQ\n\n订单号 12345')
+    expect(containsPersonalInfo(sanitizeLines('可以用支付宝\n订单号 12345 写错了'))).toBe(false)
+    expect(containsPersonalInfo(sanitizeLines('支付宝\n12345678'))).toBe(true)
+    expect(containsPersonalInfo(sanitizeLines('支付宝收款\n账号 2088102134567890'))).toBe(true)
   })
 })
 

@@ -10,7 +10,7 @@ import { corrections, projects, versions } from '../db/schema'
 import { isJsonRequest, isSameOriginRequest, readJsonLimited } from '../http'
 import { FixedWindowLimiter } from '../rate-limit'
 import { clientHash } from '../stats/limiter'
-import { containsPersonalInfo, looksLikeSpam, sanitizeText } from './filter'
+import { containsPersonalInfo, looksLikeSpam, sanitizeLines, sanitizeText } from './filter'
 import { findOption } from './options'
 
 const MAX_BODY_BYTES = 2048
@@ -77,7 +77,13 @@ export async function submitCorrection(request: Request, now: number = Date.now(
   if (!option.noValue && value === '') {
     throw new ApiError(400, 'value_required', '请填写正确的内容')
   }
-  if (containsPersonalInfo(value) || containsPersonalInfo(note)) throw personalInfo()
+  // Checked with line breaks kept: they end a sentence for the QQ and Alipay rules.
+  if (
+    containsPersonalInfo(sanitizeLines(body.suggestedValue ?? '')) ||
+    containsPersonalInfo(sanitizeLines(body.note ?? ''))
+  ) {
+    throw personalInfo()
+  }
 
   // Only valid reports count, keyed by the real project: made-up slugs or rejected requests
   // cannot fill the limiter or use up a page's budget. (Without a trusted proxy every visitor

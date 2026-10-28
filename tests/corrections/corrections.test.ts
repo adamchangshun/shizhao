@@ -332,6 +332,8 @@ describe('customer correction → merchant merge', () => {
         note: '加我微信 tianxin_88 细说',
       },
       { ...base, field: 'other', suggestedValue: '联系 someone@example.com' },
+      // A cue and a number on the next line, right after it, are still an account.
+      { ...base, field: 'items.cake01.price', suggestedValue: '138', note: '支付宝\n12345678' },
     ]
     for (const body of refused) {
       const res = await submit(body)
@@ -340,6 +342,17 @@ describe('customer correction → merchant merge', () => {
         '请勿填写个人信息：提到 QQ、支付宝或微信时，不要同时写出号码、账号或 5 位以上的数字',
       )
     }
+    // A line break ends the cue's sentence, as 。 does; the stored note has it as a space.
+    const lines = await submit({
+      ...base,
+      field: 'items.cake01.price',
+      suggestedValue: '138',
+      note: '可以用支付宝\n订单号 12345 写错了',
+    })
+    expect(lines.status).toBe(201)
+    expect((await pending(p.projectId)).corrections[0]).toMatchObject({
+      note: '可以用支付宝 订单号 12345 写错了',
+    })
     // Each page allows 3 reports per source and 10 minutes, so the contact case uses its own page.
     const q = await published()
     const phone = await submit({

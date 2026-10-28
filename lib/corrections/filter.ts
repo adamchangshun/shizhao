@@ -1,15 +1,30 @@
 // Content rules for anonymous correction text: clean it, refuse personal data, flag spam.
 // Matching runs on an NFKC-normalized copy so full-width digits and letters are caught too.
 
-/** Strips HTML tags and control characters (newlines in notes become spaces), then trims. */
-export function sanitizeText(raw: string): string {
+/** Tags removed, every line break ('\r\n', '\r', '\u2028', …) as '\n', other control characters as spaces. */
+function clean(raw: string): string {
   return raw
     .replace(/<[^>]*>?/g, '')
+    .replace(/\r\n?|[\u000b\u000c\u0085\u2028\u2029]/g, '\n')
     .replace(
-      /[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u2028\u2029\u202a-\u202e\u2066-\u2069\ufeff]/g,
+      /[\u0000-\u0009\u000e-\u001f\u007f-\u009f\u200b-\u200f\u202a-\u202e\u2066-\u2069\ufeff]/g,
       ' ',
     )
-    .replace(/\s+/g, ' ')
+}
+
+/** Strips HTML tags and control characters (newlines in notes become spaces), then trims. */
+export function sanitizeText(raw: string): string {
+  return clean(raw).replace(/\s+/g, ' ').trim()
+}
+
+/**
+ * sanitizeText, but each line break kept as '\n': for containsPersonalInfo a line break ends a
+ * sentence, as 。 does, so a cue on one line does not reach a number on the next.
+ */
+export function sanitizeLines(raw: string): string {
+  return clean(raw)
+    .replace(/[^\S\n]+/g, ' ')
+    .replace(/ ?\n ?/g, '\n')
     .trim()
 }
 
