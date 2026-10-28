@@ -58,7 +58,7 @@ recordUsage(db, result.usage, { projectId, jobId })
 - 取结果：优先读取 `submit_json` 的 `result`（若为字符串则按 `json.ts` 解析）；模型没有调用工具时退回 `json.ts` 从文本提取。提取失败或 schema 不符共享一次修正：上一轮 assistant 内容原样回传（含 thinking 块），工具调用以 `is_error` 的 `tool_result` 回复修正提示，否则以普通文本回复。
 - 不发送 `temperature`、`seed`：新模型对采样参数返回 400，Messages 协议没有 seed。`max_tokens` 固定 16000。
 - `stop_reason` 为 `max_tokens`、`model_context_window_exceeded` 或 `refusal` 时，工具输入可能残缺或被拒绝，直接报 `bad_response`，不进入修正。
-- usage：`input_tokens` 加缓存写入/读取 token 计入输入，`output_tokens` 计入输出。适配器不发送 `cache_control`，正常情况下缓存分项为 0；若代理仍返回缓存 token，按统一输入单价计费是上限估计（项目只有一组单价变量，不新增缓存费率）。缺失时与 openai-compatible 相同，只按文本字符估算并标记 `~est`，工具定义、图片与 thinking 不计入，估算不等于账单。
+- usage：`inputTokens` 记普通输入、缓存写入、缓存读取三类 token 之和，`outputTokens` 记 `output_tokens`。成本按 [Anthropic 定价页](https://platform.claude.com/docs/en/about-claude/pricing) 的缓存倍率折算到 `LLM_PRICE_INPUT_PER_1K`：5 分钟写入 1.25×、1 小时写入 2×（读 `usage.cache_creation` 的 TTL 明细；没有明细的写入按 2× 计）、读取 0.1×（定价页的标准倍率，Fable 5.1、Opus 5.5、Sonnet 5.5 等更低，所以对这些模型是上限）。不新增环境变量。适配器不发送 `cache_control`，正常情况下缓存分项为 0。缺失时与 openai-compatible 相同，只按文本字符估算并标记 `~est`，工具定义、图片与 thinking 不计入，估算不等于账单。
 - 本地协议测试见 `tests/providers/anthropic.test.ts`，未调用真实接口。
 
 ## Usage

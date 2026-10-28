@@ -36,7 +36,31 @@ const tokenUsage = z.object({
   output_tokens: z.number().int().nonnegative(),
   cache_creation_input_tokens: z.number().int().nonnegative().nullish(),
   cache_read_input_tokens: z.number().int().nonnegative().nullish(),
+  cache_creation: z
+    .object({
+      ephemeral_5m_input_tokens: z.number().int().nonnegative().nullish(),
+      ephemeral_1h_input_tokens: z.number().int().nonnegative().nullish(),
+    })
+    .nullish(),
 })
+type TokenUsage = z.infer<typeof tokenUsage>
+/**
+ * Input tokens weighted by Anthropic's published cache multipliers (pricing page, 2026-10):
+ * 5m writes 1.25x, 1h writes 2x, reads at most 0.1x (some models are lower, so 0.1x is an
+ * upper bound). Writes without a TTL breakdown are billed at the 2x upper bound.
+ */
+function billedInput(usage: TokenUsage): number {
+  const written = usage.cache_creation_input_tokens ?? 0
+  const short = usage.cache_creation?.ephemeral_5m_input_tokens ?? 0
+  const long = usage.cache_creation?.ephemeral_1h_input_tokens ?? 0
+  const unknown = Math.max(0, written - short - long)
+  return (
+    usage.input_tokens +
+    short * 1.25 +
+    (long + unknown) * 2 +
+    (usage.cache_read_input_tokens ?? 0) * 0.1
+  )
+}
 const envelopeSchema = z.object({
   content: z.array(z.object({ type: z.string() }).passthrough()).min(1),
   stop_reason: z.string().nullish(),
@@ -152,6 +176,7 @@ export class AnthropicProvider implements LLMProvider {
         repaired = false,
         retries = 0,
         inputTokens = 0,
+        billedInputTokens = 0,
         outputTokens = 0,
         estimated = false
       while (true) {
@@ -222,11 +247,15 @@ export class AnthropicProvider implements LLMProvider {
           .map((b) => toolUseSchema.safeParse(b))
           .find((r) => r.success)?.data
         const reported = tokenUsage.safeParse(envelope.usage)
+        const estimatedInput = reported.success
+          ? 0
+          : estimate(system + messages.map(textOf).join(''))
         inputTokens += reported.success
           ? reported.data.input_tokens +
             (reported.data.cache_creation_input_tokens ?? 0) +
             (reported.data.cache_read_input_tokens ?? 0)
-          : estimate(system + messages.map(textOf).join(''))
+          : estimatedInput
+        billedInputTokens += reported.success ? billedInput(reported.data) : estimatedInput
         outputTokens += reported.success
           ? reported.data.output_tokens
           : estimate(text + (toolUse ? JSON.stringify(toolUse.input) : ''))
@@ -243,7 +272,7 @@ export class AnthropicProvider implements LLMProvider {
         control.check()
         if (parsed?.success) {
           const cost =
-            (inputTokens / 1000) * (this.options.inputPricePer1K ?? 0) +
+            (billedInputTokens / 1000) * (this.options.inputPricePer1K ?? 0) +
             (outputTokens / 1000) * (this.options.outputPricePer1K ?? 0)
           return {
             data: parsed.data,

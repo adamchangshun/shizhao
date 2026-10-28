@@ -60,7 +60,7 @@ const toolUse = (input: unknown, id = 'toolu_1') => ({
 function reply(
   res: ServerResponse,
   content: unknown[] = [toolUse({ result: { answer: 'ok' } })],
-  usage: unknown = { input_tokens: 1000, output_tokens: 300, cache_read_input_tokens: 200 },
+  usage: unknown = { input_tokens: 1200, output_tokens: 300 },
   stopReason = 'tool_use',
 ) {
   res.setHeader('Content-Type', 'application/json')
@@ -123,7 +123,7 @@ describe('Anthropic Messages provider HTTP boundary', () => {
     expect(body.system.startsWith('Return JSON.\n只输出 JSON')).toBe(true)
     expect(body).not.toHaveProperty('temperature')
     expect(body).not.toHaveProperty('seed')
-    // (1000 + 200 cached) / 1000 * 0.002 + 300 / 1000 * 0.006 = 0.0024 + 0.0018
+    // 1200 / 1000 * 0.002 + 300 / 1000 * 0.006 = 0.0024 + 0.0018
     expect(result.usage).toMatchObject({
       provider: 'anthropic',
       model: 'test-text',
@@ -132,6 +132,31 @@ describe('Anthropic Messages provider HTTP boundary', () => {
       costCny: 0.0042,
     })
     expect(Usage.safeParse(result.usage).success).toBe(true)
+  })
+  it.each([
+    // Pricing page multipliers: 5m write 1.25x, 1h write 2x, read 0.1x (upper bound).
+    // Billed input = 1000 + 400*1.25 + 200*2 + 2000*0.1 = 2100 → 2.1*0.002 + 0.3*0.006 = 0.006
+    {
+      usage: {
+        input_tokens: 1000,
+        output_tokens: 300,
+        cache_creation_input_tokens: 600,
+        cache_read_input_tokens: 2000,
+        cache_creation: { ephemeral_5m_input_tokens: 400, ephemeral_1h_input_tokens: 200 },
+      },
+      inputTokens: 3600,
+      costCny: 0.006,
+    },
+    // No TTL breakdown → writes at the 2x upper bound: 1000 + 500*2 = 2000 → 0.004 + 0.0018
+    {
+      usage: { input_tokens: 1000, output_tokens: 300, cache_creation_input_tokens: 500 },
+      inputTokens: 1500,
+      costCny: 0.0058,
+    },
+  ])('bills cache tokens at the published multipliers', async ({ usage, inputTokens, costCny }) => {
+    const server = await serve((_, res) => reply(res, undefined, usage))
+    const result = await provider(server.baseUrl).generateJSON(request)
+    expect(result.usage).toMatchObject({ inputTokens, outputTokens: 300, costCny })
   })
   it('omits x-api-key when no key is configured and parses a stringified result', async () => {
     const server = await serve((_, res) => reply(res, [toolUse({ result: '{"answer":"ok"}' })]))

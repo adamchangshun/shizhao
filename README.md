@@ -148,6 +148,8 @@ LLM_PRICE_INPUT_PER_1K=0        # 每千 token 单价（元），只用于成本
 LLM_PRICE_OUTPUT_PER_1K=0
 ```
 
+`PROVIDER=anthropic` 时，成本统计按 Anthropic 定价页的缓存倍率折算输入单价：缓存写入 5 分钟 1.25 倍、1 小时 2 倍，缓存读取 0.1 倍（部分新模型更低，此时是上限）。
+
 用 Docker 运行时，容器里的 `localhost` 指向容器自身，连接本机的 Ollama 要把地址写成 `http://host.docker.internal:11434/v1`（Docker Desktop 提供该主机名）。
 
 事实抽取需要读照片，所以要完整使用实招，至少要有一个支持图片的配置（`qwen`、`glm` 或带视觉模型的 `ollama`）。各配置的协议细节见 [lib/providers/README.md](lib/providers/README.md)。
