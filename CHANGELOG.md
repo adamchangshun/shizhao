@@ -4,19 +4,105 @@
 
 All notable changes are recorded here. The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/) and versions follow [Semantic Versioning](https://semver.org/). Each release is written in Chinese first, followed by English.
 
-## [Unreleased]
+## [0.2.0] - 2026-10-28
 
 ### 中文
 
+内容为 `main` 截至提交 `74a6a7e`（2026-10-28）的代码：0.1.0（`c7396c0`）之后合并的 5 个分支（`40842a1` 事实守卫与模型适配修复、`ad1de5b` 跨商品借用检查、`90209dc` 抽取与纠错修复、`cc7f3ab` Anthropic 适配器、`74a6a7e` 商家风格偏好）。原计划的 0.1.1 并入本版，不单独发布。
+
+#### 新增
+
+- **Anthropic Messages 协议适配器**（`lib/providers/anthropic.ts`，`PROVIDER=anthropic`）：复用现有 `LLM_*` 变量，不新增环境变量。请求带一个 `submit_json` 工具并强制调用，从工具输入取 JSON；模型拒绝强制 `tool_choice` 时降级为 `auto` 一次，没调用工具时退回从文本提取。图片以 base64 `image` 块发送（WebP / PNG / JPEG 原样）。`stop_reason` 为 `max_tokens`、`model_context_window_exceeded` 或 `refusal` 时直接报 `bad_response`。成本按 Anthropic 定价页的缓存倍率折算输入单价：5 分钟写入 1.25 倍、1 小时写入 2 倍、读取 0.1 倍。超时、重试、2 MiB 响应上限、不跟随重定向、错误代码与 openai-compatible 共用 `lib/providers/control.ts`。只有本地协议测试，没有调用真实接口。
+- **商家风格偏好 `styleBrief`**：`POST /api/projects/:id/jobs` 可带可选请求体 `{ styleBrief: { templateId?, moodKeywords?, primary? } }`，即版式（`poster` / `card-stack` / `menu-board`）、1～4 个风格词（每个 1～6 个汉字）和 `#RRGGBB` 主色。接口用 zod 校验，`styleBrief: null`、未知字段和不合法的值返回 400 `invalid_style_brief`，不创建任务；不带请求体时与以前相同。`jobs` 表新增可空列 `brief`（迁移 `0004_job_style_brief`）。生成结果一定遵守给出的项，文字色仍保证 4.5:1 对比度。商家界面在事实确认、预览和生成失败三个页面加了可折叠的「风格偏好（可选）」区，在浏览器 localStorage 里记住上次填的值。见 [`docs/API.md`](docs/API.md) 附录与 `docs/CONTRACT.md` R11。
+
+#### 修复
+
+- **0.1.0 已知问题 → 已修复：F1 规格夹价**（`lib/extract/price.ts`）：商品名和价格之间可以夹一个规格（最多 4 位数字加寸、g、ml、斤、个等单位），「巴斯克芝士蛋糕 6 寸 128 元」能取到 128 元，「6 寸」记为规格。文字里还有没被任何商品取走的金额时，没有价格的商品会列入低置信字段，确认页会提示文字里有价格没有识别出来。
+- **0.1.0 已知问题 → 已修复：文案判定层拦不住不带数字的跨商品借用**（`lib/copy/`）：新增确定性检查 `crossItemBorrowing`，商品 B 的描述重复商品 A 的规格、标签或描述句子、而 B 自己的事实和店铺事实里没有这段文字时，规则模式直接删除该句，判定模式把它作为判定结果交给改写，改写后仍复查。比对前统一做 NFKC、fact-guard 的规范化并只保留字母和数字。否定词（不、未、非、没有、不含、并非、不是）只在与词条之间没有标点时生效；只有连续写出的完整商品名才豁免；单字候选只在整句去掉标点后恰好是这个字时才算借用；商品 id 含换行符时漏检的问题已修复；不可见格式字符（Unicode Cf，双向控制符除外）不算分界。
+- **0.1.0 已知问题 → 已修复：顾客纠错的 QQ / 支付宝过滤（M5）**（`lib/corrections/`）：号码中间插入任意数量的分隔符都会被拼回识别（0.1.0 中 4 个以上分隔符会漏过）。提到 QQ、支付宝（含 Q 号、扣扣、企鹅号、zfb 等写法）的同一句内（到句号、问号、感叹号或换行为止，逗号、顿号不算断句）出现 5–20 位数字或像账号的字母数字组合，一律拒绝，金额也不例外；下一句明说是账号、号码时同样拒绝。建议值和补充说明合并成一段检测，把提示词和号码拆到两个字段也会被拦。400 提示改为「请勿填写个人信息：提到 QQ、支付宝或微信时，不要同时写出号码、账号或 5 位以上的数字」，指导顾客改写。见 [`docs/PRIVACY.md`](docs/PRIVACY.md)。
+- **0.1.0 已知问题 → 已修复：M2 模型请求没有 `max_tokens`**：每次请求（含网络重试、格式降级和 schema 修正）都带输出上限：extract 8192、design 1024、copy 4096、guard-judge 8192、guard-rewrite 4096，未知场景 2048；profile 可以覆盖，Ollama 的 extract 为 4096。
+- **0.1.0 已知问题 → 已修复：M6 零宽字符只在部分位置被归一**：Unicode Cf 与 Default_Ignorable_Code_Point 字符（零宽字符、组合字素连接符、变体选择符、填充符等）在任意位置、任意个数都删除，命中位置仍指向原文。
+- **0.1.0 已知问题 → 已修复：M7 只处理全角 ASCII**：按字素簇做带原文位置映射的 NFKC，「𝟙𝟡元」能识别为价格。省略号（U+2025、U+2026）不参与 NFKC，不会被展开成句点切开分句；只有来源属于 `\p{Nd}` 的字符算数字，「⑲元」「全场③折」不再被识别为数字。
+- **0.1.0 已知问题 → 已修复：M10 价格正则在超长空白输入下耗时平方增长**：商品名到价格之间的间隔改为线性匹配，不再截断长串空格（截断会让用长空格对齐的菜单丢价格）。
+- **0.1.0 已知问题 → 部分修复：07 规则层 LOW「天气后缀只收回列出的工艺线索词」**：天气分句里的「也能存放 / 长久储存 / 久放」「也不变质」「慢慢醒发」「静置一夜」现在需要低温事实依据；未列举的同义说法仍会放行。
+- **0.1.0 已知问题 → 部分修复：M8 氛围白名单短语**：「限定的温柔」「把限定的温柔留给你」只在独立分句中豁免，「限定的温柔款蛋糕今日供应」这类带供应、款式的写法不再借它放行。「慢烤的时光」跨逗号接结果的写法本版没有改动，也没有重测。
+- **识图商品名改用商家文字（F2）**：识图模型给的商品名只来自图片（如英文 BUTTER CROISSANT）、文字里找不到价格时，按金额唯一匹配到商家文字里没被认领的一行「名字 + 价格」，改用这一行的名字和价格，并标「请核对」；没有金额时只在一个商品对一行时才改，有歧义就不猜。
+- **价格识别**：价格前面紧挨字母、数字、`_`、`-` 时不算价格（只在逐行扫描价格的入口），¥ 后面的数字之后紧接这些字符时也不算（「¥123abc」「A123元」）；商品名本身以字母或数字结尾时（「LATTE18元」「套餐2¥18」）仍能取到价格。「元旦」「元宵」等词里的「元」不算金额。一个价格只归给它前面最长的商品名（「拿铁\n燕麦拿铁 25元」不再给拿铁也标 25 元）。
+
+#### 安全
+
+- **0.1.0 已知问题 → 已修复：L3 `LLM_BASE_URL` 允许公网明文 HTTP**：两个适配器和启动时的环境校验共用 `llmEndpoint()`，公网地址必须用 https，否则启动报错；本机、局域网 IP、`.local` 与 `host.docker.internal` 仍可用 http。`host.docker.internal` 只对模型地址放行，`PUBLIC_BASE_URL` 不放行。`isLocalHost()` 移到 `lib/net.ts`。
+- **0.1.0 已知问题 → 已修复：L5 上游错误正文写进日志**：失败日志不再写响应正文和 `error.message`，只记 HTTP 状态，以及 JSON 中的 `error.type`、`error.code`（必须是 1–40 个小写字母或下划线、以字母开头，否则记为 `other`）。正文不是 JSON 时只记 content-type，去参数、转小写后只保留 `application/json`、`application/problem+json`、`text/plain`、`text/html`、`text/event-stream` 5 种，其余记为 `other`。修正轮回传的内容也不进日志。
+- **0.1.0 已知问题 → 已修复：M3 纠错接口不校验请求来源**：`POST /api/corrections` 在读取请求体、计入限流之前检查：Content-Type 不是 `application/json` 时返回 415，`Sec-Fetch-Site` 为跨站或 `Origin` 是外站时返回 403。
+
+#### 测试
+
+- `pnpm test`：65 个测试文件，1490 个测试通过，另有 1 个 todo（繁简写法绕过跨商品借用检查，见「已知问题」）。在 `74a6a7e` 上实跑，2026-10-28。
+- A1 对抗集（同一次输出，样本内，只作回归）：拦截 45/47，误杀 0/23，与 0.1.0 相同。A1b 留出集本版没有重测，0.1.0 一节的数字仍是对 `1299c61` 的唯一一次运行结果。
+
 #### 已知问题
 
-- 识图模型给的商品名只来自图片（如英文 BUTTER CROISSANT）、文字里找不到价格时，会改用商家文字里一行「名字 + 价格」的名字和价格（金额唯一匹配；没有金额时只在一个商品对一行时才改）。候选名排除了带标点、价格改写、运费、满减、合计等词的行，但换个说法的指令或普通说明（如「本店最低消费 20元」），以及中文标签后直接跟价格的编号（如「商品编号123元」），仍可能被当成商品名。这条路径只用商家自己写的文字，改名后的商品名会标「请核对」，商家确认事实表时能看到并修改。
+0.1.0「已知问题」中本版没有修复的条目仍然有效：M1（设计取舍）、M4、M8 跨逗号写法、M9 未列出的促销同义词与跨分句写法、M11、M12、M13，07 规则层的「新鲜／烘焙」与「活动／结束」两条保守误拦，L1、L2、L4、L6–L12，以及判定层依赖云端模型。
+
+本版新增或仍需说明的：
+
+- 跨商品借用检查的繁简映射只覆盖 fact-guard 规则词表里的字，没有引入繁简转换依赖（负责人决定）：A 的标签是「凤梨香气」时，B 写「鳳梨香氣。」会放行（测试中记为 `it.todo`）。
+- 识图商品名改用商家文字（F2）：候选名排除了带标点、价格改写、运费、满减、合计等词的行，但换个说法的指令或普通说明（如「本店最低消费 20元」），以及中文标签后直接跟价格的编号（如「商品编号123元」），仍可能被当成商品名；识图模型读错价格时，可能按金额匹配到另一个商品的那一行。改名后的商品名都标「请核对」，商家确认事实表时能看到并修改。同一行重复出现时，可能多标一个「请核对」，匹配耗时随行数平方增长（字段长度有上限），不会给出错误价格。
+- 顾客纠错：提到 QQ、支付宝的句子里写 5 位以上的金额也会被拒绝（「支付宝付了 12800 元」需要去掉数字再提交）；建议值和补充说明合并检测后，跨字段拼起来的数字可能被当作手机号而多拒；用汉字写数字等刻意变形的写法仍可能漏过。
+- 上游错误日志里的 `error.type` / `error.code` 是格式白名单，不是语义白名单：上游把 40 个字符以内的纯小写字母加下划线片段放进这两个字段时，仍会原样记录。
+- Anthropic 适配器：usage 缺失时只按文本字符估算，工具定义、图片与 thinking 不计入；适配器不发送 `cache_control`；没有用真实接口验证。
+- 输出 token 上限对少数合法的大输出偏紧，被截断时整步失败（不接受不完整数据）；没有做真实模型额度或大批量验收。
+- 「限定的温柔」带修饰语、不在独立分句时会被保守拦截。
+- `packages/fact-guard/README.md` 写的「㎡／㎥ 的展开结果整体按单位处理」与实际不符：`120㎡` 中的「㎡」不会被识别为单位（v011-codex 第 2 轮 LOW-1），判定结果不受影响。
 
 ### English
 
+Covers `main` as of commit `74a6a7e` (2026-10-28): the five branches merged after 0.1.0 (`c7396c0`): `40842a1` fact-guard and provider fixes, `ad1de5b` cross-item borrowing check, `90209dc` extraction and correction fixes, `cc7f3ab` Anthropic adapter, `74a6a7e` merchant style brief. The planned 0.1.1 is folded into this release and will not ship separately.
+
+#### Added
+
+- **Anthropic Messages adapter** (`lib/providers/anthropic.ts`, `PROVIDER=anthropic`): reuses the existing `LLM_*` variables; no new environment variables. Each request carries a `submit_json` tool and forces a call to it, and JSON is read from the tool input; when the model rejects a forced `tool_choice`, it falls back to `auto` once, and if no tool is called the JSON is extracted from text. Images are sent as base64 `image` blocks (WebP / PNG / JPEG as is). A `stop_reason` of `max_tokens`, `model_context_window_exceeded` or `refusal` is reported as `bad_response`. Cost applies Anthropic's published cache multipliers to the input price: 1.25x for 5-minute writes, 2x for 1-hour writes, 0.1x for reads. Timeouts, retries, the 2 MiB response cap, no redirects and error codes are shared with openai-compatible through `lib/providers/control.ts`. Covered by local protocol tests only; not run against the real API.
+- **Merchant style brief `styleBrief`**: `POST /api/projects/:id/jobs` accepts an optional body `{ styleBrief: { templateId?, moodKeywords?, primary? } }`: a template (`poster` / `card-stack` / `menu-board`), 1–4 mood words (1–6 Chinese characters each) and a `#RRGGBB` main color. The endpoint validates with zod; `styleBrief: null`, unknown fields and invalid values return 400 `invalid_style_brief` and create no job; with no body the behavior is unchanged. The `jobs` table gets a nullable `brief` column (migration `0004_job_style_brief`). The result always follows the given fields, and text color still keeps a 4.5:1 contrast ratio. The merchant console adds a collapsible "风格偏好（可选）" (style preferences, optional) section on the fact confirmation, preview and failed-generation screens, remembering the last values in browser localStorage. See the appendix of [`docs/API.md`](docs/API.md) and R11 in `docs/CONTRACT.md`.
+
+#### Fixed
+
+- **0.1.0 known issue → fixed: F1, spec between name and price** (`lib/extract/price.ts`): one size (at most 4 digits plus a unit such as 寸, g, ml, 斤, 个) may sit between the item name and the price, so 「巴斯克芝士蛋糕 6 寸 128 元」 gets 128 元, and 「6 寸」 becomes the spec. When the text still has an amount no item took, every item left without a price is listed as low confidence, and the confirm page says a price in the text was not recognized.
+- **0.1.0 known issue → fixed: the model judge could not stop cross-item borrowing without numbers** (`lib/copy/`): a new deterministic check, `crossItemBorrowing`, catches item B's blurb repeating item A's spec, tag or description sentence when B's own facts and the shop facts do not contain that text. Rules-only mode deletes the sentence; judge mode returns it as a judge verdict so it goes to rewrite, and rewrites are checked again. Both sides are compared in one form: NFKC, fact-guard normalization, then letters and digits only. Negation words (不, 未, 非, 没有, 不含, 并非, 不是) count only with no punctuation between them and the phrase; only an item name written out unbroken is exempt; a one-character candidate counts only when the whole sentence, without punctuation, is that character; items whose id contains a line break are no longer skipped; invisible format characters (Unicode Cf, except bidi controls) do not count as boundaries.
+- **0.1.0 known issue → fixed: QQ / Alipay filtering in customer corrections (M5)** (`lib/corrections/`): numbers are joined across any run of separators (in 0.1.0, four or more separators got through). A report that mentions QQ or Alipay (including Q 号, 扣扣, 企鹅号, zfb) and has a 5–20 digit number or an id-shaped letter-digit token in the same sentence (up to a full stop, question mark, exclamation mark or line break; commas do not end it) is refused, amounts included; so is a number in the next sentence that is named as an account. The suggested value and the note are checked together as one text, so splitting the cue and the number across the two fields no longer gets through. The 400 message now tells the customer how to rewrite: 「请勿填写个人信息：提到 QQ、支付宝或微信时，不要同时写出号码、账号或 5 位以上的数字」. See [`docs/PRIVACY.md`](docs/PRIVACY.md).
+- **0.1.0 known issue → fixed: M2, no `max_tokens` on model requests**: every request (including network retries, format fallback and schema repair) carries an output limit: extract 8192, design 1024, copy 4096, guard-judge 8192, guard-rewrite 4096, and 2048 for unknown stages; profiles can override them, and Ollama's extract uses 4096.
+- **0.1.0 known issue → fixed: M6, zero-width characters normalized only in some positions**: Unicode Cf and Default_Ignorable_Code_Point characters (zero-width characters, the combining grapheme joiner, variation selectors, fillers and so on) are removed at any position and in any number; hit ranges still point at the original text.
+- **0.1.0 known issue → fixed: M7, only full-width ASCII normalized**: NFKC now runs per grapheme cluster with a mapping back to the original text, so 「𝟙𝟡元」 is read as a price. Ellipses (U+2025, U+2026) are left out of NFKC, so they are not expanded into periods that split the clause; only characters whose source is `\p{Nd}` count as digits, so 「⑲元」 and 「全场③折」 are no longer read as numbers.
+- **0.1.0 known issue → fixed: M10, quadratic price regex on long whitespace**: the gap between item name and price now matches in linear time without capping space runs (a cap dropped prices in menus aligned with long runs of spaces).
+- **0.1.0 known issue → partly fixed: 07 rule layer LOW, "the weather suffix only re-blocks the listed process cue words"**: 「也能存放 / 长久储存 / 久放」, 「也不变质」, 「慢慢醒发」 and 「静置一夜」 in a weather clause now need temperature evidence; unlisted synonyms still pass.
+- **0.1.0 known issue → partly fixed: M8, mood whitelist phrases**: 「限定的温柔」 and 「把限定的温柔留给你」 are exempt only as standalone clauses, so wording about availability or product styles (e.g. 「限定的温柔款蛋糕今日供应」) no longer passes through them. The 「慢烤的时光」 form with the result after a comma is unchanged in this release and was not retested.
+- **Item names from the merchant's text (F2)**: when the vision model names an item only from the image (e.g. BUTTER CROISSANT) and no price is found in the text, the item takes the name and price of an unclaimed "name + price" line in the merchant's text with a unique matching amount, flagged for the merchant to check; with no amount, only when one item faces one line. Ambiguous cases are not guessed.
+- **Price reading**: a price directly after a letter, digit, `_` or `-` is not read (at the line-scanning entry point only), nor is a ¥ number directly followed by one (「¥123abc」, 「A123元」); item names ending in a letter or digit (「LATTE18元」, 「套餐2¥18」) still get their price. The 元 in words such as 元旦 and 元宵 is not money. A price goes only to the longest item name before it (「拿铁\n燕麦拿铁 25元」 no longer prices 拿铁 as well).
+
+#### Security
+
+- **0.1.0 known issue → fixed: L3, `LLM_BASE_URL` allowed plain HTTP to public hosts**: both adapters and the startup environment check share `llmEndpoint()`; public hosts must use https or startup fails; loopback, LAN IPs, `.local` and `host.docker.internal` may still use http. `host.docker.internal` is allowed for the model endpoint only, not for `PUBLIC_BASE_URL`. `isLocalHost()` moves to `lib/net.ts`.
+- **0.1.0 known issue → fixed: L5, upstream error bodies logged**: failure logs no longer contain the response body or `error.message`; they record the HTTP status and, from JSON bodies, `error.type` and `error.code` (1–40 lowercase letters or underscores starting with a letter, otherwise `other`). For non-JSON bodies only the content-type is logged, with parameters removed and lowercased, and only five values are kept: `application/json`, `application/problem+json`, `text/plain`, `text/html`, `text/event-stream`; anything else is `other`. Content sent back in repair turns is not logged either.
+- **0.1.0 known issue → fixed: M3, the correction endpoint did not check origin**: before reading the body or charging any rate limiter, `POST /api/corrections` returns 415 unless Content-Type is `application/json`, and 403 for a cross-site `Sec-Fetch-Site` or a foreign `Origin`.
+
+#### Tests
+
+- `pnpm test`: 65 test files, 1490 tests passing plus 1 todo (traditional characters bypassing the cross-item check; see Known issues). Run on `74a6a7e`, 2026-10-28.
+- A1 adversarial set (same run; in-sample, regression use only): 45/47 blocked, 0/23 false positives, the same as 0.1.0. The A1b holdout was not re-run; the 0.1.0 numbers remain the single run against `1299c61`.
+
 #### Known issues
 
-- When the vision model names an item only from the image (e.g. BUTTER CROISSANT) and no price is found in the text, the item takes the name and price of a "name + price" line in the merchant's text (by a unique matching amount, or when one item faces one line and there is no amount). Lines with punctuation or words about rewriting prices, delivery fees, discounts or totals are skipped, but reworded instructions or plain notes (e.g. "本店最低消费 20元"), and a Chinese label followed directly by a price-shaped code (e.g. "商品编号123元"), can still become an item name. Only the merchant's own text is used, and the new name is flagged for the merchant to check on the confirm page.
+Items from the 0.1.0 Known issues that this release does not fix still apply: M1 (design trade-off), M4, the M8 comma form, M9 unlisted promotion synonyms and cross-clause forms, M11, M12, M13, the two conservative 07 rule-layer blocks (「新鲜／烘焙」 and 「活动／结束」), L1, L2, L4, L6–L12, and the model judge depending on a cloud model.
+
+New in this release or worth restating:
+
+- The cross-item check's traditional-character mapping only covers characters in fact-guard's rule word lists, and no conversion dependency was added (owner decision): if item A's tag is 「凤梨香气」, item B writing 「鳳梨香氣。」 passes (recorded as an `it.todo` test).
+- Item names from the merchant's text (F2): lines with punctuation or words about rewriting prices, delivery fees, discounts or totals are skipped, but reworded instructions or plain notes (e.g. 「本店最低消费 20元」), and a Chinese label followed directly by a price-shaped code (e.g. 「商品编号123元」), can still become an item name; if the vision model misreads a price, the amount may match another item's line. Every renamed item is flagged, so the merchant sees and can change it when confirming the fact sheet. Repeated identical lines may add an extra flag and make matching time quadratic in the number of lines (fields are length-capped); no wrong price results.
+- Customer corrections: in a sentence that mentions QQ or Alipay, an amount of 5 or more digits is refused too (「支付宝付了 12800 元」 has to be resubmitted without the number); since the suggested value and the note are checked together, digits joined across the two fields may be refused as a phone number; deliberately disguised numbers (e.g. written in Chinese characters) can still get through.
+- `error.type` / `error.code` in upstream error logs are filtered by shape, not by meaning: a lowercase-and-underscore fragment of up to 40 characters placed there by the upstream is still logged as is.
+- Anthropic adapter: when usage is missing, the estimate counts text characters only, leaving out tool definitions, images and thinking; the adapter sends no `cache_control`; not validated against the real API.
+- The output token limits are tight for a few legitimate large outputs, and a truncated output fails the whole step (incomplete data is never accepted); real-model quota and large-batch runs have not been validated.
+- 「限定的温柔」 with modifiers, outside a standalone clause, is blocked conservatively.
+- `packages/fact-guard/README.md` says expansions of ㎡ / ㎥ are treated as complete units, but the 「㎡」 in `120㎡` is not recognized as a unit (v011-codex round 2, LOW-1); verdicts are unaffected.
 
 ## [0.1.0] - 2026-10-28
 
