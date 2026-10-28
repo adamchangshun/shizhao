@@ -618,6 +618,26 @@ describe('item blurbs cannot borrow another item’s wording (v0.1.1 cross-item)
       expect(recheck(blurbB(sentence), sheet).copy.itemBlurbs.americano).toBe(sentence)
   })
 
+  it('checks items whose id contains a line break (review 2, codex #1)', () => {
+    const base = w5Sheet()
+    for (const id of ['a\nb', 'a\rb', 'a\u2028b', 'a\u2029b']) {
+      const sheet = {
+        ...base,
+        items: [{ ...base.items[0]!, id, name: '燕麦奶可选拿铁' }, base.items[1]!],
+      }
+      const copy: CopyDraft = {
+        headline: '午后',
+        subhead: '',
+        itemBlurbs: { [id]: '', americano: '燕麦奶可选，拿铁更香。' },
+        closing: '',
+      }
+      expect(recheck(copy, sheet).copy.itemBlurbs.americano).toBe('')
+      // The name is still recognized, so a comparison keeps its exemption.
+      const compare = { ...copy, itemBlurbs: { [id]: '', americano: '比燕麦奶可选拿铁更香。' } }
+      expect(recheck(compare, sheet).copy.itemBlurbs.americano).toBe('比燕麦奶可选拿铁更香。')
+    }
+  })
+
   it('a one-character tag of A is borrowing only as a whole sentence (review 2 #3)', () => {
     const base = w5Sheet()
     // 𠮷 is one code point but two UTF-16 units; it must count as one character too.

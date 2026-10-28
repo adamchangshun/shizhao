@@ -132,9 +132,10 @@ export function crossItemBorrowing(
   const own = fieldCorpus(corpus, field)
   const support = [...own.facts, ...(own.spanFacts ?? [])].map(canonical)
   const text = canonical(sentence)
+  // Ids may contain line breaks, so path patterns need the `s` flag.
   const isPath = (i: number, pattern: RegExp) => pattern.test(corpus.paths?.[i] ?? '')
   const names = corpus.facts
-    .filter((fact, i) => isPath(i, /^items\..+\.name$/))
+    .filter((fact, i) => isPath(i, /^items\..+\.name$/s))
     .map((name) => canonical(name).text)
     .filter(Boolean)
   // A name counts only where it is written out unbroken: "燕麦奶可选，拿铁" is no "燕麦奶可选拿铁".
@@ -148,7 +149,7 @@ export function crossItemBorrowing(
   const affirmed = (source: Canonical, word: string, exempt?: (start: number) => boolean) =>
     occurrences(source.text, word).some((start) => !negated(source, start) && !exempt?.(start))
   for (const [i, fact] of corpus.facts.entries()) {
-    if (!isPath(i, /^items\..+\.(?:spec|description|tags\.\d+)$/)) continue
+    if (!isPath(i, /^items\..+\.(?:spec|description|tags\.\d+)$/s)) continue
     for (const piece of splitSentences(fact)) {
       const word = canonical(piece).text
       if (!word || support.some((source) => affirmed(source, word))) continue
