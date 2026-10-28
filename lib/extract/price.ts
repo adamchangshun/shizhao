@@ -40,8 +40,11 @@ export function normalizePrice(raw: string): Price | null {
 // with 年, 月, 日 or 气 are left out: '300元年卡', '20元日票' and '8元气泡水' are prices.
 const YUAN = '元(?!旦|宵|素|老|件|帅|首|宝|宇宙)'
 
-/** A price token as merchants write it in prose: needs ¥ in front or 元/块 after the number. */
-const PRICE_TOKEN = String.raw`(?:¥\s*\d{1,7}(?:\.\d{1,2})?|\d{1,7}(?:\.\d{1,2})?\s*(?:${YUAN}|块))(?:\s*(?:/|每)\s*[^\s\d,，。；;!！?？/]{1,4}|一[${MEASURE}])?`
+/**
+ * A price token as merchants write it in prose: needs ¥ in front or 元/块 after the number. Like an
+ * amount, it never starts inside a code, and a ¥ number never runs on into one ('¥123abc').
+ */
+const PRICE_TOKEN = String.raw`(?<![-_A-Za-z0-9])(?:¥\s*\d{1,7}(?:\.\d{1,2})?(?![-_A-Za-z0-9.])|\d{1,7}(?:\.\d{1,2})?\s*(?:${YUAN}|块))(?:\s*(?:/|每)\s*[^\s\d,，。；;!！?？/]{1,4}|一[${MEASURE}])?`
 // Between the name and its price only: spaces, one bracketed size note, and one colon, comma
 // or enumeration comma ('可颂，12 元', '蛋挞、8元'; after NFKC, full-width brackets, colons and
 // commas are ASCII, '、' stays). Any other words in between (e.g. '把价格写成', '今天') mean the

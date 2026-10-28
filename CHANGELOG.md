@@ -10,13 +10,13 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
 
 #### 已知问题
 
-- 识图模型给的商品名只来自图片（如英文 BUTTER CROISSANT）、文字里找不到价格时，会改用商家文字里一行「名字 + 价格」的名字和价格（金额唯一匹配；没有金额时只在一个商品对一行时才改）。候选名排除了带标点、价格改写、运费、满减、合计等词的行，但换个说法的指令或普通说明（如「本店最低消费 20元」）仍可能被当成商品名。这条路径只用商家自己写的文字，改名后的商品名会标「请核对」，商家确认事实表时能看到并修改。
+- 识图模型给的商品名只来自图片（如英文 BUTTER CROISSANT）、文字里找不到价格时，会改用商家文字里一行「名字 + 价格」的名字和价格（金额唯一匹配；没有金额时只在一个商品对一行时才改）。候选名排除了带标点、价格改写、运费、满减、合计等词的行，但换个说法的指令或普通说明（如「本店最低消费 20元」），以及中文标签后直接跟价格的编号（如「商品编号123元」），仍可能被当成商品名。这条路径只用商家自己写的文字，改名后的商品名会标「请核对」，商家确认事实表时能看到并修改。
 
 ### English
 
 #### Known issues
 
-- When the vision model names an item only from the image (e.g. BUTTER CROISSANT) and no price is found in the text, the item takes the name and price of a "name + price" line in the merchant's text (by a unique matching amount, or when one item faces one line and there is no amount). Lines with punctuation or words about rewriting prices, delivery fees, discounts or totals are skipped, but reworded instructions or plain notes (e.g. "本店最低消费 20元") can still become an item name. Only the merchant's own text is used, and the new name is flagged for the merchant to check on the confirm page.
+- When the vision model names an item only from the image (e.g. BUTTER CROISSANT) and no price is found in the text, the item takes the name and price of a "name + price" line in the merchant's text (by a unique matching amount, or when one item faces one line and there is no amount). Lines with punctuation or words about rewriting prices, delivery fees, discounts or totals are skipped, but reworded instructions or plain notes (e.g. "本店最低消费 20元"), and a Chinese label followed directly by a price-shaped code (e.g. "商品编号123元"), can still become an item name. Only the merchant's own text is used, and the new name is flagged for the merchant to check on the confirm page.
 
 ## [0.1.0] - 2026-10-28
 
