@@ -66,14 +66,17 @@ export function fieldCorpus<T extends FactCorpus>(corpus: T, field: string): T {
 
 /**
  * Letters and digits only, after NFKC and fact-guard folding; hits and support share it.
- * `cut[k]` marks anything but spaces and zero-width characters (punctuation, symbols, folded-away
- * interference) between `text[k - 1]` and `text[k]` in the source, so checks that need adjacency
- * can still see the boundaries the canonical text drops.
+ * `cut[k]` marks a `boundary` (punctuation, symbols, folded-away interference) between
+ * `text[k - 1]` and `text[k]` in the source, so checks that need adjacency can still see the
+ * boundaries the canonical text drops.
  */
 interface Canonical {
   text: string
   cut: boolean[]
 }
+// Spaces and invisible format characters (zero-width, soft hyphen, ...) do not separate words;
+// bidi embeddings, overrides and isolates do, since they reorder what the reader sees.
+const boundary = /[^\s\p{Cf}]|[\u202a-\u202e\u2066-\u2069]/u
 function canonical(raw: string): Canonical {
   const source = raw.normalize('NFKC')
   const folded = normalizeText(source)
@@ -87,10 +90,7 @@ function canonical(raw: string): Canonical {
     i += char.length
     if (!/[\p{L}\p{N}]/u.test(char)) continue
     const gap = last < 0 ? '' : source.slice(last, Math.max(last, start))
-    cut.push(
-      /[^\s\u200b-\u200f\u2060\ufeff]/u.test(gap),
-      ...Array<boolean>(char.length - 1).fill(false),
-    )
+    cut.push(boundary.test(gap), ...Array<boolean>(char.length - 1).fill(false))
     text += char
     last = Math.max(last, end)
   }

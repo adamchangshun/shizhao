@@ -618,6 +618,21 @@ describe('item blurbs cannot borrow another item’s wording (v0.1.1 cross-item)
       expect(recheck(blurbB(sentence), sheet).copy.itemBlurbs.americano).toBe(sentence)
   })
 
+  it('any invisible format character keeps a negation or a name joined; bidi controls do not (review 2, codex #2)', () => {
+    const base = w5Sheet()
+    const sheet = {
+      ...base,
+      items: [{ ...base.items[0]!, name: '燕麦奶可选拿铁' }, base.items[1]!],
+    }
+    for (const gap of ['\u2063', '\u180e', '\u00ad', '\u2064']) {
+      for (const sentence of [`不${gap}燕麦奶可选。`, `比燕麦奶可选${gap}拿铁更香。`])
+        expect(recheck(blurbB(sentence), sheet).copy.itemBlurbs.americano).toBe(sentence)
+    }
+    // Bidi overrides and isolates reorder what the reader sees, so they stay boundaries.
+    for (const gap of ['\u202e', '\u2067'])
+      expect(recheck(blurbB(`不${gap}燕麦奶可选。`), sheet).copy.itemBlurbs.americano).toBe('')
+  })
+
   it('checks items whose id contains a line break (review 2, codex #1)', () => {
     const base = w5Sheet()
     for (const id of ['a\nb', 'a\rb', 'a\u2028b', 'a\u2029b']) {
