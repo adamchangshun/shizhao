@@ -694,6 +694,15 @@ describe('OpenAI compatible provider HTTP boundary', () => {
       expect(server.bodies).toHaveLength(1)
     },
   )
+  it('rejects a public plain-http endpoint but keeps LAN and loopback http', () => {
+    expect(() => provider('http://api.example.com/v1')).toThrow(
+      expect.objectContaining({ code: 'bad_response', message: expect.stringContaining('https') }),
+    )
+    expect(provider('http://10.0.0.5:11434/v1')).toBeInstanceOf(OpenAICompatibleProvider)
+    expect(provider('http://host.docker.internal:11434/v1')).toBeInstanceOf(
+      OpenAICompatibleProvider,
+    )
+  })
   it('wraps local image read failures and invalid endpoint configuration', async () => {
     const server = await serve((_, res) => reply(res))
     await expect(

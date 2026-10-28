@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises'
 import sharp from 'sharp'
 import { z } from 'zod'
 import type { Usage } from '../core/schemas'
+import { HTTPS_REQUIRED_MESSAGE, isLocalHost } from '../env'
 import { createCallControl } from './control'
 import { ProviderError } from './errors'
 import { extractJSON } from './json'
@@ -122,8 +123,9 @@ export class OpenAICompatibleProvider implements LLMProvider {
     const capabilities = PROFILE_CAPABILITIES[this.profile]
     if (!capabilities) throw new ProviderError('bad_response')
     this.etaMultiplier = capabilities.etaMultiplier
+    let base: URL
     try {
-      const base = new URL(options.baseUrl)
+      base = new URL(options.baseUrl)
       if (
         !['http:', 'https:'].includes(base.protocol) ||
         base.username ||
@@ -132,11 +134,14 @@ export class OpenAICompatibleProvider implements LLMProvider {
         base.hash
       )
         throw new Error('Invalid URL')
-      base.pathname = `${base.pathname.replace(/\/+$/, '')}/chat/completions`
-      this.endpoint = base.toString()
     } catch {
       throw new ProviderError('bad_response')
     }
+    // Keys and merchant data must not cross a public network in plain text.
+    if (base.protocol !== 'https:' && !isLocalHost(base.hostname))
+      throw new ProviderError('bad_response', HTTPS_REQUIRED_MESSAGE)
+    base.pathname = `${base.pathname.replace(/\/+$/, '')}/chat/completions`
+    this.endpoint = base.toString()
     if (
       !options.textModel?.trim() ||
       !options.visionModel?.trim() ||

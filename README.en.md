@@ -152,6 +152,8 @@ LLM_PRICE_OUTPUT_PER_1K=0
 
 With `PROVIDER=anthropic`, cost tracking applies Anthropic's published cache multipliers to the input price: cache writes 1.25x (5-minute) or 2x (1-hour), cache reads 0.1x (some newer models are cheaper, so this is an upper bound for them).
 
+For security, `LLM_BASE_URL` may use plain http only for loopback, LAN IPs or `.local` hosts; public endpoints must use https or startup fails.
+
 Under Docker, `localhost` inside the container is the container itself; to reach Ollama on the host, use `http://host.docker.internal:11434/v1` (provided by Docker Desktop).
 
 Fact extraction reads photos, so the full flow needs at least one image-capable profile (`qwen`, `glm`, or `ollama` with a vision model). Protocol details: [lib/providers/README.md](lib/providers/README.md).

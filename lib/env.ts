@@ -16,11 +16,17 @@ const bool = z
   .default('false')
   .transform((v) => v === 'true' || v === '1')
 
-/** Hosts where plain http is acceptable: loopback, RFC 1918 LAN addresses, mDNS names. */
+export const HTTPS_REQUIRED_MESSAGE =
+  '公网地址必须使用 https；http 只允许 localhost、局域网 IP 或 .local 域名'
+
+/**
+ * Hosts where plain http is acceptable: loopback, RFC 1918 LAN addresses, mDNS names and
+ * Docker Desktop's host alias (README: Ollama from a container).
+ */
 export function isLocalHost(hostname: string): boolean {
   const h = hostname.toLowerCase()
   if (h === 'localhost' || h.endsWith('.localhost') || h.endsWith('.local')) return true
-  if (h === '[::1]' || h === '::1') return true
+  if (h === '[::1]' || h === '::1' || h === 'host.docker.internal') return true
   const m = /^(\d{1,3})\.(\d{1,3})\.\d{1,3}\.\d{1,3}$/.exec(h)
   if (!m) return false
   const a = Number(m[1])
@@ -81,10 +87,29 @@ const EnvSchema = z
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['PUBLIC_BASE_URL'],
-        message: '公网地址必须使用 https；http 只允许 localhost、局域网 IP 或 .local 域名',
+        message: HTTPS_REQUIRED_MESSAGE,
       })
     }
     if (env.PROVIDER === 'mock') return
+    if (env.LLM_BASE_URL) {
+      let llm: URL | undefined
+      try {
+        llm = new URL(env.LLM_BASE_URL)
+      } catch {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['LLM_BASE_URL'],
+          message: '必须是完整网址',
+        })
+      }
+      // Providers send API keys and merchant data; never over plain http to a public host.
+      if (llm && llm.protocol !== 'https:' && !isLocalHost(llm.hostname))
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['LLM_BASE_URL'],
+          message: HTTPS_REQUIRED_MESSAGE,
+        })
+    }
     for (const key of ['LLM_BASE_URL', 'LLM_MODEL_TEXT', 'LLM_MODEL_VISION'] as const) {
       if (!env[key]) {
         ctx.addIssue({

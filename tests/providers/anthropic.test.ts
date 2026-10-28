@@ -363,6 +363,40 @@ describe('Anthropic Messages provider HTTP boundary', () => {
     expect(logged).not.toContain(bytes.toString('base64'))
     expect((error as Error).message).not.toContain(key)
   })
+  it('rejects a public plain-http endpoint before any request', () => {
+    expect(() => provider('http://api.example.com/v1')).toThrow(
+      expect.objectContaining({ code: 'bad_response', message: expect.stringContaining('https') }),
+    )
+    expect(provider('http://192.168.1.20:8080/v1')).toBeInstanceOf(AnthropicProvider)
+  })
+  it('rejects a public plain-http LLM_BASE_URL at startup', () => {
+    const base = { ADMIN_TOKEN: 'test-admin-012345', PUBLIC_BASE_URL: 'http://localhost:6690' }
+    const llm = { LLM_MODEL_TEXT: 't', LLM_MODEL_VISION: 'v' }
+    expect(() =>
+      parseEnv({
+        ...base,
+        ...llm,
+        PROVIDER: 'anthropic',
+        LLM_BASE_URL: 'http://api.example.com/v1',
+      }),
+    ).toThrow(/LLM_BASE_URL.*https/s)
+    expect(() =>
+      parseEnv({
+        ...base,
+        ...llm,
+        PROVIDER: 'openai-compatible',
+        LLM_BASE_URL: 'http://api.example.com/v1',
+      }),
+    ).toThrow(/LLM_BASE_URL.*https/s)
+    expect(
+      parseEnv({
+        ...base,
+        ...llm,
+        PROVIDER: 'openai-compatible',
+        LLM_BASE_URL: 'http://localhost:11434/v1',
+      }).LLM_BASE_URL,
+    ).toBe('http://localhost:11434/v1')
+  })
   it('is selected by PROVIDER=anthropic and requires the LLM settings', () => {
     const base = { ADMIN_TOKEN: 'test-admin-012345', PUBLIC_BASE_URL: 'http://localhost:6690' }
     expect(() => parseEnv({ ...base, PROVIDER: 'anthropic' })).toThrow(/LLM_BASE_URL/)
