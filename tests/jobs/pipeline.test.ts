@@ -269,6 +269,64 @@ describe('POST /api/projects/:id/jobs → full mock pipeline', () => {
   })
 })
 
+describe('styleBrief', () => {
+  it.each([
+    [{ templateId: 'magazine' }, '模板只能选择海报、卡片叠放或菜单板'],
+    [
+      { moodKeywords: ['日式', '极简', '复古', '清新', '温暖'] },
+      '风格词需要 1～4 个，每个 1～6 个汉字',
+    ],
+    [{ moodKeywords: ['japanese'] }, '风格词需要 1～4 个，每个 1～6 个汉字'],
+    [{ primary: 'navy' }, '主色需要是 #RRGGBB 格式的颜色'],
+    [{ primary: '#1f3a5' }, '主色需要是 #RRGGBB 格式的颜色'],
+  ])('rejects %j with 400 and creates no job', async (styleBrief, message) => {
+    const { projectId } = await prepareProject()
+    const res = await postJob(
+      jsonReq(`/api/projects/${projectId}/jobs`, 'POST', { styleBrief }),
+      ctx(projectId),
+    )
+    expect(res.status).toBe(400)
+    expect(await res.json()).toEqual({ error: { code: 'invalid_style_brief', message } })
+    expect(listJobStatuses(projectId)).toEqual([])
+  })
+
+  it('a job with a brief produces a version that follows it', async () => {
+    const { projectId } = await prepareProject()
+    const styleBrief = {
+      templateId: 'menu-board',
+      moodKeywords: ['日式', '极简'],
+      primary: '#1F3A5F',
+    }
+    const res = await postJob(
+      jsonReq(`/api/projects/${projectId}/jobs`, 'POST', { styleBrief }),
+      ctx(projectId),
+    )
+    expect(res.status).toBe(202)
+    const { jobId } = (await res.json()) as { jobId: string }
+    expect(findJob(jobId)!.brief).toEqual(styleBrief)
+    await startJobRunner().idle()
+    expect((await jobView(jobId)).status).toBe('succeeded')
+
+    const [summary] = await versionsOf(projectId)
+    const { designSpec } = findActiveVersion(summary!.id as string)!
+    expect(designSpec.templateId).toBe('menu-board')
+    expect(designSpec.palette.primary).toBe('#1f3a5f')
+    expect(designSpec.moodKeywords).toEqual(['日式', '极简'])
+  })
+
+  it('an empty brief is the same as none', async () => {
+    const { projectId } = await prepareProject()
+    const res = await postJob(
+      jsonReq(`/api/projects/${projectId}/jobs`, 'POST', { styleBrief: {} }),
+      ctx(projectId),
+    )
+    expect(res.status).toBe(202)
+    const { jobId } = (await res.json()) as { jobId: string }
+    expect(findJob(jobId)!.brief).toBeNull()
+    await startJobRunner().idle()
+  })
+})
+
 describe('failures', () => {
   const tamper: typeof renderPage = async (input) => {
     const out = await renderPage(input)

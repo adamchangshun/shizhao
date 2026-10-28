@@ -7,6 +7,7 @@ const { spec, usage, onPrimary } = await generateDesign({
   factSheet,
   previousSpecs, // 按时间从旧到新排列，只比较最后一份
   seed: 42,
+  // brief: { templateId: 'menu-board', moodKeywords: ['日式', '极简'], primary: '#1f3a5f' },
   // heroImage: { path: '/absolute/path/main.webp', mime: 'image/webp' },
 })
 
@@ -31,6 +32,8 @@ const readable = ensureContrast(spec.palette)
 三次调用后仍不可解时，按第 1 轮审查要求在代码中兜底：保留 bg、primary、accent，将 surface 的 HSL 明度移到与 bg 相同的位置，尽量保留 surface 的色相和饱和度，然后重新调整 text。若两个颜色的 HSL 明度相同但相对亮度仍差异过大，则使用 `surface = bg` 作为最终兜底；同一背景总有可读的黑色或白色文字。所有返回路径仍检查最终 hex 在两个背景上的对比度。此兜底仅发生在最后一次调用，不额外消耗模型调用，并保留所有成功模型回复的 Usage；之后仍执行相邻风格判定，必要时切换模板。
 
 正文仅允许 noto-sans-sc、noto-serif-sc、lxgw-wenkai。zcool-xiaowei 正文映射到较接近的 noto-serif-sc，zcool-kuaile 正文映射到 noto-sans-sc；合法标题保持，纯函数对未知字体回退 noto-sans-sc。真实模型选择枚举外字体会在 provider schema 校验时拒绝。
+
+商家风格偏好 `brief`（`StyleBrief`，定义在 `brief.ts`，三项均可省略）：作为 `merchantBrief` 写进模型输入，系统提示词要求原样采用且优先于 previous；模型返回后仍由代码兜底。指定 `templateId` 就强制使用，相似度判定不再切换模板；指定 `primary` 就在对比度修正之前覆盖 `palette.primary`，再照常调整 text 并重算 onPrimary；指定 `moodKeywords`（1～4 个、每个 1～6 个汉字，与模型输出同一条规则）就以它为准。`templateId` 与 `primary` 都指定时，重试无法改变相似度比较的两项，因此不做相似重试。seed 仍由调用方随机给出。`parseStyleBrief` 供接口校验使用：空对象视为没有偏好，非法值抛出 400 `invalid_style_brief`，中文提示说明是哪一项不合法。
 
 模型提示词全文位于 `prompt.ts` 的 `DESIGN_SYSTEM_PROMPT`。本地验收汇总、五次生成 JSON 和命令日志位于 `CODEX_REVIEW_SUMMARY.md` 与 `data/design-verification/`（均不提交）。本模块仅负责风格规格，不负责页面渲染或营销文案。
 

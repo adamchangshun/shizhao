@@ -400,3 +400,92 @@ describe('constrained design generation', () => {
     },
   )
 })
+
+describe('merchant style brief', () => {
+  it('forces the merchant template even when the model picks another one', async () => {
+    // Fixture seed 0 is a poster.
+    const provider = new DesignMockProvider(0)
+    const result = await generateDesign(
+      { factSheet: facts, previousSpecs: [], seed: 3, brief: { templateId: 'menu-board' } },
+      { provider },
+    )
+    expect(result.spec.templateId).toBe('menu-board')
+    expect(result.spec.seed).toBe(3)
+    expect(result.usage).toHaveLength(1)
+  })
+  it('overrides primary before the contrast repair, so text stays readable', async () => {
+    // The model's text is unreadable on its own background; the brief primary is navy.
+    const provider = new DesignMockProvider(0, {
+      palette: {
+        bg: '#FFFBEB',
+        surface: '#FFFFFF',
+        primary: '#B45309',
+        accent: '#F59E0B',
+        text: '#FFF7E0',
+      },
+    })
+    const result = await generateDesign(
+      { factSheet: facts, previousSpecs: [], seed: 0, brief: { primary: '#1F3A5F' } },
+      { provider },
+    )
+    const { palette } = result.spec
+    expect(palette.primary).toBe('#1f3a5f')
+    expect(contrastRatio(palette.text, palette.bg)).toBeGreaterThanOrEqual(4.5)
+    expect(contrastRatio(palette.text, palette.surface)).toBeGreaterThanOrEqual(4.5)
+    // Dark navy carries white text.
+    expect(result.onPrimary).toBe('#ffffff')
+  })
+  it('uses the merchant mood keywords instead of the model ones', async () => {
+    const provider = new DesignMockProvider(0)
+    const result = await generateDesign(
+      { factSheet: facts, previousSpecs: [], seed: 0, brief: { moodKeywords: ['日式', '极简'] } },
+      { provider },
+    )
+    expect(result.spec.moodKeywords).toEqual(['日式', '极简'])
+  })
+  it('keeps the merchant template when the result resembles the previous version', async () => {
+    const provider = new DesignMockProvider(2) // menu-board, primary #BE123C
+    const first = await generateDesign(
+      { factSheet: facts, previousSpecs: [], seed: 0 },
+      { provider },
+    )
+    expect(first.spec.templateId).toBe('menu-board')
+    const result = await generateDesign(
+      {
+        factSheet: facts,
+        previousSpecs: [first.spec],
+        seed: 1,
+        brief: { templateId: 'menu-board', primary: '#be123c' },
+      },
+      { provider },
+    )
+    // Template and primary are both fixed: nothing a retry could change, so no retry and no switch.
+    expect(result.spec.templateId).toBe('menu-board')
+    expect(result.usage).toHaveLength(1)
+  })
+  it('keeps the merchant template after the similarity retries run out', async () => {
+    const provider = new DesignMockProvider(2)
+    const first = await generateDesign(
+      { factSheet: facts, previousSpecs: [], seed: 0 },
+      { provider },
+    )
+    const result = await generateDesign(
+      {
+        factSheet: facts,
+        previousSpecs: [first.spec],
+        seed: 1,
+        brief: { templateId: 'menu-board' },
+      },
+      { provider },
+    )
+    expect(result.spec.templateId).toBe('menu-board')
+    expect(result.usage).toHaveLength(3)
+  })
+  it('passes the brief to the model as the merchant requirement', async () => {
+    const provider = new DesignMockProvider()
+    const brief = { templateId: 'card-stack' as const, moodKeywords: ['日式'], primary: '#1F3A5F' }
+    await generateDesign({ factSheet: facts, previousSpecs: [], seed: 0, brief }, { provider })
+    expect(JSON.parse(provider.requests[0]!.prompt).merchantBrief).toEqual(brief)
+    expect(provider.requests[0]!.system).toContain('merchantBrief')
+  })
+})

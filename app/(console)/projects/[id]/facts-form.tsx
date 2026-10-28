@@ -141,9 +141,11 @@ interface FactsFormProps {
   lowConfidence: ReadonlySet<string>
   /** Gets the edited facts, or null when nothing changed. */
   onSubmit: (edited: FactsEdit | null) => Promise<SubmitResult>
+  /** Rendered just above the submit button (the style preferences). */
+  beforeSubmit?: ReactNode
 }
 
-export function FactsForm({ sheet, lowConfidence, onSubmit }: FactsFormProps) {
+export function FactsForm({ sheet, lowConfidence, onSubmit, beforeSubmit }: FactsFormProps) {
   const uid = useId()
   const initial = useMemo(() => toDraft(sheet), [sheet])
   const [draft, setDraft] = useState<Draft>(initial)
@@ -441,6 +443,7 @@ export function FactsForm({ sheet, lowConfidence, onSubmit }: FactsFormProps) {
         </span>
       </div>
 
+      {beforeSubmit}
       <p role="status" aria-live="polite" className={s.srOnly}>
         {announce}
       </p>

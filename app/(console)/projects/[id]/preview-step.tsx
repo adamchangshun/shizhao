@@ -6,6 +6,7 @@ import { messageOf, postJson } from '../../_lib/api'
 import { fieldLabel, formatTime, LAYOUT_LABEL, REASON_LABEL } from '../../_lib/labels'
 import type { VersionSummary } from '../../_lib/types'
 import s from '../../shell.module.css'
+import { briefRequest, StylePreferences, type StyleBriefDraft } from './generate-step'
 import { StepHeading } from './step-heading'
 import w from './wizard.module.css'
 
@@ -17,6 +18,8 @@ interface PreviewStepProps {
   onSelect: (versionId: string) => void
   onRestyle: (jobId: string) => void
   onPublish: (versionId: string) => void
+  brief: StyleBriefDraft
+  onBriefChange: (next: StyleBriefDraft) => void
 }
 
 /** One entry per flagged sentence; a sentence can break several rules. */
@@ -48,15 +51,23 @@ export function PreviewStep(props: PreviewStepProps) {
   const { projectId, versions, publishedVersionId } = props
   const [restyling, setRestyling] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [briefInvalid, setBriefInvalid] = useState(false)
   const list = versions.data?.versions ?? []
   const selected = list.find((v) => v.id === props.selectedId) ?? list[0]
 
   async function restyle() {
+    const request = briefRequest(props.brief)
+    setBriefInvalid(!request.ok)
+    if (!request.ok) {
+      setError(request.message)
+      return
+    }
     setRestyling(true)
     setError(null)
     try {
       const { jobId } = await postJson<{ jobId: string }>(
         `/api/projects/${encodeURIComponent(projectId)}/jobs`,
+        request.body,
       )
       props.onRestyle(jobId)
     } catch (err) {
@@ -140,6 +151,11 @@ export function PreviewStep(props: PreviewStepProps) {
           )}
         </section>
 
+        <StylePreferences
+          value={props.brief}
+          onChange={props.onBriefChange}
+          invalid={briefInvalid}
+        />
         {error && (
           <p role="alert" className={s.error}>
             {error}

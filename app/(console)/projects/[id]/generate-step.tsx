@@ -1,8 +1,9 @@
 'use client'
 
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import useSWR from 'swr'
 import type { ProjectState } from '@/lib/core/job-state'
+import { MOOD_KEYWORD, StyleBrief } from '@/lib/design/brief'
 import { ClientError, messageOf, postJson } from '../../_lib/api'
 import type { JobView, ProjectDetail } from '../../_lib/types'
 import s from '../../shell.module.css'
@@ -19,10 +20,131 @@ const STAGES = [
 ] as const
 const TERMINAL = new Set(['succeeded', 'failed', 'timed_out'])
 
+const TEMPLATES = [
+  ['poster', '海报', '一张主图做视觉焦点，适合招牌单品或活动'],
+  ['card-stack', '卡片叠放', '商品分卡片纵向排列，适合少量商品或系列'],
+  ['menu-board', '菜单板', '黑板或木板菜单质感，适合多品菜单'],
+] as const
+
+/** What the merchant typed into 风格偏好; kept by the workspace so a regeneration reuses it. */
+export interface StyleBriefDraft {
+  templateId: '' | (typeof TEMPLATES)[number][0]
+  keywords: string
+  usePrimary: boolean
+  primary: string
+}
+
+export const EMPTY_BRIEF_DRAFT: StyleBriefDraft = {
+  templateId: '',
+  keywords: '',
+  usePrimary: false,
+  primary: '#1f3a5f',
+}
+
+export type BriefResult =
+  { ok: true; body?: { styleBrief: StyleBrief } } | { ok: false; message: string }
+
+/** Draft → request body for POST /jobs; nothing filled in sends no body at all. */
+export function briefRequest(draft: StyleBriefDraft): BriefResult {
+  const words = draft.keywords.split(/[,，、\s]+/).filter(Boolean)
+  if (words.length > 4 || words.some((k) => !MOOD_KEYWORD.test(k))) {
+    return { ok: false, message: '风格词需要 1～4 个，每个 1～6 个汉字，用逗号分开' }
+  }
+  const brief = StyleBrief.parse({
+    ...(draft.templateId ? { templateId: draft.templateId } : {}),
+    ...(words.length > 0 ? { moodKeywords: words } : {}),
+    ...(draft.usePrimary ? { primary: draft.primary } : {}),
+  })
+  return Object.keys(brief).length > 0 ? { ok: true, body: { styleBrief: brief } } : { ok: true }
+}
+
+interface StylePreferencesProps {
+  value: StyleBriefDraft
+  onChange: (next: StyleBriefDraft) => void
+  /** Opens the section and marks the keywords field when the last attempt was rejected. */
+  invalid?: boolean
+}
+
+/** 风格偏好（可选）: collapsed by default; every field may stay empty. */
+export function StylePreferences({ value, onChange, invalid = false }: StylePreferencesProps) {
+  const uid = useId()
+  const [open, setOpen] = useState(false)
+  const set = (patch: Partial<StyleBriefDraft>) => onChange({ ...value, ...patch })
+  return (
+    <details
+      className={`${s.card} ${w.brief}`}
+      open={open || invalid}
+      onToggle={(e) => setOpen(e.currentTarget.open)}
+    >
+      <summary className={w.briefSummary}>风格偏好（可选）</summary>
+      <p className={s.hint}>不填就由 AI 自由搭配；填了的项目，生成结果一定照做。</p>
+      <fieldset className={w.briefTemplates}>
+        <legend className={s.label}>版式</legend>
+        {[['', '不指定', '由 AI 按商品挑选'] as const, ...TEMPLATES].map(([id, name, note]) => (
+          <label key={id || 'auto'} className={w.briefOption}>
+            <input
+              type="radio"
+              name={`${uid}-template`}
+              value={id}
+              checked={value.templateId === id}
+              onChange={() => set({ templateId: id })}
+            />
+            <span>
+              <span className={w.briefOptionName}>{name}</span>
+              <span className={s.small}>{note}</span>
+            </span>
+          </label>
+        ))}
+      </fieldset>
+      <div className={s.field}>
+        <label htmlFor={`${uid}-keywords`} className={s.label}>
+          风格词
+        </label>
+        <input
+          id={`${uid}-keywords`}
+          className={s.input}
+          value={value.keywords}
+          placeholder="例如：日式，极简"
+          aria-describedby={`${uid}-keywords-h`}
+          aria-invalid={invalid || undefined}
+          onChange={(e) => set({ keywords: e.target.value })}
+        />
+        <span id={`${uid}-keywords-h`} className={s.hint}>
+          1～4 个，每个 1～6 个汉字，用逗号分开。
+        </span>
+      </div>
+      <div className={w.briefColor}>
+        <label className={w.briefOption}>
+          <input
+            type="checkbox"
+            checked={value.usePrimary}
+            onChange={(e) => set({ usePrimary: e.target.checked })}
+          />
+          <span>指定主色</span>
+        </label>
+        <label htmlFor={`${uid}-primary`} className={s.srOnly}>
+          主色
+        </label>
+        <input
+          id={`${uid}-primary`}
+          type="color"
+          className={w.briefSwatch}
+          value={value.primary}
+          disabled={!value.usePrimary}
+          onChange={(e) => set({ primary: e.target.value })}
+        />
+        {value.usePrimary && <span className={s.small}>{value.primary}</span>}
+      </div>
+    </details>
+  )
+}
+
 interface GenerateStepProps {
   projectId: string
   jobId: string | null
   state: ProjectState | null
+  brief: StyleBriefDraft
+  onBriefChange: (next: StyleBriefDraft) => void
   /** The job ended: true when it produced a new version. */
   onFinished: (ok: boolean) => void
   onRestarted: (jobId: string) => void
@@ -36,6 +158,8 @@ export function GenerateStep(props: GenerateStepProps) {
 function JobProgress({
   projectId,
   jobId,
+  brief,
+  onBriefChange,
   onFinished,
   onRestarted,
 }: GenerateStepProps & { jobId: string }) {
@@ -51,6 +175,7 @@ function JobProgress({
   })
   const [retrying, setRetrying] = useState(false)
   const [retryError, setRetryError] = useState<string | null>(null)
+  const [briefInvalid, setBriefInvalid] = useState(false)
   const reported = useRef(false)
 
   useEffect(() => {
@@ -61,11 +186,18 @@ function JobProgress({
   }, [job?.status, onFinished])
 
   async function retry() {
+    const request = briefRequest(brief)
+    setBriefInvalid(!request.ok)
+    if (!request.ok) {
+      setRetryError(request.message)
+      return
+    }
     setRetrying(true)
     setRetryError(null)
     try {
       const res = await postJson<{ jobId: string }>(
         `/api/projects/${encodeURIComponent(projectId)}/jobs`,
+        request.body,
       )
       onRestarted(res.jobId)
     } catch (err) {
@@ -149,6 +281,7 @@ function JobProgress({
           <p className={w.failText}>{job?.error ?? '生成失败，请稍后重试'}</p>
         </div>
       )}
+      {failed && <StylePreferences value={brief} onChange={onBriefChange} invalid={briefInvalid} />}
       {failed && (
         <div className={w.actions}>
           <button

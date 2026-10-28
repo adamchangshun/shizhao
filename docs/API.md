@@ -110,3 +110,19 @@ Next.js Request不提供可靠的直连对端IP。默认 `GUARD_TRUST_PROXY=fals
 应用不把text、facts或Key落库，也不记录其全文（本实现不记录输入摘要）。仅持久化配额与成功模型调用的用量元数据。`rules+judge`会把文案/事实发送到已配置的模型服务，外部服务的数据保留策略由部署方选择；代理、APM和外部模型的保留不属于本应用本地存储保证。浏览器只在当前组件内存中保存输入与Key，不使用localStorage或Cookie保存Key。
 
 规则匹配不是完整语义事实核验，也不替代人工确认；MockProvider只验证演示链路，不证明真实模型识别率。此模块不更改fact-guard规则，也不使用独立留出集。
+
+## 附：生成任务的风格偏好（管理 API）
+
+本文其余部分只描述文案检查 API。商家后台的 `POST /api/projects/:id/jobs`（需管理口令）可带可选请求体，让商家指定风格：
+
+```json
+{ "styleBrief": { "templateId": "menu-board", "moodKeywords": ["日式", "极简"], "primary": "#1f3a5f" } }
+```
+
+| 字段 | 规则 |
+|---|---|
+| `templateId` | `poster` / `card-stack` / `menu-board`，可省略 |
+| `moodKeywords` | 1～4 个风格词，每个 1～6 个汉字，可省略 |
+| `primary` | `#RRGGBB` 主色，可省略 |
+
+三项都可省略，整个 `styleBrief` 或请求体也可省略（与以前相同，由模型自由搭配）；不允许其他字段。生成结果一定遵守给出的项：版本 `designSpec` 的 `templateId`、`palette.primary`（统一小写）、`moodKeywords` 与之一致，文字色仍保证 4.5:1 对比度。不合法时返回 400 `invalid_style_brief`，`message` 用中文说明是哪一项，不创建任务。完整的 curl 流程见 [API-quickstart.md](./API-quickstart.md) 第 6 节。

@@ -164,6 +164,7 @@ export async function runJob(jobId: string, deps: PipelineDeps = {}): Promise<vo
           factSheet,
           previousSpecs: listRecentDesignSpecs(job.projectId, 3),
           seed: job.seed,
+          ...(job.brief ? { brief: job.brief } : {}),
         },
         { provider: resolveProvider(), signal },
       )

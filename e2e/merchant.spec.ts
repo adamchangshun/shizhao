@@ -185,3 +185,29 @@ test('a failed generation shows the reason in Chinese and succeeds on retry', as
   await page.getByRole('button', { name: '重试' }).click()
   await waitForPreview(page)
 })
+
+test('style preferences: the chosen template and mood words reach the version', async ({
+  page,
+}) => {
+  await login(page)
+  await createAndUpload(page, `风格小店${Date.now() % 100000}`)
+  await toFacts(page)
+  await page.getByText('风格偏好（可选）').click()
+  await page.getByRole('radio', { name: /^菜单板/ }).check()
+  await page.getByLabel('风格词').fill('日式，极简')
+  await expectAccessible(page, 'style-brief')
+  await page.getByRole('button', { name: '确认无误，开始生成' }).click()
+  await waitForPreview(page)
+
+  const projectId = /\/projects\/([^/?]+)/.exec(page.url())![1]!
+  const res = await page.request.get(`/api/projects/${projectId}/versions`)
+  expect(res.status()).toBe(200)
+  const { versions } = (await res.json()) as {
+    versions: Array<{ templateId: string; moodKeywords: string[] }>
+  }
+  expect(versions).toHaveLength(1)
+  expect(versions[0]).toMatchObject({
+    templateId: 'menu-board',
+    moodKeywords: ['日式', '极简'],
+  })
+})

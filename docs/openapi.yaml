@@ -57,17 +57,85 @@ paths:
           $ref: '#/components/responses/Provider'
         '504':
           $ref: '#/components/responses/Timeout'
+  /api/projects/{id}/jobs:
+    post:
+      operationId: startGeneration
+      summary: 发起生成（商家后台管理 API）
+      description: >-
+        从最新已确认的事实表发起生成，任务在后台运行。请求体可省略；styleBrief 中给出的项生成结果一定遵守，
+        版本 designSpec 的 templateId、palette.primary（统一小写）、moodKeywords 与之一致。
+      security:
+        - AdminToken: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/JobRequest'
+            example:
+              styleBrief: { templateId: menu-board, moodKeywords: [日式, 极简], primary: '#1f3a5f' }
+      responses:
+        '202':
+          description: 已创建任务。
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [jobId]
+                properties:
+                  jobId: { type: string }
+        '400':
+          description: invalid_style_brief（message 说明哪一项不合法）或 invalid_input（请求体不是合法 JSON）。
+          content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+        '401':
+          description: unauthorized，缺少或错误的管理口令。
+          content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+        '404':
+          description: not_found，项目不存在。
+          content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+        '409':
+          description: facts_not_confirmed 或 job_running。
+          content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
+        '413':
+          description: payload_too_large，请求体超过 1024 字节。
+          content: { application/json: { schema: { $ref: '#/components/schemas/Error' } } }
 components:
   securitySchemes:
     GuardKey:
       type: http
       scheme: bearer
       description: 服务端GUARD_API_KEYS中的Key；管理Cookie或管理口令不替代此Key。
+    AdminToken:
+      type: http
+      scheme: bearer
+      description: 管理口令 ADMIN_TOKEN（商家后台的管理 API）。
   headers:
     Remaining:
       description: 当前分钟窗口剩余请求数，错误响应同样提供。
       schema: { type: integer, minimum: 0, maximum: 120 }
   schemas:
+    JobRequest:
+      type: object
+      properties:
+        styleBrief:
+          $ref: '#/components/schemas/StyleBrief'
+    StyleBrief:
+      type: object
+      additionalProperties: false
+      description: 商家风格偏好，三项都可省略；空对象等同于不指定。
+      properties:
+        templateId: { type: string, enum: [poster, card-stack, menu-board] }
+        moodKeywords:
+          type: array
+          minItems: 1
+          maxItems: 4
+          items: { type: string, pattern: '^\p{Script=Han}{1,6}$' }
+        primary: { type: string, pattern: '^#[0-9a-fA-F]{6}$' }
     GuardRequest:
       type: object
       additionalProperties: false
