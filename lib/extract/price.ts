@@ -41,10 +41,11 @@ export function normalizePrice(raw: string): Price | null {
 const YUAN = '元(?!旦|宵|素|老|件|帅|首|宝|宇宙)'
 
 /**
- * A price token as merchants write it in prose: needs ¥ in front or 元/块 after the number. Like an
- * amount, it never starts inside a code, and a ¥ number never runs on into one ('¥123abc').
+ * A price token as merchants write it in prose: needs ¥ in front or 元/块 after the number. A ¥
+ * number never runs on into a code ('¥123abc'). Where a token may start is left to the caller:
+ * right after an item's name ('LATTE18元'), or never inside a code when scanning lines.
  */
-const PRICE_TOKEN = String.raw`(?<![-_A-Za-z0-9])(?:¥\s*\d{1,7}(?:\.\d{1,2})?(?![-_A-Za-z0-9.])|\d{1,7}(?:\.\d{1,2})?\s*(?:${YUAN}|块))(?:\s*(?:/|每)\s*[^\s\d,，。；;!！?？/]{1,4}|一[${MEASURE}])?`
+const PRICE_TOKEN = String.raw`(?:¥\s*\d{1,7}(?:\.\d{1,2})?(?![-_A-Za-z0-9.])|\d{1,7}(?:\.\d{1,2})?\s*(?:${YUAN}|块))(?:\s*(?:/|每)\s*[^\s\d,，。；;!！?？/]{1,4}|一[${MEASURE}])?`
 // Between the name and its price only: spaces, one bracketed size note, and one colon, comma
 // or enumeration comma ('可颂，12 元', '蛋挞、8元'; after NFKC, full-width brackets, colons and
 // commas are ASCII, '、' stays). Any other words in between (e.g. '把价格写成', '今天') mean the

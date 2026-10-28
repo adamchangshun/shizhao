@@ -181,10 +181,13 @@ describe('findTextPrice', () => {
     expect(performance.now() - start).toBeLessThan(50)
   })
 
-  it('never reads a price inside a code: nothing but spaces may touch ¥123 or 123元', () => {
+  it('never reads a price inside a code (¥123abc), but one may follow the item name directly', () => {
     expect(findTextOffers('BUTTER CROISSANT', 'BUTTER CROISSANT ¥123abc')).toEqual([])
     expect(findTextOffers('BUTTER CROISSANT', 'BUTTER CROISSANT ¥12_3')).toEqual([])
     expect(findTextOffers('LATTE', 'LATTE A123元')).toEqual([])
+    // Right after the item's own name, a price may follow without a space.
+    expect(findTextPrice('LATTE', 'LATTE18元')?.amount).toBe(18)
+    expect(findTextPrice('套餐2', '套餐2¥18')?.amount).toBe(18)
     expect(findLineOffers('牛角包 ¥123abc')).toEqual([])
     expect(findTextOffers('拿铁', '拿铁 ¥12/杯').map((o) => o.price.amount)).toEqual([12])
     expect(findTextOffers('拿铁', '拿铁 ¥12.50，美式').map((o) => o.price.amount)).toEqual([12.5])
