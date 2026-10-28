@@ -29,6 +29,13 @@
       "when": 1791903560409,
       "tag": "0003_guard_api_accounting",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1793178675195,
+      "tag": "0004_job_style_brief",
+      "breakpoints": true
     }
   ]
 }

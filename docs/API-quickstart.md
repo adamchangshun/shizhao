@@ -137,13 +137,22 @@ curl -sS -X POST "$BASE/api/projects/$PROJECT_ID/facts/confirm" -H "$AUTH" \
 
 ## 6. 生成 / Generate
 
-没有请求体。返回 202 `{ jobId }`，任务在后台运行。没有已确认的事实表时返回 409 `facts_not_confirmed`，已有任务在运行时返回 409 `job_running`。
+请求体可省略。可选的 `{ "styleBrief": { "templateId", "moodKeywords", "primary" } }` 指定版式（`poster` / `card-stack` / `menu-board`）、1～4 个风格词（每个 1～6 个汉字）和主色（`#RRGGBB`），三项都可省略，生成结果一定遵守；不合法时返回 400 `invalid_style_brief`。返回 202 `{ jobId }`，任务在后台运行。没有已确认的事实表时返回 409 `facts_not_confirmed`，已有任务在运行时返回 409 `job_running`。
 
-No request body. Returns 202 `{ jobId }`; the job runs in the background. 409 `facts_not_confirmed` without confirmed facts, 409 `job_running` while another job runs.
+The body is optional. An optional `{ "styleBrief": { "templateId", "moodKeywords", "primary" } }` fixes the layout (`poster` / `card-stack` / `menu-board`), 1–4 mood words (1–6 Chinese characters each) and the main color (`#RRGGBB`); each part may be left out, and the result always follows what is given. Invalid values return 400 `invalid_style_brief`. Returns 202 `{ jobId }`; the job runs in the background. 409 `facts_not_confirmed` without confirmed facts, 409 `job_running` while another job runs.
 
 ```bash
 JOB_ID=$(curl -sS -X POST "$BASE/api/projects/$PROJECT_ID/jobs" -H "$AUTH" | jq -r .jobId)
 echo "$JOB_ID"
+```
+
+指定风格偏好 / With style preferences:
+
+```bash
+JOB_ID=$(curl -sS -X POST "$BASE/api/projects/$PROJECT_ID/jobs" -H "$AUTH" \
+  -H 'Content-Type: application/json' \
+  -d '{"styleBrief":{"templateId":"menu-board","moodKeywords":["日式","极简"],"primary":"#1f3a5f"}}' \
+  | jq -r .jobId)
 ```
 
 ## 7. 轮询任务 / Poll the job

@@ -20,6 +20,7 @@ import type {
   JobStatus,
   QaReport,
 } from '../core/schemas'
+import type { StyleBrief } from '../design/brief'
 
 export const PROJECT_TYPES = ['single', 'menu'] as const
 export const ASSET_KINDS = ['image', 'text'] as const
@@ -130,6 +131,8 @@ export const jobs = sqliteTable(
     // Module 08: ISO start time of each pipeline stage, for ETA statistics. Null for jobs resumed
     // after a restart, whose stage times would be meaningless.
     stageStartedAt: text('stage_started_at', { mode: 'json' }).$type<Record<string, string>>(),
+    // The merchant's optional style preferences (StyleBrief); null when none were given.
+    brief: text('brief', { mode: 'json' }).$type<StyleBrief>(),
   },
   (t) => [
     index('jobs_project_idx').on(t.projectId),

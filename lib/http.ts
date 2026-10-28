@@ -10,11 +10,31 @@ export async function readJsonLimited(
   maxBytes: number,
   signal?: AbortSignal,
 ): Promise<unknown> {
+  const bytes = await readBytesLimited(request, maxBytes, signal)
+  if (!bytes) throw new SyntaxError('empty body')
+  return JSON.parse(bytes.toString('utf8'))
+}
+
+/** Like readJsonLimited, but a missing or zero-byte body is `undefined` instead of an error. */
+export async function readOptionalJsonLimited(
+  request: Request,
+  maxBytes: number,
+): Promise<unknown> {
+  const bytes = await readBytesLimited(request, maxBytes)
+  return bytes && bytes.length > 0 ? JSON.parse(bytes.toString('utf8')) : undefined
+}
+
+/** The raw body under the byte cap; null when the request has no body stream. */
+async function readBytesLimited(
+  request: Request,
+  maxBytes: number,
+  signal?: AbortSignal,
+): Promise<Buffer | null> {
   signal?.throwIfAborted()
   const tooLarge = () => new ApiError(413, 'payload_too_large', '请求内容过大')
   const declared = Number(request.headers.get('content-length') ?? '0')
   if (declared > maxBytes) throw tooLarge()
-  if (!request.body) throw new SyntaxError('empty body')
+  if (!request.body) return null
   const reader = request.body.getReader()
   const cancel = () => {
     void reader.cancel().catch(() => {})
@@ -34,7 +54,7 @@ export async function readJsonLimited(
       }
       chunks.push(value)
     }
-    return JSON.parse(Buffer.concat(chunks).toString('utf8'))
+    return Buffer.concat(chunks)
   } finally {
     signal?.removeEventListener('abort', cancel)
     reader.releaseLock()

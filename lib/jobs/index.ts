@@ -8,6 +8,7 @@ import { createJobIfIdle, findJob, listRecentStageLogs } from '../db/repo/jobs'
 import { findActiveProject } from '../db/repo/projects'
 import { findActiveVersion, listVersionsWithCost } from '../db/repo/versions'
 import { getEnv } from '../env'
+import type { StyleBrief } from '../design/brief'
 import { getConfirmedFactSheet } from '../extract'
 import { computeStageStats, estimateEtaSeconds, HISTORY_LIMIT } from './eta'
 import { versionMediaPath } from './files'
@@ -20,8 +21,9 @@ export type { PipelineDeps } from './pipeline'
 /**
  * POST /api/projects/:id/jobs: requires confirmed facts (409 otherwise), creates a queued job
  * unless one is already running (409), and hands it to the runner without waiting for it.
+ * `brief` (already validated) is stored on the job for the designing stage.
  */
-export function createGenerationJob(projectId: string): { jobId: string } {
+export function createGenerationJob(projectId: string, brief?: StyleBrief): { jobId: string } {
   if (!findActiveProject(projectId)) throw Errors.notFound('项目')
   let sheet
   try {
@@ -36,6 +38,7 @@ export function createGenerationJob(projectId: string): { jobId: string } {
   const job = createJobIfIdle(projectId, {
     factRevision: sheet.revision,
     seed: randomInt(0, 2 ** 31 - 1),
+    ...(brief ? { brief } : {}),
   })
   if (!job) {
     if (!findActiveProject(projectId)) throw Errors.notFound('项目')

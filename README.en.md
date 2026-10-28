@@ -103,7 +103,7 @@ To set up by hand instead: `cp .env.example .env.local`, set `ADMIN_TOKEN` there
 
 ### After startup
 
-- `http://localhost:6688/`: merchant console; sign in with the admin token to create projects, upload, confirm facts, generate, preview and publish.
+- `http://localhost:6688/`: merchant console; sign in with the admin token to create projects, upload, confirm facts, generate (with optional style preferences: layout, mood words and main color), preview and publish.
 - `http://localhost:6688/p/<code>/`: the public page customers see; `pnpm demo` prints the actual URL.
 - `http://localhost:6688/check`: copy-check page, no login needed.
 - `http://localhost:6688/api/health`: health check.

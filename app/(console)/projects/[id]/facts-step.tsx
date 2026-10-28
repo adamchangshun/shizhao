@@ -6,6 +6,7 @@ import { api, ClientError, messageOf, postJson } from '../../_lib/api'
 import type { ExtractResponse, FactConflict, FactsResponse, FactSheet } from '../../_lib/types'
 import s from '../../shell.module.css'
 import { FactsForm, type FactsEdit, type SubmitResult } from './facts-form'
+import { briefRequest, StylePreferences, type StyleBriefDraft } from './generate-step'
 import { StepHeading } from './step-heading'
 import w from './wizard.module.css'
 
@@ -14,6 +15,8 @@ interface FactsStepProps {
   extract: ExtractResponse | null
   onExtracted: (result: ExtractResponse) => void
   onStarted: (jobId: string) => void
+  brief: StyleBriefDraft
+  onBriefChange: (next: StyleBriefDraft) => void
 }
 
 const SHOP_FIELD: Record<string, string> = {
@@ -40,11 +43,19 @@ export function pathLabel(path: string): string {
   return '信息'
 }
 
-export function FactsStep({ projectId, extract, onExtracted, onStarted }: FactsStepProps) {
+export function FactsStep({
+  projectId,
+  extract,
+  onExtracted,
+  onStarted,
+  brief,
+  onBriefChange,
+}: FactsStepProps) {
   const base = `/api/projects/${encodeURIComponent(projectId)}`
   const facts = useSWR<FactsResponse>(`${base}/facts`)
   const [extracting, setExtracting] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [briefInvalid, setBriefInvalid] = useState(false)
 
   async function runExtract() {
     setExtracting(true)
@@ -62,6 +73,9 @@ export function FactsStep({ projectId, extract, onExtracted, onStarted }: FactsS
 
   /** Save (if edited) → confirm → start generating. */
   async function submit(sheet: FactSheet, edited: FactsEdit | null): Promise<SubmitResult> {
+    const request = briefRequest(brief)
+    setBriefInvalid(!request.ok)
+    if (!request.ok) return request
     try {
       let revision = sheet.revision
       if (edited) {
@@ -73,7 +87,7 @@ export function FactsStep({ projectId, extract, onExtracted, onStarted }: FactsS
         await facts.mutate({ factSheet: saved.factSheet, confirmed: false }, { revalidate: false })
       }
       await postJson(`${base}/facts/confirm`, { revision })
-      const { jobId } = await postJson<{ jobId: string }>(`${base}/jobs`)
+      const { jobId } = await postJson<{ jobId: string }>(`${base}/jobs`, request.body)
       onStarted(jobId)
       return { ok: true }
     } catch (err) {
@@ -159,6 +173,9 @@ export function FactsStep({ projectId, extract, onExtracted, onStarted }: FactsS
           sheet={sheet}
           lowConfidence={lowConfidence}
           onSubmit={(edited) => submit(sheet, edited)}
+          beforeSubmit={
+            <StylePreferences value={brief} onChange={onBriefChange} invalid={briefInvalid} />
+          }
         />
       )}
     </div>

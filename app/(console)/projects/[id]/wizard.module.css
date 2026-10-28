@@ -757,3 +757,62 @@ li[data-current='true'] .stepNum {
   display: grid;
   gap: 0.4rem;
 }
+
+/* 风格偏好（可选） */
+.brief {
+  margin-top: 1rem;
+  display: grid;
+  gap: 0.75rem;
+}
+.briefSummary {
+  cursor: pointer;
+  font-weight: 600;
+  min-height: 2.75rem;
+  display: flex;
+  align-items: center;
+}
+.briefTemplates {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  min-width: 0;
+  display: grid;
+  gap: 0.4rem;
+}
+.briefOption {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+  min-height: 2.75rem;
+  padding-block: 0.35rem;
+  cursor: pointer;
+}
+.briefOption input {
+  margin-top: 0.2rem;
+  width: 1.15rem;
+  height: 1.15rem;
+  accent-color: var(--red);
+}
+.briefOptionName {
+  display: block;
+  font-weight: 600;
+}
+.briefColor {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  align-items: center;
+}
+.briefSwatch {
+  inline-size: 3rem;
+  block-size: 2.75rem;
+  padding: 0.15rem;
+  border: 1px solid var(--line-strong);
+  border-radius: 6px;
+  background: var(--surface);
+  cursor: pointer;
+}
+.briefSwatch:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}

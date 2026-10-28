@@ -167,7 +167,7 @@ queued → designing → writing → guarding → rendering → checking → suc
 | `projects` | id (text pk)、slug (text unique，6 位，字符集 `23456789abcdefghjkmnpqrstuvwxyz`)、type (`single`/`menu`)、title、publishedVersionId (nullable)、unpublishedAt (nullable)、createdAt、deletedAt (nullable) |
 | `assets` | id、projectId、kind (`image`/`text`)、path、width、height、sha256、bytes、text (nullable)、createdAt |
 | `fact_sheets` | projectId、revision、json (FactSheet)、confirmedAt (nullable)、createdAt；主键 (projectId, revision) |
-| `jobs` | id、projectId、factRevision、status、stage、seed、error (nullable)、startedAt、finishedAt (nullable)、createdAt |
+| `jobs` | id、projectId、factRevision、status、stage、seed、error (nullable)、startedAt、finishedAt (nullable)、createdAt、brief (json nullable，R11) |
 | `versions` | id、projectId、jobId (nullable，纠错重渲染时为空)、origin (`generate`/`correction`)、factRevision、designSpec (json)、copy (json)、guard (json)、htmlPath、qa (json nullable)、createdAt |
 | `usage_records` | id、jobId (nullable)、projectId、Usage 各字段、createdAt |
 | `visit_events` | id、projectId、versionId、source (`qr`/`link`)、action (`view`/`call`/`wechat_copy`/`navigate`)、createdAt |
@@ -185,7 +185,7 @@ queued → designing → writing → guarding → rendering → checking → suc
 | POST | `/api/projects/:id/extract` | 抽取事实 → 新 revision 的未确认 FactSheet | 04 |
 | PUT | `/api/projects/:id/facts` | 保存商家修改（生成新 revision） | 04 |
 | POST | `/api/projects/:id/facts/confirm` | 确认最新 revision | 04 |
-| POST | `/api/projects/:id/jobs` | 发起生成 → `{ jobId }` | 08 |
+| POST | `/api/projects/:id/jobs` | 发起生成（可选请求体 `{ styleBrief? }`，见 R11）→ `{ jobId }` | 08 |
 | GET | `/api/jobs/:id` | `{ status, stage, etaSeconds: [lo, hi], error? }` | 08 |
 | GET | `/api/projects/:id/versions` | 版本列表 | 08 |
 | GET | `/api/versions/:id/preview` | 预览 HTML（需管理口令） | 08 |
@@ -282,3 +282,13 @@ queued → designing → writing → guarding → rendering → checking → suc
 - 发布时为该版本生成一张手机长图：`DATA_DIR/pages/<projectId>/<versionId>/long.png`（宽 1080px，页面全长截图，底部拼接二维码与「扫码查看完整页面」）。
 - 路由：`GET /api/projects/:id/long-image` 返回当前已发布版本的长图（需管理口令，由 09 号负责）。
 - 环境变量 `LONG_IMAGE_ENABLED`（默认 `true`）：服务器没有安装浏览器时设为 `false`，发布照常进行，只是不生成长图。
+
+## 商家风格偏好修订（2026-10-28，优先于上文）
+
+### R11 生成任务的 styleBrief
+
+- `POST /api/projects/:id/jobs` 接收可选请求体 `{ styleBrief? }`；不带请求体与以前完全相同。
+- `StyleBrief = { templateId?: TemplateId, moodKeywords?: string[], primary?: Hex }`（`lib/design/brief.ts`）：三项都可省略，整个对象可省略；`moodKeywords` 1～4 个、每个 1～6 个汉字，与模型输出的风格词同一条规则；不允许其他字段；`styleBrief: null` 不合法。空对象视为没有偏好。
+- 非法时返回 400 `{ error: { code: 'invalid_style_brief', message } }`，`message` 用中文说明是哪一项不合法，不创建任务。
+- `jobs` 表增加可空列 `brief`（json），保存校验后的 StyleBrief；没有偏好时为 null。版本表不另存 brief，结果已体现在 `designSpec`。
+- 生成结果必须遵守：指定了 `templateId` 就使用它（相似度判定不切换模板）；指定了 `primary` 就是最终的 `palette.primary`（统一小写），text 仍保证在 bg 与 surface 上 ≥ 4.5:1；指定了 `moodKeywords` 就是最终的风格词。`DesignSpec` 字段不变，seed 仍随机。

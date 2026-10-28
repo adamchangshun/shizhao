@@ -1,6 +1,7 @@
 import { and, desc, eq, isNotNull, isNull, notInArray } from 'drizzle-orm'
 import type { JobStatus } from '../../core/schemas'
 import { newId } from '../../core/ids'
+import type { StyleBrief } from '../../design/brief'
 import { isTerminal, transition } from '../../core/job-state'
 import { getDb, type Db } from '../client'
 import { jobs, projects, TERMINAL_JOB_STATUSES, type JobRow } from '../schema'
@@ -10,6 +11,7 @@ const TERMINAL_STATUSES = TERMINAL_JOB_STATUSES
 export interface NewJobInput {
   factRevision: number
   seed: number
+  brief?: StyleBrief
 }
 
 function isActiveJobConflict(err: unknown): boolean {
@@ -59,6 +61,7 @@ export function createJobIfIdle(
           finishedAt: null,
           createdAt: now,
           stageStartedAt: null,
+          brief: input.brief ?? null,
         }
         tx.insert(jobs).values(row).run()
         return row

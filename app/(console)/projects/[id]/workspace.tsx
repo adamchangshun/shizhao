@@ -17,7 +17,13 @@ import s from '../../shell.module.css'
 import w from './wizard.module.css'
 import { CorrectionsTab, correctionsKey } from './corrections-tab'
 import { FactsStep } from './facts-step'
-import { GenerateStep } from './generate-step'
+import {
+  EMPTY_BRIEF_DRAFT,
+  GenerateStep,
+  loadBriefDraft,
+  saveBriefDraft,
+  type StyleBriefDraft,
+} from './generate-step'
 import { PreviewStep } from './preview-step'
 import { PublishStep } from './publish-step'
 import { SettingsTab } from './settings-tab'
@@ -62,6 +68,20 @@ export function Workspace({ projectId, publicBase }: { projectId: string; public
   // Extraction details (conflicts) only come with the extract response; they live for this visit.
   const [extract, setExtract] = useState<ExtractResponse | null>(null)
   const [materialChanged, setMaterialChanged] = useState(false)
+  // Style preferences: every later generation, also after a reload, starts from the last ones.
+  const [brief, setBriefState] = useState(EMPTY_BRIEF_DRAFT)
+  useEffect(() => {
+    // Read after mount: storage does not exist during the server render.
+    const saved = loadBriefDraft(projectId)
+    if (saved) setBriefState(saved)
+  }, [projectId])
+  const setBrief = useCallback(
+    (next: StyleBriefDraft) => {
+      setBriefState(next)
+      saveBriefDraft(projectId, next)
+    },
+    [projectId],
+  )
 
   const tab: Tab =
     params.get('tab') === 'corrections'
@@ -232,6 +252,8 @@ export function Workspace({ projectId, publicBase }: { projectId: string; public
               <FactsStep
                 projectId={projectId}
                 extract={extract}
+                brief={brief}
+                onBriefChange={setBrief}
                 onExtracted={(result) => {
                   setExtract(result)
                   void project.mutate()
@@ -247,6 +269,8 @@ export function Workspace({ projectId, publicBase }: { projectId: string; public
                 projectId={projectId}
                 jobId={params.get('job')}
                 state={detail.state}
+                brief={brief}
+                onBriefChange={setBrief}
                 onFinished={(ok) => {
                   void project.mutate()
                   void versions.mutate().then(() => go(ok ? 'preview' : 'facts', { v: null }))
@@ -260,6 +284,8 @@ export function Workspace({ projectId, publicBase }: { projectId: string; public
                 versions={versions}
                 publishedVersionId={detail.publishedVersionId}
                 selectedId={params.get('v')}
+                brief={brief}
+                onBriefChange={setBrief}
                 onSelect={(id) => set({ v: id })}
                 onRestyle={(jobId) => {
                   void project.mutate()
