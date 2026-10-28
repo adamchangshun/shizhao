@@ -29,36 +29,22 @@ const WECHAT_DIRECT = new RegExp(
 )
 const ID_TOKEN = /(?<![a-z0-9_-])(?=[a-z][-_a-z0-9]{5,19}(?![a-z0-9_-]))[a-z]*[-_0-9][-_a-z0-9]*/i
 // QQ numbers and Alipay accounts are also only recognisable next to a cue word (spaces inside
-// the cue are allowed: "Q Q", "支 付 宝"). Either a 5–20 digit number follows the cue directly
-// ("QQ：12345678", "支付宝账号 2088…", even with 元 after it), or the same clause carries a number
-// that is not an amount, or an id-shaped token ("我的QQ是这个 123456789", "支付宝账号：tian_88abc").
-// "支付宝付了 12800 元", "QQ糖" and "QQ音乐" are not accounts, nor is a number in another clause
-// unless that clause says it is one ("支付宝收款，账号写在这里 2088…").
+// the cue are allowed: "Q Q", "支 付 宝"). Anywhere in the cue's clause, a 5–20 digit number or an
+// id-shaped token is refused, amounts included: "支付宝付了 12800 元" has to be rewritten without
+// the number, since no rule tells amounts from accounts reliably. So is one in the next clause
+// when that clause says it is an account ("支付宝收款，账号写在这里 2088…"). "QQ糖" and "QQ音乐" are
+// not cues.
 const ACCOUNT_SERVICE = String.raw`(?:q\s?q(?!\s?(?:糖|音乐))|扣\s?扣|企鹅号|q号|支\s?付\s?宝|alipay|zfb)`
 const ACCOUNT_WORD = String.raw`(?:号码|号|账号|帐号|账户|id)`
 const ACCOUNT_CUE = `${ACCOUNT_SERVICE}${ACCOUNT_WORD}?`
 const ACCOUNT_DIRECT = new RegExp(`${ACCOUNT_CUE}[\\s:=是为]{0,3}[1-9]\\d{4,19}(?!\\d)`, 'i')
-const ACCOUNT_NUMBER = String.raw`(?<!\d)[1-9]\d{4,19}(?!\d)`
-// After a cue that names an account ("QQ账号", "支付宝账户"), a number in the same clause is the
-// account even when written like an amount ("我的QQ账号是这个 12345元旦后停用"), so this rule
-// runs on the text before amounts are set aside.
-const ACCOUNT_WORDED = new RegExp(
-  `${ACCOUNT_SERVICE}${ACCOUNT_WORD}[^,.;!?\\n。、]{0,20}?${ACCOUNT_NUMBER}`,
-  'i',
-)
-const ACCOUNT_NEARBY = new RegExp(
-  `${ACCOUNT_CUE}[^,.;!?\\n。、]{0,20}?(?:${ACCOUNT_NUMBER}|${ID_TOKEN.source})`,
-  'i',
-)
+const ACCOUNT_ID = String.raw`(?:(?<!\d)[1-9]\d{4,19}(?!\d)|${ID_TOKEN.source})`
+const CLAUSE = String.raw`[^,.;!?\n。、]*`
+const ACCOUNT_NEARBY = new RegExp(`${ACCOUNT_CUE}${CLAUSE}?${ACCOUNT_ID}`, 'i')
 const ACCOUNT_NEXT_CLAUSE = new RegExp(
-  `${ACCOUNT_CUE}[^,.;!?\\n。、]{0,20}[,.;!?\\n。、][^,.;!?\\n。、]{0,10}?(?:账号|帐号|账户|号码)[^,.;!?\\n。、]{0,10}?(?:${ACCOUNT_NUMBER}|${ID_TOKEN.source})`,
+  `${ACCOUNT_CUE}${CLAUSE}[,.;!?\\n。、]${CLAUSE}?(?:账号|帐号|账户|号码)${CLAUSE}?${ACCOUNT_ID}`,
   'i',
 )
-// Amounts, with any spaces around the number: "¥ 12800", "RMB  12800", "CNY12800", "12800 人民币".
-// An amount never starts or ends inside an id ("RMB123abc", "abc123元旦" stay ids). The number may
-// only start where a run of digits starts, so a failed match is not retried from every digit.
-const AMOUNT =
-  /(?<![-_a-z0-9])(?:¥|rmb|cny)\s*\d+(?![-_a-z0-9])|(?<![-_a-z0-9])\d+\s*(?:元|块|人民币)/gi
 
 // "支付宝账号 tian 88abc", "QQ：t i a n x 8": an id split by spaces. After every cue, the words
 // that follow are joined one at a time (up to 20 characters, the longest id), and the text is
@@ -82,8 +68,9 @@ function spacedAccount(text: string): boolean {
     while (word !== undefined) {
       joined += word
       words += 1
-      mixed ||= MIXED.test(word)
+      // Checked before MIXED, which is quadratic in the word's length.
       if (joined.length > 20) break
+      mixed ||= MIXED.test(word)
       if (words > 1 && (strong || mixed) && WHOLE_ID.test(joined)) return true
       NEXT_WORD.lastIndex = FIRST_WORD.lastIndex
       word = NEXT_WORD.exec(text)?.[1]
@@ -102,9 +89,6 @@ export function containsPersonalInfo(text: string): boolean {
   // "tian _ 88abc": spaces around "_" and "-" inside an account id. Each run of spaces is
   // matched from its first space only, so a long run cannot make this quadratic.
   const ids = digits.replace(/(?<!\s)\s+(?=[-_])|(?<=[-_])\s+/g, '')
-  // Only a number written right after the cue is an account even as an amount ("QQ账号 12345678元");
-  // elsewhere amounts are set aside first ("支付宝付了 ¥ 12800").
-  const noAmounts = ids.replace(AMOUNT, ' 金额 ')
   // "someone @ example . com"
   const compact = n.replace(/\s*([@.])\s*/g, '$1')
   return (
@@ -115,10 +99,9 @@ export function containsPersonalInfo(text: string): boolean {
     WECHAT_DIRECT.test(n) ||
     (WECHAT_CUE.test(n) && ID_TOKEN.test(n)) ||
     ACCOUNT_DIRECT.test(ids) ||
-    ACCOUNT_WORDED.test(ids) ||
-    ACCOUNT_NEARBY.test(noAmounts) ||
-    ACCOUNT_NEXT_CLAUSE.test(noAmounts) ||
-    spacedAccount(noAmounts)
+    ACCOUNT_NEARBY.test(ids) ||
+    ACCOUNT_NEXT_CLAUSE.test(ids) ||
+    spacedAccount(ids)
   )
 }
 

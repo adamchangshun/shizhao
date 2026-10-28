@@ -236,6 +236,7 @@ pnpm eval:extract && pnpm eval:compare && pnpm eval:guard && pnpm eval:report
 
 - 02/07: Model requests have stage-specific output token limits. Fact-guard removes Unicode Cf and Default_Ignorable_Code_Point characters at any position and applies NFKC with source-span mapping. Storage predicates and limited-edition metaphors are hardened, but fresh/bakery weather phrases and event/end wording beside opening hours may still be conservatively blocked. Finite rules do not cover all semantics; see the [fact-guard README](packages/fact-guard/README.md).
 
+- Customer corrections that mention QQ or Alipay are refused whenever the same sentence contains a number of 5 or more digits, amounts included ("支付宝付了 12800 元" has to be resubmitted without the number), because amounts and account numbers cannot be told apart reliably. Detection is best effort and deliberately disguised numbers can still get through; see [docs/PRIVACY.md](docs/PRIVACY.md).
 - F1: when a spec sits between the product name and the price (e.g. "巴斯克芝士蛋糕 6 寸 128 元"), the price is missed; a fix is planned for v0.1.1. Until then, check every field and add the price before confirming the fact sheet.
 
 ## How it was built

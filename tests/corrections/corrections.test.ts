@@ -337,7 +337,7 @@ describe('customer correction → merchant merge', () => {
       const res = await submit(body)
       expect(res.status).toBe(400)
       expect(((await res.json()) as { error: { message: string } }).error.message).toBe(
-        '请勿填写个人信息',
+        '请勿填写个人信息：提到 QQ、支付宝或微信时，不要同时写出号码、账号或 5 位以上的数字',
       )
     }
     // Each page allows 3 reports per source and 10 minutes, so the contact case uses its own page.

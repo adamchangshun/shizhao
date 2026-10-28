@@ -52,6 +52,25 @@ describe('personal information', () => {
     'QQ：tian_88¥5',
     '我的QQ账号是这个 12345元旦后停用',
     '支付宝账号是这个 2088102134567890 元',
+    // Any 5+ digit number near an account cue is refused, amounts included: the form asks the
+    // customer to leave the number out.
+    '支付宝付了 12800 元',
+    '支持支付宝付款，会员账号年费是 12800 元',
+    '支付宝付了 ¥12800',
+    '支付宝付了 ￥12,800',
+    '支持支付宝付款，会员账号年费是 RMB 12800',
+    '支付宝付了 CNY12800',
+    '支付宝付了 12800 人民币',
+    '支持支付宝付款，会员账号年费是 12800人民币',
+    '支付宝 RMB 12800',
+    '支付宝 cny 12 800',
+    '支付宝付了 ¥ 12800',
+    '支持支付宝付款，会员账号年费是 RMB  12800',
+    '支付宝付了 12800  人民币',
+    '支付宝付了 12800\t元',
+    '我的QQ 账号是这个 12345元旦后停用',
+    '我的Q号是这个 12345元旦后停用',
+    '我的QQ账号已经换了很久目前这个号码也停用了请不要再联系我了 12345元旦后停用',
   ])('refuses %s', (text) => {
     expect(containsPersonalInfo(text)).toBe(true)
   })
@@ -70,31 +89,26 @@ describe('personal information', () => {
     'QQ 音乐里放的歌很好听',
     '可以用支付宝付款',
     '支付宝付了 128 元',
-    '支付宝付了 12800 元',
     '营业 8:00 ---- 20:00',
     '大杯 18 元 / 中杯 15 元',
     '2 杯 ---- 3 杯',
     '价格 13，不是 15',
     '支持支付宝付款，商品编号 12345 写错了',
     'QQ音乐可以播放，订单号 abc_123 有误',
-    '支持支付宝付款，会员账号年费是 12800 元',
     '支付宝付款 tian 写错了',
-    '支付宝付了 ¥12800',
-    '支付宝付了 ￥12,800',
-    '支持支付宝付款，会员账号年费是 RMB 12800',
-    '支付宝付了 CNY12800',
-    '支付宝付了 12800 人民币',
-    '支持支付宝付款，会员账号年费是 12800人民币',
-    '支付宝 RMB 12800',
-    '支付宝 cny 12 800',
-    '支付宝付了 ¥ 12800',
-    '支持支付宝付款，会员账号年费是 RMB  12800',
-    '支付宝付了 12800  人民币',
-    '支付宝付了 12800\t元',
     '支付宝 payment method 2 is unavailable',
     'QQ login option 2 is broken',
   ])('allows %s', (text) => {
     expect(containsPersonalInfo(text)).toBe(false)
+  })
+
+  it('checks an 800-character note of repeated cues quickly', () => {
+    containsPersonalInfo('QQ')
+    for (const text of ['QQ'.repeat(400), 'QQ a'.repeat(200), 'QQ，账号 '.repeat(130)]) {
+      const start = performance.now()
+      containsPersonalInfo(text)
+      expect(performance.now() - start).toBeLessThan(30)
+    }
   })
 })
 

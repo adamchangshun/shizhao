@@ -204,4 +204,10 @@ describe('findTextAmounts', () => {
     // Not amounts: a number inside a code or a word ('RMB123abc', 'abc123元旦').
     expect(findTextAmounts('编号RMB123abc已停用，abc123元旦后恢复')).toEqual([])
   })
+
+  it('does not read 元 as money in words such as 元旦 and 元宵', () => {
+    expect(findTextAmounts('2026元旦开业')).toEqual([])
+    expect(findTextAmounts('15元宵节限定，2026元年')).toEqual([])
+    expect(findTextAmounts('12元一个')).toEqual([{ amount: 12, at: 0, end: 3 }])
+  })
 })

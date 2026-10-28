@@ -36,8 +36,11 @@ export function normalizePrice(raw: string): Price | null {
   return unit === '' ? { amount, currency: 'CNY' } : { amount, currency: 'CNY', unit }
 }
 
+// 元 that starts a word is not money: 元旦, 元宵, 元素, 元老, 元气, 元件, 元帅, 元首, 元年, 元月, 元日, 元宝.
+const YUAN = '元(?![旦宵素老气件帅首年月日宝])'
+
 /** A price token as merchants write it in prose: needs ¥ in front or 元/块 after the number. */
-const PRICE_TOKEN = String.raw`(?:¥\s*\d{1,7}(?:\.\d{1,2})?|\d{1,7}(?:\.\d{1,2})?\s*(?:元|块))(?:\s*(?:/|每)\s*[^\s\d,，。；;!！?？/]{1,4}|一[${MEASURE}])?`
+const PRICE_TOKEN = String.raw`(?:¥\s*\d{1,7}(?:\.\d{1,2})?|\d{1,7}(?:\.\d{1,2})?\s*(?:${YUAN}|块))(?:\s*(?:/|每)\s*[^\s\d,，。；;!！?？/]{1,4}|一[${MEASURE}])?`
 // Between the name and its price only: spaces, one bracketed size note, and one colon, comma
 // or enumeration comma ('可颂，12 元', '蛋挞、8元'; after NFKC, full-width brackets, colons and
 // commas are ASCII, '、' stays). Any other words in between (e.g. '把价格写成', '今天') mean the
@@ -91,8 +94,10 @@ export function findTextPrice(name: string, text: string): Price | null {
 }
 
 // An amount never starts or ends inside a code or word: 'RMB123abc' and 'abc123元' are not amounts.
-const AMOUNT_RE =
-  /(?<![-_a-z0-9.])(?:(?:¥|rmb|cny)\s*(\d{1,7}(?:\.\d{1,2})?)(?![-_a-z0-9.])|(\d{1,7}(?:\.\d{1,2})?)\s*(?:元|块))/giu
+const AMOUNT_RE = new RegExp(
+  String.raw`(?<![-_a-z0-9.])(?:(?:¥|rmb|cny)\s*(\d{1,7}(?:\.\d{1,2})?)(?![-_a-z0-9.])|(\d{1,7}(?:\.\d{1,2})?)\s*(?:${YUAN}|块))`,
+  'giu',
+)
 
 /** Every amount of money written in the text ('18 元', '¥15', 'RMB 1', '3块'), in order. */
 export function findTextAmounts(text: string): Array<{ amount: number; at: number; end: number }> {

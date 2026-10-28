@@ -30,7 +30,12 @@ const SubmitBody = z
 const perSource = new FixedWindowLimiter(SOURCE_LIMIT.count, SOURCE_LIMIT.windowMs)
 const perProject = new FixedWindowLimiter(PROJECT_DAILY_LIMIT, 24 * 3600_000)
 
-const personalInfo = () => new ApiError(400, 'personal_info', '请勿填写个人信息')
+const personalInfo = () =>
+  new ApiError(
+    400,
+    'personal_info',
+    '请勿填写个人信息：提到 QQ、支付宝或微信时，不要同时写出号码、账号或 5 位以上的数字',
+  )
 
 export async function submitCorrection(request: Request, now: number = Date.now()): Promise<void> {
   // Only the published page's own form may post here. Otherwise any site could make its visitors
