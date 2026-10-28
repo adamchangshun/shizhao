@@ -255,7 +255,7 @@ describe('OpenAI compatible provider HTTP boundary', () => {
     await expect(
       provider(server.baseUrl, 'qwen').generateJSON({ ...request, images: [img] }),
     ).rejects.toMatchObject({ code: 'upstream_error', status: 400 })
-    expect(log.mock.calls[0]![1]).toEqual({ status: 400, contentType: '' })
+    expect(log.mock.calls[0]![1]).toEqual({ status: 400, contentType: 'other' })
     expect(server.bodies).toHaveLength(1)
   })
   it('repairs unparseable JSON once and accumulates usage for both replies', async () => {

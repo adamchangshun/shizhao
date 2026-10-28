@@ -411,16 +411,49 @@ describe('Anthropic Messages provider HTTP boundary', () => {
     for (const fragment of ['老王面馆', '人民路', '后门', 'bad:'])
       expect(logged).not.toContain(fragment)
   })
-  it('drops error type or code values that are not identifiers', async () => {
+  it.each([
+    ['an sk- key as type', { type: 'sk-ant-api03-secret-value' }, { type: 'other' }],
+    ['base64 image data as code', { code: 'iVBORw0KGgoAAAANSUhEUg' }, { code: 'other' }],
+    [
+      'a prose type beside a valid code',
+      { type: 'echo 老王面馆 prompt', code: 'rate_limit_error' },
+      { type: 'other', code: 'rate_limit_error' },
+    ],
+  ])('logs %s as "other"', async (_, error, logged) => {
     const log = vi.spyOn(console, 'warn').mockImplementation(() => {})
-    const server = await serve((_, res) => {
+    const server = await serve((__, res) => {
       res.statusCode = 400
-      res.end(JSON.stringify({ error: { type: 'echo 老王面馆 prompt', code: 'rate_limit_error' } }))
+      res.end(JSON.stringify({ error }))
     })
     await expect(provider(server.baseUrl).generateJSON(request)).rejects.toMatchObject({
       code: 'upstream_error',
     })
-    expect(log.mock.calls[0]![1]).toEqual({ status: 400, code: 'rate_limit_error' })
+    expect(log.mock.calls[0]![1]).toEqual({ status: 400, ...logged })
+  })
+  it('logs a content type that echoes request data as "other"', async () => {
+    const log = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const server = await serve((_, res) => {
+      res.statusCode = 502
+      res.setHeader('Content-Type', 'text/x-echo_MERCHANT_PROMPT; key=sk-ant-secret')
+      res.end('gateway error')
+    })
+    await expect(
+      provider(server.baseUrl).generateJSON({ ...request, timeoutMs: 300 }),
+    ).rejects.toMatchObject({ code: 'timeout' })
+    expect(log.mock.calls[0]![1]).toEqual({ status: 502, contentType: 'other' })
+    expect(JSON.stringify(log.mock.calls)).not.toContain('sk-ant-secret')
+  })
+  it('keeps a standard MIME type without parameters', async () => {
+    const log = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const server = await serve((_, res) => {
+      res.statusCode = 400
+      res.setHeader('Content-Type', 'Text/HTML; charset=utf-8')
+      res.end('<html>bad request</html>')
+    })
+    await expect(provider(server.baseUrl).generateJSON(request)).rejects.toMatchObject({
+      code: 'upstream_error',
+    })
+    expect(log.mock.calls[0]![1]).toEqual({ status: 400, contentType: 'text/html' })
   })
   it('rejects a public plain-http endpoint before any request', () => {
     expect(() => provider('http://api.example.com/v1')).toThrow(

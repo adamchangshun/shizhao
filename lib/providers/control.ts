@@ -82,17 +82,17 @@ export async function readResponse(response: Response): Promise<string> {
   }
 }
 
-/** Error identifiers only; anything else (prompt echoes, escaped text) is dropped. */
-const identifier = (value: unknown) =>
-  (typeof value === 'string' || typeof value === 'number') && /^[\w.:-]{1,100}$/.test(String(value))
-    ? String(value)
-    : undefined
-
 /**
- * Log-safe summary of a failed upstream call. Never logs the body or `error.message`, which
- * may echo prompts in escaped forms no redaction can match: only status plus the JSON
- * `error.type` / `error.code` identifiers, or the content type when the body is not JSON.
+ * Allowlisted shapes only: lowercase snake_case error names, and a bare type/subtype MIME.
+ * Keys (digits, hyphens), base64 (capitals, digits) and prose cannot match and become "other".
  */
+const errorName = (value: unknown) =>
+  typeof value === 'string' && /^[a-z][a-z_]{0,39}$/.test(value) ? value : 'other'
+const mimeType = (header: string | null) => {
+  const mime = (header ?? '').split(';')[0]!.trim().toLowerCase()
+  return /^[a-z]+\/[a-z0-9.+-]+$/.test(mime) ? mime : 'other'
+}
+
 export function upstreamFailure(
   response: Response,
   body: string,
@@ -103,8 +103,8 @@ export function upstreamFailure(
       const { type, code } = error as Record<string, unknown>
       return {
         status: response.status,
-        ...(identifier(type) ? { type: identifier(type) } : {}),
-        ...(identifier(code) ? { code: identifier(code) } : {}),
+        ...(type === undefined ? {} : { type: errorName(type) }),
+        ...(code === undefined ? {} : { code: errorName(code) }),
       }
     }
     if (error !== undefined) return { status: response.status }
@@ -113,6 +113,6 @@ export function upstreamFailure(
   }
   return {
     status: response.status,
-    contentType: (response.headers.get('content-type') ?? '').slice(0, 100),
+    contentType: mimeType(response.headers.get('content-type')),
   }
 }
