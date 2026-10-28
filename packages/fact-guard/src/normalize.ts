@@ -87,6 +87,20 @@ const han = /\p{Script=Han}/u
 const interference =
   /^[\s\u200b-\u200f\u2060\ufeff*·~._\-+^|/\\#@]|\p{Extended_Pictographic}|[\ufe0e\ufe0f]$/u
 
+function normalizeCompatibility(segment: string): string {
+  let output = '',
+    pending = ''
+  for (const char of segment) {
+    if (char !== '\u2025' && char !== '\u2026') {
+      pending += char
+      continue
+    }
+    output += pending.normalize('NFKC') + char
+    pending = ''
+  }
+  return output + pending.normalize('NFKC')
+}
+
 /** Normalize with an explicit mapping; removed interference stays within matched source spans. */
 export function normalizeText(input: string): NormalizedText {
   const tokens: Array<{ text: string; start: number; end: number }> = []
@@ -107,8 +121,9 @@ export function normalizeText(input: string): NormalizedText {
   }
   for (const { segment, index } of graphemes.segment(visible)) {
     // Normalize whole graphemes for canonical composition as well as compatibility
-    // expansion; every resulting code unit maps to the complete source cluster.
-    for (const char of segment.normalize('NFKC')) {
+    // expansion, except horizontal ellipses that must not become clause-boundary dots.
+    // Every resulting code unit maps to the complete source cluster.
+    for (const char of normalizeCompatibility(segment)) {
       tokens.push({
         text: (simplified[char] ?? char).toLowerCase(),
         start: sourceStarts[index]!,

@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest'
-import { checkSentence, extractNumbers } from '../src/index'
+import {
+  checkSentence,
+  defaultRules,
+  extractNumbers,
+  guardText,
+  mergeRules,
+  rulePacks,
+} from '../src/index'
 import { normalizeText, originalSpan } from '../src/normalize'
+
+const foodRules = mergeRules(defaultRules, rulePacks.food)
 
 describe('M7: NFKC claims retain source ranges', () => {
   it('recognizes supplementary mathematical digits as one price', () => {
@@ -25,6 +34,9 @@ describe('M7: NFKC claims retain source ranges', () => {
       { value: 2, unit: 'kg', raw: '２㎏', start: 1, end: 3 },
     ])
   })
+  it('preserves horizontal ellipsis code points through compatibility normalization', () => {
+    expect(normalizeText('…‥').text).toBe('…‥')
+  })
   it('combines normalization with invisible removal and retains multiple source occurrences', () => {
     const text = '𝟙\u200b𝟡元，𝟚𝟡元'
     expect(extractNumbers(text)).toEqual([
@@ -34,5 +46,22 @@ describe('M7: NFKC claims retain source ranges', () => {
     expect(checkSentence(text, { facts: ['19元'] })).toEqual([
       expect.objectContaining({ reason: 'unsupported_number', start: 7, end: 12 }),
     ])
+  })
+  it.each(['慢烤的时光……才出炉的面包', '低温天里……慢慢发酵的面团'])(
+    'does not turn horizontal ellipses into clause boundaries: %s',
+    (text) => {
+      expect(checkSentence(text, { facts: [] }, foodRules)).toContainEqual(
+        expect.objectContaining({ ruleId: 'process' }),
+      )
+    },
+  )
+  it('removes both unsupported process sentences separated by punctuation', async () => {
+    const result = await guardText(
+      '低温天里……慢慢发酵的面团。慢烤的时光……才出炉的面包。',
+      { facts: [] },
+      { rules: foodRules },
+    )
+    expect(result.text).toBe('')
+    expect(result.hits.map((hit) => hit.ruleId)).toEqual(['process', 'process'])
   })
 })
