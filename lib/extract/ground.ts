@@ -189,9 +189,10 @@ export function groundDraft(model: ModelDraft, ctx: GroundingContext): GroundedD
   // Items
   const items: FactItem[] = []
   const seen = new Set<string>()
-  const offersOf = textOffersByName(model, ctx.merchantText)
+  const allOffers = allTextOffers(model, ctx.merchantText)
+  const offersOf = ownedOffers(allOffers)
   const lineOf = hasImages
-    ? linesForImageNames(model, ctx.merchantText, offersOf, inText)
+    ? linesForImageNames(model, ctx.merchantText, allOffers, inText)
     : new Map<number, LineOffer>()
   const taken: TextOffer[] = [] // the prices items took
   for (const [rawIndex, raw] of model.items.entries()) {
@@ -313,24 +314,42 @@ export function groundDraft(model: ModelDraft, ctx: GroundingContext): GroundedD
   }
 }
 
-/**
- * The prices written after each item name, each price given only to the longest name it follows:
- * in '拿铁\n燕麦拿铁 25元' the 25 is 燕麦拿铁's, not also 拿铁's.
- */
-function textOffersByName(model: ModelDraft, text: string): Map<string, TextOffer[]> {
+/** Every price written after each item name in the draft (see findTextOffers). */
+function allTextOffers(model: ModelDraft, text: string): Map<string, TextOffer[]> {
   // Bounded like the item list itself, so a runaway draft cannot make this quadratic.
   const names = [...new Set(model.items.map((raw) => raw.name.trim()))]
     .filter((name) => FactItem.shape.name.safeParse(name).success)
     .slice(0, MAX_ITEMS * 4)
+  return new Map(names.map((name) => [name, findTextOffers(name, text)] as const))
+}
+
+/**
+ * Each written price goes only to the longest name it follows: in '拿铁\n燕麦拿铁 25元' the 25
+ * is 燕麦拿铁's, not also 拿铁's. When names read the same characters as different prices
+ * ('套餐218元': 套餐 at 218 元 or 套餐2 at 18 元), the price goes to none of them.
+ */
+function ownedOffers(all: ReadonlyMap<string, TextOffer[]>): Map<string, TextOffer[]> {
   const len = (name: string) => [...name.normalize('NFKC').trim()].length
-  const all = new Map(names.map((name) => [name, findTextOffers(name, text)] as const))
-  const owner = new Map<number, number>() // price position → longest name length
-  for (const [name, offers] of all) {
-    for (const o of offers) owner.set(o.at, Math.max(owner.get(o.at) ?? 0, len(name)))
+  const entries = [...all]
+    .flatMap(([name, offers]) => offers.map((offer) => ({ offer, len: len(name) })))
+    .sort((a, b) => a.offer.at - b.offer.at)
+  const kept = new Set<TextOffer>()
+  // Sweep over groups of overlapping prices.
+  for (let i = 0; i < entries.length;) {
+    let j = i + 1
+    let end = entries[i]!.offer.end
+    while (j < entries.length && entries[j]!.offer.at < end) {
+      end = Math.max(end, entries[j]!.offer.end)
+      j += 1
+    }
+    const group = entries.slice(i, j)
+    if (group.every((e) => e.offer.at === group[0]!.offer.at)) {
+      const longest = Math.max(...group.map((e) => e.len))
+      for (const e of group) if (e.len === longest) kept.add(e.offer)
+    }
+    i = j
   }
-  return new Map(
-    [...all].map(([name, offers]) => [name, offers.filter((o) => owner.get(o.at) === len(name))]),
-  )
+  return new Map([...all].map(([name, offers]) => [name, offers.filter((o) => kept.has(o))]))
 }
 
 /**
@@ -343,17 +362,18 @@ function textOffersByName(model: ModelDraft, text: string): Map<string, TextOffe
 function linesForImageNames(
   model: ModelDraft,
   text: string,
-  offersOf: ReadonlyMap<string, TextOffer[]>,
+  allOffers: ReadonlyMap<string, TextOffer[]>,
   inText: (value: string) => boolean,
 ): Map<number, LineOffer> {
-  const claimed = [...offersOf.values()].flat()
+  // A line that follows any item name is that item's, even when no item ends up owning it.
+  const claimed = [...allOffers.values()].flat()
   const lines = findLineOffers(text).filter(
     (l) => !claimed.some((o) => l.at < o.end && o.at < l.end),
   )
   const orphans = [...model.items.entries()].flatMap(([i, raw]) => {
     const name = raw.name.trim()
     if (!FactItem.shape.name.safeParse(name).success || inText(name)) return []
-    return offersOf.get(name)?.length ? [] : [{ i, amount: toPrice(raw.price)?.amount }]
+    return allOffers.get(name)?.length ? [] : [{ i, amount: toPrice(raw.price)?.amount }]
   })
   const chosen = new Map<number, LineOffer>()
   const only = orphans[0]

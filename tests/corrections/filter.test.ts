@@ -71,6 +71,11 @@ describe('personal information', () => {
     '我的QQ 账号是这个 12345元旦后停用',
     '我的Q号是这个 12345元旦后停用',
     '我的QQ账号已经换了很久目前这个号码也停用了请不要再联系我了 12345元旦后停用',
+    '支付宝 012345',
+    '支付宝收款，账号 012345',
+    'QQ 支付异常 tian 88abc',
+    '支付宝收款，账号 tian 88abc',
+    '支付宝收款，账号写在这里 tian 888',
   ])('refuses %s', (text) => {
     expect(containsPersonalInfo(text)).toBe(true)
   })

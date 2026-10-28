@@ -37,45 +37,82 @@ const ID_TOKEN = /(?<![a-z0-9_-])(?=[a-z][-_a-z0-9]{5,19}(?![a-z0-9_-]))[a-z]*[-
 const ACCOUNT_SERVICE = String.raw`(?:q\s?q(?!\s?(?:糖|音乐))|扣\s?扣|企鹅号|q号|支\s?付\s?宝|alipay|zfb)`
 const ACCOUNT_WORD = String.raw`(?:号码|号|账号|帐号|账户|id)`
 const ACCOUNT_CUE = `${ACCOUNT_SERVICE}${ACCOUNT_WORD}?`
-const ACCOUNT_DIRECT = new RegExp(`${ACCOUNT_CUE}[\\s:=是为]{0,3}[1-9]\\d{4,19}(?!\\d)`, 'i')
-const ACCOUNT_ID = String.raw`(?:(?<!\d)[1-9]\d{4,19}(?!\d)|${ID_TOKEN.source})`
+const ACCOUNT_DIRECT = new RegExp(`${ACCOUNT_CUE}[\\s:=是为]{0,3}\\d{5,20}(?!\\d)`, 'i')
+const ACCOUNT_ID = String.raw`(?:(?<!\d)\d{5,20}(?!\d)|${ID_TOKEN.source})`
 const CLAUSE = String.raw`[^,.;!?\n。、]*`
 const ACCOUNT_NEARBY = new RegExp(`${ACCOUNT_CUE}${CLAUSE}?${ACCOUNT_ID}`, 'i')
+const ACCOUNT_LABEL = String.raw`(?:账号|帐号|账户|号码)`
 const ACCOUNT_NEXT_CLAUSE = new RegExp(
-  `${ACCOUNT_CUE}${CLAUSE}[,.;!?\\n。、]${CLAUSE}?(?:账号|帐号|账户|号码)${CLAUSE}?${ACCOUNT_ID}`,
+  `${ACCOUNT_CUE}${CLAUSE}[,.;!?\\n。、]${CLAUSE}?${ACCOUNT_LABEL}${CLAUSE}?${ACCOUNT_ID}`,
   'i',
 )
 
-// "支付宝账号 tian 88abc", "QQ：t i a n x 8": an id split by spaces. After every cue, the words
-// that follow are joined one at a time (up to 20 characters, the longest id), and the text is
-// refused as soon as the joined words have the shape of an id, whatever follows them
-// ("QQ：tian 88 abc please confirm"). After a bare service name ("QQ login option 2 is broken")
-// that only counts when one of the words mixes letters with digits, "_" or "-" ("QQ tian 88abc").
+// "支付宝账号 tian 88abc", "QQ：t i a n x 8": an id split by spaces. In the rest of the cue's
+// clause, words separated only by spaces are joined one at a time (up to 20 characters, the
+// longest id), and the text is refused as soon as the joined words have the shape of an id,
+// whatever follows them ("QQ：tian 88 abc please confirm"). Words right after a cue that names
+// an account ("QQ：", "支付宝账号") always count; elsewhere ("QQ login option 2 is broken") only
+// when one of them mixes letters with digits, "_" or "-" ("QQ 支付异常 tian 88abc"). In a next
+// clause that says it is an account ("支付宝收款，账号 tian 888") the words after that label count.
 const CUE_SCAN = new RegExp(`(${ACCOUNT_SERVICE})(${ACCOUNT_WORD})?([\\s:=是为]{0,3})`, 'gi')
-const FIRST_WORD = /[-_a-z0-9]+/iy
-const NEXT_WORD = /\s+([-_a-z0-9]+)/iy
-const WHOLE_ID = new RegExp(`^(?:[1-9]\\d{4,19}|${ID_TOKEN.source})$`, 'i')
+const CLAUSE_SEP = /[,.;!?\n。、]/g
+const LABEL = new RegExp(ACCOUNT_LABEL)
+const WORD = /[-_a-z0-9]+/gi
+const WHOLE_ID = new RegExp(`^(?:\\d{5,20}|${ID_TOKEN.source})$`, 'i')
 const MIXED = /(?=.*[a-z])(?=.*[-_\d])/i
 
-function spacedAccount(text: string): boolean {
-  for (const cue of text.matchAll(CUE_SCAN)) {
-    const strong = cue[2] !== undefined || /[:=是为]/.test(cue[3]!) || cue[1]!.includes('号')
-    FIRST_WORD.lastIndex = cue.index + cue[0].length
-    let word = FIRST_WORD.exec(text)?.[0]
-    let joined = ''
-    let words = 0
-    let mixed = false
-    while (word !== undefined) {
-      joined += word
-      words += 1
-      // Checked before MIXED, which is quadratic in the word's length.
+function clauseEnd(text: string, from: number): number {
+  CLAUSE_SEP.lastIndex = from
+  return CLAUSE_SEP.exec(text)?.index ?? text.length
+}
+
+/** Whether words in text[from, end) with only spaces between them join into an id. */
+function joinsToId(
+  text: string,
+  from: number,
+  end: number,
+  counts: (at: number) => boolean,
+): boolean {
+  const words = [...text.slice(from, end).matchAll(WORD)].map((m) => ({
+    word: m[0],
+    at: from + m.index,
+  }))
+  for (let i = 0; i < words.length; i++) {
+    let joined = words[i]!.word
+    // Length first: MIXED is quadratic in the word's length.
+    let mixed = joined.length <= 20 && MIXED.test(joined)
+    for (let j = i + 1; j < words.length; j++) {
+      const prev = words[j - 1]!
+      if (!/^\s+$/.test(text.slice(prev.at + prev.word.length, words[j]!.at))) break
+      joined += words[j]!.word
       if (joined.length > 20) break
-      mixed ||= MIXED.test(word)
-      if (words > 1 && (strong || mixed) && WHOLE_ID.test(joined)) return true
-      NEXT_WORD.lastIndex = FIRST_WORD.lastIndex
-      word = NEXT_WORD.exec(text)?.[1]
-      FIRST_WORD.lastIndex = NEXT_WORD.lastIndex
+      mixed ||= MIXED.test(words[j]!.word)
+      if ((mixed || counts(words[i]!.at)) && WHOLE_ID.test(joined)) return true
     }
+  }
+  return false
+}
+
+function spacedAccount(text: string): boolean {
+  const cues = [...text.matchAll(CUE_SCAN)]
+  const strong = new Set(
+    cues
+      .filter((c) => c[2] !== undefined || /[:=是为]/.test(c[3]!) || c[1]!.includes('号'))
+      .map((c) => c.index + c[0].length),
+  )
+  // Each clause is scanned from its first cue only, and at most once more as a next clause.
+  let scanned = -1
+  for (const cue of cues) {
+    const from = cue.index + cue[0].length
+    if (from <= scanned) continue
+    const end = clauseEnd(text, from)
+    scanned = end
+    if (joinsToId(text, from, end, (at) => strong.has(at))) return true
+    if (end >= text.length) continue
+    const nextEnd = clauseEnd(text, end + 1)
+    const label = LABEL.exec(text.slice(end + 1, nextEnd))
+    const after = end + 1 + (label ? label.index + label[0].length : 0)
+    if (label && joinsToId(text, after, nextEnd, () => true)) return true
   }
   return false
 }
