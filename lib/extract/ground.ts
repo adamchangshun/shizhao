@@ -205,6 +205,8 @@ export function groundDraft(model: ModelDraft, ctx: GroundingContext): GroundedD
     const nameSource = line ? 'merchant_text' : sourceOf(name)
     if (!nameSource) continue
     seen.add(norm(name))
+    // The model's own name too, so a second entry of the renamed item is dropped as a duplicate.
+    if (line) seen.add(norm(raw.name))
     const index = items.length
     const path = (f: string) => `items[${index}].${f}`
     const sources: FactItem['sources'] = { name: nameSource }
@@ -378,10 +380,17 @@ function linesForImageNames(
   const lines = findLineOffers(text).filter(
     (l) => !claimed.some((o) => l.at < o.end && o.at < l.end),
   )
+  // An item the model returned more than once (same name and price) counts once: its first entry.
+  const seen = new Set<string>()
   const orphans = [...model.items.entries()].flatMap(([i, raw]) => {
     const name = raw.name.trim()
     if (!FactItem.shape.name.safeParse(name).success || inText(name)) return []
-    return allOffers.get(name)?.length ? [] : [{ i, amount: toPrice(raw.price)?.amount }]
+    if (allOffers.get(name)?.length) return []
+    const amount = toPrice(raw.price)?.amount
+    const key = `${norm(name)}\u0000${amount ?? ''}`
+    if (seen.has(key)) return []
+    seen.add(key)
+    return [{ i, amount }]
   })
   const chosen = new Map<number, LineOffer>()
   const only = orphans[0]

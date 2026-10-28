@@ -331,6 +331,13 @@ describe('groundDraft: a name the model read off the image', () => {
     ])
   })
 
+  it('counts an item the model returned twice once', () => {
+    const twice = { name: 'BUTTER CROISSANT', price: 12 }
+    const out = groundDraft(draft({ items: [twice, { ...twice }] }), ctx('黄油可颂 12元'))
+    expect(out.items.map((i) => [i.name, i.price?.amount])).toEqual([['黄油可颂', 12]])
+    expect(out.lowConfidenceFields).toContain('items[0].name')
+  })
+
   it('guesses nothing when two lines have the same price', () => {
     const d = draft({
       items: [
