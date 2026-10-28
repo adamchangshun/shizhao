@@ -22,7 +22,7 @@ recordUsage(db, result.usage, { projectId, jobId })
 - 普通 4xx 不重试；只有 400/422 明确表示不支持 `response_format` 时移除它一次。system 从第一次请求起带「只输出 JSON」。修正请求保留原消息与模型回复；提取失败时要求仅输出符合要求的 JSON（jsonMode 开启时要求对象），schema 不符时增加 zod 错误路径/代码摘要。
 - 回复支持字符串或 `[{type:'text',text:...}]`；先解析完整 JSON，再提取第一个 JSON 代码块或第一个平衡对象，正确跳过字符串中的括号和转义字符。JSON 提取失败与 schema 不符共享一次修正额度；修正后仍无法解析报 `bad_response`，能够解析但仍不符合 schema 则报 `schema_mismatch`。HTTP 成功响应本身不是合法协议 envelope 时仍立即报 `bad_response`。
 - 读响应限制为 2 MiB，超出即取消响应并报 `bad_response`。不跟随重定向，以免向另一个目标转发凭据。
-- 失败日志不写响应正文，也不写 `error.message`（上游可能以转义形式回显提示词，任何脱敏都匹配不全）：只记 HTTP 状态，以及 JSON 中 `error.type`、`error.code` 两个字段；它们必须是 1–40 个小写字母或下划线、以字母开头（如 `rate_limit_error`），否则记为 `other`，所以密钥、base64 与文字都不会进日志。正文不是 JSON 时只记状态与 content-type 的 `type/subtype` 部分（去参数、转小写，不符合格式记为 `other`）。修正轮回传的内容同样不进日志。错误对象不附带响应正文、请求或底层 cause。
+- 失败日志不写响应正文，也不写 `error.message`（上游可能以转义形式回显提示词，任何脱敏都匹配不全）：只记 HTTP 状态，以及 JSON 中 `error.type`、`error.code` 两个字段；它们必须是 1–40 个小写字母或下划线、以字母开头（如 `rate_limit_error`），否则记为 `other`，所以密钥、base64 与文字都不会进日志。正文不是 JSON 时只记状态与 content-type：去参数、转小写后只保留 `application/json`、`application/problem+json`、`text/plain`、`text/html`、`text/event-stream`，其余记为 `other`。修正轮回传的内容同样不进日志。错误对象不附带响应正文、请求或底层 cause。
 - 端点校验统一由 `control.ts` 的 `llmEndpoint()` 完成，两个适配器与 `lib/env.ts` 共用：只接受不含用户名、密码、查询参数或锚点的 http(s) 网址；公网地址必须用 https，http 只允许本机、局域网 IP、`.local` 与 `host.docker.internal`。
 - 对外错误代码：`timeout`、`aborted`、`rate_limited`、`bad_response`、`schema_mismatch`、`upstream_error`；提示信息为简体中文。
 
@@ -46,6 +46,8 @@ recordUsage(db, result.usage, { projectId, jobId })
 仅 Ollama 将 WebP 在内存中解码并转成 PNG，data URL 同步使用 `image/png`，不写文件。PNG/JPEG 及其他 profile 的图片保持原样。转换失败报 `bad_response`；转换前后检查同一个超时/取消信号，不在已取消时发送请求。
 
 关闭 JSON 模式后，普通说明文字加裸 JSON 对象可直接提取，不消耗修正机会。第 3 轮审查 M1 指出的原有解析边界仍待独立处理：`<think>` 内的花括号可能先被选中；说明文字包裹的数组可能被截成首个对象。纯数组和 JSON 代码块内数组可直接解析。本次按范围要求不修改通用 `json.ts`，也不改变调用超时。
+
+已知限制（日志）：`error.type`/`error.code` 是格式白名单而非语义白名单，上游若把纯小写字母与下划线、不超过 40 个字符的片段放进这两个字段，仍会原样记录；这类片段不含密钥、base64 或成段文字，不构成有意义的泄露，因此保留以便排查非 Anthropic 服务的错误码。
 
 以上是项目明确支持的协议配置，不代表所有模型版本均已实测。各 profile 的本地 HTTP 协议测试均已覆盖；使用者必须选择自己服务中支持相应能力的模型。模型名不内置在适配器中。
 

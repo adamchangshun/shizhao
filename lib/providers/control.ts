@@ -83,14 +83,21 @@ export async function readResponse(response: Response): Promise<string> {
 }
 
 /**
- * Allowlisted shapes only: lowercase snake_case error names, and a bare type/subtype MIME.
+ * Allowlists only: lowercase snake_case error names, and a fixed set of MIME types.
  * Keys (digits, hyphens), base64 (capitals, digits) and prose cannot match and become "other".
  */
 const errorName = (value: unknown) =>
   typeof value === 'string' && /^[a-z][a-z_]{0,39}$/.test(value) ? value : 'other'
+const MIME_TYPES = new Set([
+  'application/json',
+  'application/problem+json',
+  'text/plain',
+  'text/html',
+  'text/event-stream',
+])
 const mimeType = (header: string | null) => {
   const mime = (header ?? '').split(';')[0]!.trim().toLowerCase()
-  return /^[a-z]+\/[a-z0-9.+-]+$/.test(mime) ? mime : 'other'
+  return MIME_TYPES.has(mime) ? mime : 'other'
 }
 
 export function upstreamFailure(

@@ -443,6 +443,19 @@ describe('Anthropic Messages provider HTTP boundary', () => {
     expect(log.mock.calls[0]![1]).toEqual({ status: 502, contentType: 'other' })
     expect(JSON.stringify(log.mock.calls)).not.toContain('sk-ant-secret')
   })
+  it('logs an MIME type outside the fixed allowlist as "other"', async () => {
+    const log = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const server = await serve((_, res) => {
+      res.statusCode = 400
+      res.setHeader('Content-Type', 'application/sk-ant-api03-secret-value')
+      res.end('denied')
+    })
+    await expect(provider(server.baseUrl).generateJSON(request)).rejects.toMatchObject({
+      code: 'upstream_error',
+    })
+    expect(log.mock.calls[0]![1]).toEqual({ status: 400, contentType: 'other' })
+    expect(JSON.stringify(log.mock.calls)).not.toContain('sk-ant')
+  })
   it('keeps a standard MIME type without parameters', async () => {
     const log = vi.spyOn(console, 'warn').mockImplementation(() => {})
     const server = await serve((_, res) => {
