@@ -119,8 +119,8 @@ function negated(form: Canonical, start: number): boolean {
  * The other item's wording that an `itemBlurbs.<id>` sentence repeats, or undefined. Candidates
  * are every item's spec, tags and description sentences (split like the guard splits copy);
  * support is `fieldCorpus`, so only wording outside the blurb's own item, shop facts and
- * extraClaims counts, and page-level fields never hit. Mentions inside an item name are exempt:
- * a blurb may compare with another item. Checked deterministically because the live judge does
+ * extraClaims counts, and page-level fields never hit. Mentions inside an unbroken item name are
+ * exempt: a blurb may compare with another item. Checked deterministically because the live judge does
  * not honor `evidence[i]` for this (A4 W5).
  */
 export function crossItemBorrowing(
@@ -137,9 +137,13 @@ export function crossItemBorrowing(
     .filter((fact, i) => isPath(i, /^items\..+\.name$/))
     .map((name) => canonical(name).text)
     .filter(Boolean)
+  // A name counts only where it is written out unbroken: "燕麦奶可选，拿铁" is no "燕麦奶可选拿铁".
   const inName = (start: number, end: number) =>
     names.some((name) =>
-      occurrences(text.text, name).some((left) => left <= start && end <= left + name.length),
+      occurrences(text.text, name).some(
+        (left) =>
+          left <= start && end <= left + name.length && joined(text, left, left + name.length),
+      ),
     )
   const affirmed = (source: Canonical, word: string, exempt?: (start: number) => boolean) =>
     occurrences(source.text, word).some((start) => !negated(source, start) && !exempt?.(start))

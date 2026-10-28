@@ -601,6 +601,23 @@ describe('item blurbs cannot borrow another item’s wording (v0.1.1 cross-item)
     )
   })
 
+  it('a name split by punctuation is no name, so its pieces are still borrowing (review 2 #2)', () => {
+    const base = w5Sheet()
+    const sheet = {
+      ...base,
+      items: [{ ...base.items[0]!, name: '燕麦奶可选拿铁' }, base.items[1]!],
+    }
+    for (const sentence of ['燕麦奶可选，拿铁更香。', '燕麦奶可选·拿铁更香。'])
+      expect(recheck(blurbB(sentence), sheet).copy.itemBlurbs.americano).toBe('')
+    // A name written with spaces or zero-width characters inside is still that name.
+    for (const sentence of [
+      '比燕麦奶可选拿铁更香。',
+      '比燕麦奶可选 拿铁更香。',
+      '比燕麦奶可选​拿铁更香。',
+    ])
+      expect(recheck(blurbB(sentence), sheet).copy.itemBlurbs.americano).toBe(sentence)
+  })
+
   it('a tag both items carry is not borrowing; the same tag on A alone is', () => {
     const base = w5Sheet()
     const shared = {
