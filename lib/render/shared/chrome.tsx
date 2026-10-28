@@ -96,7 +96,9 @@ export function CorrectionSlot({ facts, api }: { facts: FactSheet; api: string }
         <p id="sz-fix-msg" role="status" aria-live="polite" hidden>
           <span>已转告老板，谢谢你</span>
           <span>提交失败，请稍后再试</span>
-          <span>请勿填写个人信息</span>
+          <span>
+            请勿填写个人信息：提到 QQ、支付宝或微信时，不要同时写出号码、账号或 5 位以上的数字
+          </span>
           <span>请填写正确的内容</span>
         </p>
       </form>

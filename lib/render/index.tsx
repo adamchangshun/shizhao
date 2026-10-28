@@ -6,7 +6,9 @@ import { createRequire } from 'node:module'
 import { z } from 'zod'
 
 // This renders standalone files in a Node job, outside Next's Server Component renderer.
-const { renderToStaticMarkup } = createRequire(import.meta.url)('react-dom/server') as typeof import('react-dom/server')
+const { renderToStaticMarkup } = createRequire(import.meta.url)(
+  'react-dom/server',
+) as typeof import('react-dom/server')
 import {
   DesignSpec as DesignSpecSchema,
   FactSheet as FactSheetSchema,
@@ -61,12 +63,20 @@ export function mediaFileName(assetId: string, size: ImageSize): string {
 }
 
 /** Version-relative image path (contract R2). Not overridable: pages never reference other origins. */
-const assetUrl = (assetId: string, size: ImageSize): string => `media/${mediaFileName(assetId, size)}`
+const assetUrl = (assetId: string, size: ImageSize): string =>
+  `media/${mediaFileName(assetId, size)}`
 
-const ENTITIES: Record<string, string> = { '&amp;': '&', '&lt;': '<', '&gt;': '>', '&quot;': '"', '&#x27;': "'", '&#39;': "'" }
+const ENTITIES: Record<string, string> = {
+  '&amp;': '&',
+  '&lt;': '<',
+  '&gt;': '>',
+  '&quot;': '"',
+  '&#x27;': "'",
+  '&#39;': "'",
+}
 
 function decodeEntities(text: string): string {
-  return text.replace(/&(?:amp|lt|gt|quot|#x27|#39);/g, m => ENTITIES[m] ?? m)
+  return text.replace(/&(?:amp|lt|gt|quot|#x27|#39);/g, (m) => ENTITIES[m] ?? m)
 }
 
 function visibleText(markup: string): string {
@@ -76,7 +86,9 @@ function visibleText(markup: string): string {
 /** Text inside elements styled with the heading font (class token `fh`); those elements never nest their own tag. */
 function headingText(markup: string): string {
   const parts: string[] = []
-  for (const m of markup.matchAll(/<([a-z0-9]+)\b[^>]*\bclass="(?:[^"]*\s)?fh(?:\s[^"]*)?"[^>]*>([\s\S]*?)<\/\1>/g)) {
+  for (const m of markup.matchAll(
+    /<([a-z0-9]+)\b[^>]*\bclass="(?:[^"]*\s)?fh(?:\s[^"]*)?"[^>]*>([\s\S]*?)<\/\1>/g,
+  )) {
     parts.push(visibleText(m[2] ?? ''))
   }
   return parts.join('')
@@ -118,8 +130,12 @@ function byFile(a: MediaRef, b: MediaRef): number {
 export async function renderPage(input: RenderInput): Promise<RenderResult> {
   // mapUrl is re-validated here rather than by zod, so a bad link drops the button, not the page.
   const rawMapUrl: unknown = input.factSheet.shop.mapUrl
-  const facts = FactSheetSchema.parse({ ...input.factSheet, shop: { ...input.factSheet.shop, mapUrl: undefined } })
-  const mapUrl = rawMapUrl == null ? undefined : typeof rawMapUrl === 'string' ? rawMapUrl : 'invalid'
+  const facts = FactSheetSchema.parse({
+    ...input.factSheet,
+    shop: { ...input.factSheet.shop, mapUrl: undefined },
+  })
+  const mapUrl =
+    rawMapUrl == null ? undefined : typeof rawMapUrl === 'string' ? rawMapUrl : 'invalid'
   const nav = navigationHref(facts.shop, mapUrl)
   assertItemIds(facts)
   const design = DesignSpecSchema.parse(input.design)
@@ -136,7 +152,7 @@ export async function renderPage(input: RenderInput): Promise<RenderResult> {
     return { src: assetUrl(assetId, size), hero: isHero }
   }
 
-  const ogAsset = facts.items.find(item => item.imageAssetIds.length > 0)?.imageAssetIds[0]
+  const ogAsset = facts.items.find((item) => item.imageAssetIds.length > 0)?.imageAssetIds[0]
   const ogSrc = ogAsset ? image(ogAsset, 'display').src : null
   const ogImage = ogSrc && input.pageUrl ? new URL(ogSrc, input.pageUrl).href : ogSrc
 
@@ -144,7 +160,8 @@ export async function renderPage(input: RenderInput): Promise<RenderResult> {
     headline: draft.headline,
     subhead: draft.subhead,
     closing: draft.closing,
-    blurb: itemId => (Object.hasOwn(draft.itemBlurbs, itemId) ? draft.itemBlurbs[itemId] : undefined),
+    blurb: (itemId) =>
+      Object.hasOwn(draft.itemBlurbs, itemId) ? draft.itemBlurbs[itemId] : undefined,
   }
   const { Component } = template
 
@@ -189,10 +206,17 @@ export async function renderPage(input: RenderInput): Promise<RenderResult> {
     FONT_REGISTRY[headingFont].heading.pkg === FONT_REGISTRY[bodyFont].body.pkg &&
     FONT_REGISTRY[headingFont].heading.css === FONT_REGISTRY[bodyFont].body.css
   const bodyFaces = await buildFontFaces(bodyFont, 'body', visibleText(body) + CSS_GLYPHS)
-  const headingFaces = sameFace ? null : await buildFontFaces(headingFont, 'heading', headingText(body))
+  const headingFaces = sameFace
+    ? null
+    : await buildFontFaces(headingFont, 'heading', headingText(body))
 
   const css = assertSafeRawCss(
-    [headingFaces?.css ?? '', bodyFaces.css, baseCss(design, { headingSharesBody: sameFace }), template.styles].join('\n'),
+    [
+      headingFaces?.css ?? '',
+      bodyFaces.css,
+      baseCss(design, { headingSharesBody: sameFace }),
+      template.styles,
+    ].join('\n'),
   )
 
   const doctype = markup.startsWith('<!DOCTYPE html>') ? '' : '<!DOCTYPE html>'
@@ -204,5 +228,9 @@ export async function renderPage(input: RenderInput): Promise<RenderResult> {
     `<script>${INLINE_SCRIPT}</script>` +
     markup.slice(bodyEnd)
 
-  return { html, media: [...media.values()].sort(byFile), fontBytes: bodyFaces.bytes + (headingFaces?.bytes ?? 0) }
+  return {
+    html,
+    media: [...media.values()].sort(byFile),
+    fontBytes: bodyFaces.bytes + (headingFaces?.bytes ?? 0),
+  }
 }

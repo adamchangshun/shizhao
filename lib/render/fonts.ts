@@ -23,7 +23,8 @@ interface FontEntry {
   fallback: string
 }
 
-const SANS = 'system-ui, -apple-system, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif'
+const SANS =
+  'system-ui, -apple-system, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif'
 const SERIF = '"Songti SC", "STSong", "SimSun", serif'
 const KAI = '"Kaiti SC", "STKaiti", "KaiTi", serif'
 
@@ -56,7 +57,10 @@ export const FONT_REGISTRY: Readonly<Record<FontId, FontEntry>> = {
   },
 }
 
-export const FONT_FAMILY: Readonly<Record<FontRole, string>> = { heading: 'SZ Heading', body: 'SZ Body' }
+export const FONT_FAMILY: Readonly<Record<FontRole, string>> = {
+  heading: 'SZ Heading',
+  body: 'SZ Body',
+}
 
 export function fontWeight(id: FontId, role: FontRole): 400 | 700 {
   return FONT_REGISTRY[id][role].weight
@@ -82,7 +86,7 @@ function packageDir(pkg: string): string {
 }
 
 function parseRanges(value: string): Array<readonly [number, number]> {
-  return value.split(',').flatMap(part => {
+  return value.split(',').flatMap((part) => {
     const m = /^\s*U\+([0-9a-fA-F]+)(?:-([0-9a-fA-F]+))?\s*$/.exec(part)
     if (!m || !m[1]) return []
     const start = parseInt(m[1], 16)
@@ -130,13 +134,18 @@ function toUnicodeRange(cps: readonly number[]): string {
     const start = cps[i] as number
     let end = start
     while (i + 1 < cps.length && cps[i + 1] === end + 1) end = cps[++i] as number
-    parts.push(start === end ? `U+${start.toString(16)}` : `U+${start.toString(16)}-${end.toString(16)}`)
+    parts.push(
+      start === end ? `U+${start.toString(16)}` : `U+${start.toString(16)}-${end.toString(16)}`,
+    )
     i++
   }
   return parts.join(',')
 }
 
-async function subsetSlice(file: string, cps: readonly number[]): Promise<{ b64: string; bytes: number }> {
+async function subsetSlice(
+  file: string,
+  cps: readonly number[],
+): Promise<{ b64: string; bytes: number }> {
   const text = String.fromCodePoint(...cps)
   const key = `${file}\u0000${text}`
   const cached = subsetCache.get(key)
@@ -154,16 +163,20 @@ export interface FontFaceResult {
 }
 
 /** Inline @font-face rules for one role, covering exactly the code points in `text`. */
-export async function buildFontFaces(id: FontId, role: FontRole, text: string): Promise<FontFaceResult> {
+export async function buildFontFaces(
+  id: FontId,
+  role: FontRole,
+  text: string,
+): Promise<FontFaceResult> {
   const source = FONT_REGISTRY[id][role]
-  const cps = [...new Set(Array.from(text, ch => ch.codePointAt(0) as number))]
-    .filter(cp => cp > 0x20 && !/\s/u.test(String.fromCodePoint(cp)))
+  const cps = [...new Set(Array.from(text, (ch) => ch.codePointAt(0) as number))]
+    .filter((cp) => cp > 0x20 && !/\s/u.test(String.fromCodePoint(cp)))
     .sort((a, b) => a - b)
   const remaining = new Set(cps)
   const rules: string[] = []
   let bytes = 0
   for (const slice of loadSlices(source)) {
-    const hit = cps.filter(cp => remaining.has(cp) && inRanges(cp, slice.ranges))
+    const hit = cps.filter((cp) => remaining.has(cp) && inRanges(cp, slice.ranges))
     if (hit.length === 0) continue
     for (const cp of hit) remaining.delete(cp)
     const { b64, bytes: size } = await subsetSlice(slice.file, hit)

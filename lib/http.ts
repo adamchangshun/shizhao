@@ -1,4 +1,5 @@
 import { ApiError } from './core/errors'
+import { getEnv } from './env'
 
 /**
  * Reads a JSON body with a hard byte cap enforced while streaming, so neither a missing nor a
@@ -38,4 +39,31 @@ export async function readJsonLimited(
     signal?.removeEventListener('abort', cancel)
     reader.releaseLock()
   }
+}
+
+/**
+ * Browser state changes must come from our own origin: the CSRF defence for cookie sessions (on
+ * top of SameSite=Lax) and for the anonymous correction form. Requests without
+ * Origin/Sec-Fetch-Site are non-browser clients and pass.
+ */
+export function isSameOriginRequest(request: Request): boolean {
+  if (request.headers.get('sec-fetch-site') === 'cross-site') return false
+  const origin = request.headers.get('origin')
+  if (!origin) return true
+  let originHost: string
+  try {
+    originHost = new URL(origin).host
+  } catch {
+    return false
+  }
+  const allowed = new Set([new URL(getEnv().PUBLIC_BASE_URL).host])
+  const host = request.headers.get('host')
+  if (host) allowed.add(host)
+  return allowed.has(originHost)
+}
+
+/** True when the media type is application/json; parameters such as charset are ignored. */
+export function isJsonRequest(request: Request): boolean {
+  const type = request.headers.get('content-type')?.split(';')[0]?.trim().toLowerCase()
+  return type === 'application/json'
 }

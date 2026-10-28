@@ -99,11 +99,14 @@ async function published() {
   return { projectId: project.id, slug: project.slug, versionId: staged.versionId }
 }
 
-function submit(body: Record<string, unknown>) {
+function submit(
+  body: Record<string, unknown>,
+  headers: Record<string, string> = { 'content-type': 'application/json' },
+) {
   return postCorrection(
     new Request(`${BASE}/api/corrections`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers,
       body: JSON.stringify(body),
     }),
   )
@@ -329,14 +332,29 @@ describe('customer correction → merchant merge', () => {
         note: '加我微信 tianxin_88 细说',
       },
       { ...base, field: 'other', suggestedValue: '联系 someone@example.com' },
+      // A cue and a number on the next line, right after it, are still an account.
+      { ...base, field: 'items.cake01.price', suggestedValue: '138', note: '支付宝\n12345678' },
+      // The cue in one field and the number in the other are checked together.
+      { ...base, field: 'other', suggestedValue: '支付宝账号', note: '12345678' },
     ]
     for (const body of refused) {
       const res = await submit(body)
       expect(res.status).toBe(400)
       expect(((await res.json()) as { error: { message: string } }).error.message).toBe(
-        '请勿填写个人信息',
+        '请勿填写个人信息：提到 QQ、支付宝或微信时，不要同时写出号码、账号或 5 位以上的数字',
       )
     }
+    // A line break ends the cue's sentence, as 。 does; the stored note has it as a space.
+    const lines = await submit({
+      ...base,
+      field: 'items.cake01.price',
+      suggestedValue: '138',
+      note: '可以用支付宝\n订单号 12345 写错了',
+    })
+    expect(lines.status).toBe(201)
+    expect((await pending(p.projectId)).corrections[0]).toMatchObject({
+      note: '可以用支付宝 订单号 12345 写错了',
+    })
     // Each page allows 3 reports per source and 10 minutes, so the contact case uses its own page.
     const q = await published()
     const phone = await submit({
@@ -354,6 +372,68 @@ describe('customer correction → merchant merge', () => {
       needsValue: true,
       suggestedValue: '',
     })
+  })
+})
+
+describe('only JSON requests from the page itself are accepted', () => {
+  const json = 'application/json'
+
+  async function report() {
+    const p = await published()
+    const body = {
+      slug: p.slug,
+      versionId: p.versionId,
+      field: 'items.tart02.price',
+      suggestedValue: '9元',
+    }
+    const stored = () =>
+      getDb().select().from(corrections).where(eq(corrections.projectId, p.projectId)).all()
+    return { body, stored }
+  }
+
+  it('refuses text/plain and a missing Content-Type without storing anything', async () => {
+    const { body, stored } = await report()
+    // What a cross-site no-cors fetch can send without a preflight.
+    expect((await submit(body, { 'content-type': 'text/plain;charset=UTF-8' })).status).toBe(415)
+    expect((await submit(body, {})).status).toBe(415)
+    expect((await submit(body, { 'content-type': 'application/jsonx' })).status).toBe(415)
+    expect(stored()).toEqual([])
+  })
+
+  it('accepts JSON with a charset parameter', async () => {
+    const { body, stored } = await report()
+    expect((await submit(body, { 'content-type': 'Application/JSON; charset=utf-8' })).status).toBe(
+      201,
+    )
+    expect(stored()).toHaveLength(1)
+  })
+
+  it('refuses cross-site requests with 403', async () => {
+    const { body, stored } = await report()
+    const crossSite = await submit(body, { 'content-type': json, 'sec-fetch-site': 'cross-site' })
+    expect(crossSite.status).toBe(403)
+    expect(
+      (await submit(body, { 'content-type': json, origin: 'https://evil.example' })).status,
+    ).toBe(403)
+    expect(
+      (await submit(body, { 'content-type': json, origin: 'http://localhost:6688.evil.example' }))
+        .status,
+    ).toBe(403)
+    expect((await submit(body, { 'content-type': json, origin: 'null' })).status).toBe(403)
+    expect(stored()).toEqual([])
+  })
+
+  it('accepts the published page itself, and refused requests do not use up the budget', async () => {
+    const { body, stored } = await report()
+    const evil = { 'content-type': json, origin: 'https://evil.example' }
+    for (let i = 0; i < 5; i++) expect((await submit(body, evil)).status).toBe(403)
+    const page = {
+      'content-type': json,
+      origin: 'http://localhost:6688',
+      'sec-fetch-site': 'same-origin',
+    }
+    for (let i = 0; i < 3; i++) expect((await submit(body, page)).status).toBe(201)
+    expect(stored()).toHaveLength(3)
   })
 })
 

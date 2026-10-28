@@ -13,7 +13,10 @@ import { ModelDraft } from './schema'
 export interface ExtractResult {
   factSheet: FactSheet
   conflicts: FactConflict[]
-  /** Paths of facts read only from images, e.g. 'items[0].price'; the merchant should check them. */
+  /**
+   * Paths the merchant should check, e.g. 'items[0].price': facts read only from images, and
+   * prices left empty while the text has an amount no item took.
+   */
   lowConfidenceFields: string[]
 }
 

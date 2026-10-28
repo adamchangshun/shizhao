@@ -1,15 +1,30 @@
 // Content rules for anonymous correction text: clean it, refuse personal data, flag spam.
 // Matching runs on an NFKC-normalized copy so full-width digits and letters are caught too.
 
-/** Strips HTML tags and control characters (newlines in notes become spaces), then trims. */
-export function sanitizeText(raw: string): string {
+/** Tags removed, every line break ('\r\n', '\r', '\u2028', …) as '\n', other control characters as spaces. */
+function clean(raw: string): string {
   return raw
     .replace(/<[^>]*>?/g, '')
+    .replace(/\r\n?|[\u000b\u000c\u0085\u2028\u2029]/g, '\n')
     .replace(
-      /[\u0000-\u001f\u007f-\u009f\u200b-\u200f\u2028\u2029\u202a-\u202e\u2066-\u2069\ufeff]/g,
+      /[\u0000-\u0009\u000e-\u001f\u007f-\u009f\u200b-\u200f\u202a-\u202e\u2066-\u2069\ufeff]/g,
       ' ',
     )
-    .replace(/\s+/g, ' ')
+}
+
+/** Strips HTML tags and control characters (newlines in notes become spaces), then trims. */
+export function sanitizeText(raw: string): string {
+  return clean(raw).replace(/\s+/g, ' ').trim()
+}
+
+/**
+ * sanitizeText, but each line break kept as '\n': for containsPersonalInfo a line break ends a
+ * sentence, as 。 does, so a cue on one line does not reach a number on the next.
+ */
+export function sanitizeLines(raw: string): string {
+  return clean(raw)
+    .replace(/[^\S\n]+/g, ' ')
+    .replace(/ ?\n ?/g, '\n')
     .trim()
 }
 
@@ -28,13 +43,111 @@ const WECHAT_DIRECT = new RegExp(
   'i',
 )
 const ID_TOKEN = /(?<![a-z0-9_-])(?=[a-z][-_a-z0-9]{5,19}(?![a-z0-9_-]))[a-z]*[-_0-9][-_a-z0-9]*/i
+// QQ numbers and Alipay accounts are also only recognisable next to a cue word (spaces inside
+// the cue are allowed: "Q Q", "支 付 宝"). Anywhere in the cue's sentence (up to 。, ., !, ? or a
+// line break; commas do not end it), a 5–20 digit number or an id-shaped token is refused,
+// amounts included: "支付宝付了，12800 元" has to be rewritten without the number, since no rule
+// tells amounts from accounts reliably. So is one in the next sentence when that sentence says it
+// is an account ("支付宝收款。账号写在这里 2088…"). "QQ糖" and "QQ音乐" are not cues.
+const ACCOUNT_SERVICE = String.raw`(?:q\s?q(?!\s?(?:糖|音乐))|扣\s?扣|企鹅号|q\s{0,3}号|支\s?付\s?宝|alipay|zfb)`
+const ACCOUNT_WORD = String.raw`(?:号码|号|账号|帐号|账户|id)`
+const ACCOUNT_CUE = `${ACCOUNT_SERVICE}${ACCOUNT_WORD}?`
+const ACCOUNT_DIRECT = new RegExp(`${ACCOUNT_CUE}[\\s:=是为]{0,3}\\d{5,20}(?!\\d)`, 'i')
+const ACCOUNT_ID = String.raw`(?:(?<!\d)\d{5,20}(?!\d)|${ID_TOKEN.source})`
+const SENTENCE = String.raw`[^.!?\n。]*`
+const ACCOUNT_NEARBY = new RegExp(`${ACCOUNT_CUE}${SENTENCE}?${ACCOUNT_ID}`, 'i')
+const ACCOUNT_LABEL = String.raw`(?:账号|帐号|账户|号码)`
+const ACCOUNT_NEXT_SENTENCE = new RegExp(
+  `${ACCOUNT_CUE}${SENTENCE}[.!?\\n。]${SENTENCE}?${ACCOUNT_LABEL}${SENTENCE}?${ACCOUNT_ID}`,
+  'i',
+)
 
-/** True when the text carries a phone number, e-mail, WeChat id or ID card number. */
+// "支付宝账号 tian 88abc", "QQ：t i a n x 8": an id split by spaces. In the rest of the cue's
+// sentence, words separated only by spaces are joined one at a time (up to 20 characters, the
+// longest id), and the text is refused as soon as the joined words have the shape of an id,
+// whatever follows them ("QQ：tian 88 abc please confirm"). Words right after a cue that names
+// an account ("QQ：", "支付宝账号") always count; elsewhere ("QQ login option 2 is broken") only
+// when one of them mixes letters with digits, "_" or "-" ("QQ 支付异常 tian 88abc"). Words after an
+// account label ("支付宝收款，账号 tian 888"), in the cue's sentence or the next one, count too.
+const CUE_SCAN = new RegExp(`(${ACCOUNT_SERVICE})(${ACCOUNT_WORD})?([\\s:=是为]{0,3})`, 'gi')
+const SENTENCE_END = /[.!?\n。]/g
+const LABEL = new RegExp(ACCOUNT_LABEL)
+const WORD = /[-_a-z0-9]+/gi
+const WHOLE_ID = new RegExp(`^(?:\\d{5,20}|${ID_TOKEN.source})$`, 'i')
+const MIXED = /(?=.*[a-z])(?=.*[-_\d])/i
+
+function sentenceEnd(text: string, from: number): number {
+  SENTENCE_END.lastIndex = from
+  return SENTENCE_END.exec(text)?.index ?? text.length
+}
+
+/** Where the first account label in text[from, end) ends, if there is one. */
+function afterLabel(text: string, from: number, end: number): number | undefined {
+  const label = LABEL.exec(text.slice(from, end))
+  return label ? from + label.index + label[0].length : undefined
+}
+
+/** Whether words in text[from, end) with only spaces between them join into an id. */
+function joinsToId(
+  text: string,
+  from: number,
+  end: number,
+  counts: (at: number) => boolean,
+): boolean {
+  const words = [...text.slice(from, end).matchAll(WORD)].map((m) => ({
+    word: m[0],
+    at: from + m.index,
+  }))
+  for (let i = 0; i < words.length; i++) {
+    let joined = words[i]!.word
+    // Length first: MIXED is quadratic in the word's length.
+    let mixed = joined.length <= 20 && MIXED.test(joined)
+    for (let j = i + 1; j < words.length; j++) {
+      const prev = words[j - 1]!
+      if (!/^\s+$/.test(text.slice(prev.at + prev.word.length, words[j]!.at))) break
+      joined += words[j]!.word
+      if (joined.length > 20) break
+      mixed ||= MIXED.test(words[j]!.word)
+      if ((mixed || counts(words[i]!.at)) && WHOLE_ID.test(joined)) return true
+    }
+  }
+  return false
+}
+
+function spacedAccount(text: string): boolean {
+  const cues = [...text.matchAll(CUE_SCAN)]
+  const strong = new Set(
+    cues
+      .filter((c) => c[2] !== undefined || /[:=是为]/.test(c[3]!) || c[1]!.includes('号'))
+      .map((c) => c.index + c[0].length),
+  )
+  // Each sentence is scanned from its first cue only, and at most once more as a next sentence.
+  let scanned = -1
+  for (const cue of cues) {
+    const from = cue.index + cue[0].length
+    if (from <= scanned) continue
+    const end = sentenceEnd(text, from)
+    scanned = end
+    // Words after an account label in the same sentence count too ("支付宝收款，账号 tian 888").
+    const labelEnd = afterLabel(text, from, end) ?? end
+    if (joinsToId(text, from, end, (at) => strong.has(at) || at >= labelEnd)) return true
+    if (end >= text.length) continue
+    const nextEnd = sentenceEnd(text, end + 1)
+    const after = afterLabel(text, end + 1, nextEnd)
+    if (after !== undefined && joinsToId(text, after, nextEnd, () => true)) return true
+  }
+  return false
+}
+
+/** True when the text carries a phone number, e-mail, WeChat, QQ or Alipay id, or ID card number. */
 export function containsPersonalInfo(text: string): boolean {
   const n = text.normalize('NFKC')
-  // Digits split by up to three separators that are neither letters nor digits
-  // ("138 0013 8000", "138/0013/8000", "(021)64881234") still count.
-  const digits = n.replace(/(?<=\d)[^\p{L}\p{N}]{1,3}(?=\d)/gu, '')
+  // Digits split by any run of separators that are neither letters nor digits
+  // ("138 0013 8000", "138/0013/8000", "138----0013----8000", "(021)64881234") still count.
+  const digits = n.replace(/(?<=\d)[^\p{L}\p{N}]+(?=\d)/gu, '')
+  // "tian _ 88abc": spaces around "_" and "-" inside an account id. Each run of spaces is
+  // matched from its first space only, so a long run cannot make this quadratic.
+  const ids = digits.replace(/(?<!\s)\s+(?=[-_])|(?<=[-_])\s+/g, '')
   // "someone @ example . com"
   const compact = n.replace(/\s*([@.])\s*/g, '$1')
   return (
@@ -43,7 +156,11 @@ export function containsPersonalInfo(text: string): boolean {
     ID_CARD.test(digits) ||
     EMAIL.test(compact) ||
     WECHAT_DIRECT.test(n) ||
-    (WECHAT_CUE.test(n) && ID_TOKEN.test(n))
+    (WECHAT_CUE.test(n) && ID_TOKEN.test(n)) ||
+    ACCOUNT_DIRECT.test(ids) ||
+    ACCOUNT_NEARBY.test(ids) ||
+    ACCOUNT_NEXT_SENTENCE.test(ids) ||
+    spacedAccount(ids)
   )
 }
 

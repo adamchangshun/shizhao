@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import { containsPersonalInfo, looksLikeSpam, sanitizeText } from '@/lib/corrections/filter'
+import {
+  containsPersonalInfo,
+  looksLikeSpam,
+  sanitizeLines,
+  sanitizeText,
+} from '@/lib/corrections/filter'
 
 describe('personal information', () => {
   it.each([
@@ -17,8 +22,75 @@ describe('personal information', () => {
     '微信号是：tianxin_88',
     '我的微信号是这个 abc12345',
     'someone @ example . com',
+    '138----0013----8000',
+    '电话 138 —— 0013 —— 8000',
+    '138 / / / / 0013 / / / / 8000',
+    'QQ 12345678',
+    'qq：1234 5678 9',
+    '扣扣号是 987654321',
+    '我的QQ是这个 123456789',
+    'Q号: 10001',
+    '支付宝账号：tian_88abc',
+    '支付宝 2088 1021 3456 7890',
+    'zfb 12345678',
+    '支付宝收款账号写在这里 2088102134567890',
+    '支付宝收款，账号写在这里 2088102134567890',
+    '我的QQ，账号是 12345678',
+    '支付宝账号 tian _ 88abc',
+    'QQ 是 tian - 88abc',
+    'QQ账号 12345678元',
+    '支付宝账号 2088102134567890 元',
+    'Q Q：12345678',
+    '支 付 宝 2088 1021 3456 7890',
+    '支付宝账号 tian 88abc',
+    'QQ：tian 88 abc',
+    'QQ：tian 88 abc please confirm',
+    '支付宝 abc def，QQ tian 88abc',
+    'QQ：t i a n x 8',
+    '支付宝账号 tian  88abc',
+    'QQ：tian    88abc',
+    'QQ：t i a n x    8',
+    '支付宝账号 tian\t\t\t\t88abc',
+    'QQ abcdefghijklmnopqrst QQ tian 88abc',
+    '支付宝账号 RMB123abc',
+    '支付宝账号 abc123元旦后停用',
+    'QQ：tian_88¥5',
+    '我的QQ账号是这个 12345元旦后停用',
+    '支付宝账号是这个 2088102134567890 元',
+    // Any 5+ digit number near an account cue is refused, amounts included: the form asks the
+    // customer to leave the number out.
+    '支付宝付了 12800 元',
+    '支持支付宝付款，会员账号年费是 12800 元',
+    '支付宝付了 ¥12800',
+    '支付宝付了 ￥12,800',
+    '支持支付宝付款，会员账号年费是 RMB 12800',
+    '支付宝付了 CNY12800',
+    '支付宝付了 12800 人民币',
+    '支持支付宝付款，会员账号年费是 12800人民币',
+    '支付宝 RMB 12800',
+    '支付宝 cny 12 800',
+    '支付宝付了 ¥ 12800',
+    '支持支付宝付款，会员账号年费是 RMB  12800',
+    '支付宝付了 12800  人民币',
+    '支付宝付了 12800\t元',
+    '我的QQ 账号是这个 12345元旦后停用',
+    '我的Q号是这个 12345元旦后停用',
+    '我的QQ账号已经换了很久目前这个号码也停用了请不要再联系我了 12345元旦后停用',
+    '支付宝 012345',
+    'Q 号: 12345678',
+    // The cue covers the whole sentence: commas and enumeration commas do not end it.
+    '支付宝收款，写在这里 2088102134567890',
+    '支付宝付了，12800 元',
+    '支付宝付了、12800 元',
+    '支持支付宝付款，商品编号 12345 写错了',
+    '我的 Q  号是 tian 88abc',
+    '支付宝收款，账号 012345',
+    'QQ 支付异常 tian 88abc',
+    '支付宝收款，账号 tian 88abc',
+    '支付宝收款，账号写在这里 tian 888',
   ])('refuses %s', (text) => {
     expect(containsPersonalInfo(text)).toBe(true)
+    expect(containsPersonalInfo(sanitizeText(text))).toBe(true)
   })
 
   it.each([
@@ -31,8 +103,40 @@ describe('personal information', () => {
     '约 450g，8 寸',
     'Americano 改成 Latte',
     '一百三十八',
+    'QQ糖 5 元一包',
+    'QQ 音乐里放的歌很好听',
+    '可以用支付宝付款',
+    '支付宝付了 128 元',
+    '营业 8:00 ---- 20:00',
+    '大杯 18 元 / 中杯 15 元',
+    '2 杯 ---- 3 杯',
+    '价格 13，不是 15',
+    'QQ音乐可以播放，订单号 abc_123 有误',
+    '支付宝付款 tian 写错了',
+    '支付宝 payment method 2 is unavailable',
+    'QQ login option 2 is broken',
+    '支付宝付了 128 元。会员号 12345 写错了',
+    '可以用 QQ 联系！订单 12345 有误',
   ])('allows %s', (text) => {
     expect(containsPersonalInfo(text)).toBe(false)
+  })
+
+  it('checks an 800-character note of repeated cues quickly', () => {
+    containsPersonalInfo('QQ')
+    for (const text of ['QQ'.repeat(400), 'QQ a'.repeat(200), 'QQ，账号 '.repeat(130)]) {
+      const start = performance.now()
+      containsPersonalInfo(text)
+      expect(performance.now() - start).toBeLessThan(30)
+    }
+  })
+})
+
+describe('line breaks end a sentence', () => {
+  it('keeps line breaks for the check, so a cue does not reach the next line', () => {
+    expect(sanitizeLines(' a <b>QQ</b>\r\n\u2028 订单号  12345 ')).toBe('a QQ\n\n订单号 12345')
+    expect(containsPersonalInfo(sanitizeLines('可以用支付宝\n订单号 12345 写错了'))).toBe(false)
+    expect(containsPersonalInfo(sanitizeLines('支付宝\n12345678'))).toBe(true)
+    expect(containsPersonalInfo(sanitizeLines('支付宝收款\n账号 2088102134567890'))).toBe(true)
   })
 })
 

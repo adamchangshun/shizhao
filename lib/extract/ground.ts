@@ -1,7 +1,15 @@
 import { ApiError } from '../core/errors'
 import { newId } from '../core/ids'
 import { FactItem, Price, Shop, type FactSource } from '../core/schemas'
-import { findTextPrice, normalizePrice } from './price'
+import {
+  findGluedNames,
+  findLineOffers,
+  findTextAmounts,
+  findTextOffers,
+  normalizePrice,
+  type LineOffer,
+  type TextOffer,
+} from './price'
 import type { ModelDraft, ModelPrice } from './schema'
 
 export interface FactConflict {
@@ -146,8 +154,10 @@ function formatPrice(p: Price): string {
  * - otherwise, if there are images, it is `image_ocr` and reported in `lowConfidenceFields`;
  * - otherwise it has no source in the material and is dropped.
  * Prices and phone numbers the merchant wrote are re-read from the text by code and always win;
- * a differing image reading is reported in `conflicts`. Descriptions and extra claims must be
- * the merchant's own words. Ids are generated here, never taken from the model.
+ * a differing image reading is reported in `conflicts`. An item left without a price while the
+ * text has an amount no item took is also listed in `lowConfidenceFields`. Descriptions and extra claims must be
+ * the merchant's own words. An item named only from the images may take the name and price of a
+ * line in the text (see linesForImageNames). Ids are generated here, never taken from the model.
  */
 export function groundDraft(model: ModelDraft, ctx: GroundingContext): GroundedDraft {
   const text = norm(ctx.merchantText)
@@ -180,20 +190,33 @@ export function groundDraft(model: ModelDraft, ctx: GroundingContext): GroundedD
   // Items
   const items: FactItem[] = []
   const seen = new Set<string>()
-  for (const raw of model.items) {
+  const allOffers = allTextOffers(model, ctx.merchantText)
+  const offersOf = ownedOffers(allOffers, ctx.merchantText)
+  const lineOf = hasImages
+    ? linesForImageNames(model, ctx.merchantText, allOffers, inText)
+    : new Map<number, LineOffer>()
+  const taken: TextOffer[] = [] // the prices items took
+  for (const [rawIndex, raw] of model.items.entries()) {
     if (items.length >= MAX_ITEMS) break
-    const name = raw.name.trim()
+    const picked = lineOf.get(rawIndex)
+    const line = picked && !seen.has(norm(picked.name)) ? picked : undefined
+    const name = line?.name ?? raw.name.trim()
     if (!FactItem.shape.name.safeParse(name).success || seen.has(norm(name))) continue
-    const nameSource = sourceOf(name)
+    const nameSource = line ? 'merchant_text' : sourceOf(name)
     if (!nameSource) continue
     seen.add(norm(name))
+    // The model's own name too, so a second entry of the renamed item is dropped as a duplicate.
+    if (line) seen.add(norm(raw.name))
     const index = items.length
     const path = (f: string) => `items[${index}].${f}`
     const sources: FactItem['sources'] = { name: nameSource }
-    if (nameSource === 'image_ocr') low.push(path('name'))
+    // A name taken from a line is the merchant's, but which item it belongs to is a guess.
+    if (nameSource === 'image_ocr' || line) low.push(path('name'))
 
     let price: Price | undefined
-    const textPrice = findTextPrice(name, ctx.merchantText)
+    const offer = line ?? offersOf.get(name)?.[0]
+    const textPrice = offer?.price
+    if (offer) taken.push(offer)
     const modelPrice = toPrice(raw.price)
     if (textPrice) {
       price = textPrice
@@ -215,7 +238,11 @@ export function groundDraft(model: ModelDraft, ctx: GroundingContext): GroundedD
 
     let spec: string | undefined
     const specValue = raw.spec?.trim()
-    if (specValue && FactItem.shape.spec.safeParse(specValue).success) {
+    if (offer?.spec && FactItem.shape.spec.safeParse(offer.spec).success) {
+      // The size the merchant wrote right before this item's price.
+      spec = offer.spec
+      sources.spec = 'merchant_text'
+    } else if (specValue && FactItem.shape.spec.safeParse(specValue).success) {
       const s = sourceOf(specValue)
       if (s) {
         spec = specValue
@@ -253,6 +280,18 @@ export function groundDraft(model: ModelDraft, ctx: GroundingContext): GroundedD
       }),
     )
   }
+  // An amount the merchant wrote that no item took (e.g. a price after words the code does not
+  // read as a size) may be a price the code missed: every item left without a price is flagged
+  // so the confirm page asks the merchant to check it.
+  // Overlap, not equal start: an offer and the amount reader may start a price at different digits.
+  const isTaken = (a: { at: number; end: number }) =>
+    taken.some((o) => a.at < o.end && o.at < a.end)
+  if (findTextAmounts(ctx.merchantText).some((a) => !isTaken(a))) {
+    items.forEach((item, i) => {
+      const p = `items[${i}].price`
+      if (!item.price && !low.includes(p)) low.push(p)
+    })
+  }
   if (items.length === 0) {
     throw new ApiError(
       422,
@@ -276,6 +315,96 @@ export function groundDraft(model: ModelDraft, ctx: GroundingContext): GroundedD
     conflicts,
     lowConfidenceFields: low,
   }
+}
+
+/** Every price written after each item name in the draft (see findTextOffers). */
+function allTextOffers(model: ModelDraft, text: string): Map<string, TextOffer[]> {
+  // Bounded like the item list itself, so a runaway draft cannot make this quadratic.
+  const names = [...new Set(model.items.map((raw) => raw.name.trim()))]
+    .filter((name) => FactItem.shape.name.safeParse(name).success)
+    .slice(0, MAX_ITEMS * 4)
+  return new Map(names.map((name) => [name, findTextOffers(name, text)] as const))
+}
+
+/**
+ * Each written price goes only to the longest name it follows: in '拿铁\n燕麦拿铁 25元' the 25
+ * is 燕麦拿铁's, not also 拿铁's. When names read overlapping characters as different prices, the
+ * price goes to none of them; so it does when it starts inside a name that runs into it: in
+ * '套餐218元' 套餐 is not given 218 元 while the draft also has 套餐2 (which findTextOffers never
+ * gives 18 元), since the text may mean either.
+ */
+function ownedOffers(
+  all: ReadonlyMap<string, TextOffer[]>,
+  text: string,
+): Map<string, TextOffer[]> {
+  const len = (name: string) => [...name.normalize('NFKC').trim()].length
+  const glued = [...all.keys()].flatMap((name) => findGluedNames(name, text))
+  const entries = [...all]
+    .flatMap(([name, offers]) => offers.map((offer) => ({ offer, len: len(name) })))
+    .filter(({ offer }) => !glued.some((g) => g.at < offer.at && offer.at < g.end))
+    .sort((a, b) => a.offer.at - b.offer.at)
+  const kept = new Set<TextOffer>()
+  // Sweep over groups of overlapping prices.
+  for (let i = 0; i < entries.length;) {
+    let j = i + 1
+    let end = entries[i]!.offer.end
+    while (j < entries.length && entries[j]!.offer.at < end) {
+      end = Math.max(end, entries[j]!.offer.end)
+      j += 1
+    }
+    const group = entries.slice(i, j)
+    if (group.every((e) => e.offer.at === group[0]!.offer.at)) {
+      const longest = Math.max(...group.map((e) => e.len))
+      for (const e of group) if (e.len === longest) kept.add(e.offer)
+    }
+    i = j
+  }
+  return new Map([...all].map(([name, offers]) => [name, offers.filter((o) => kept.has(o))]))
+}
+
+/**
+ * An item the model named only from the images ('BUTTER CROISSANT' read off the photo) finds no
+ * price in the text, while the merchant's line '招牌黄油可颂，12 元一个' is left to no item. Such an
+ * item takes the name and price of a line no item took: the line with the item's own amount when
+ * exactly one such item and one such line share it; with no amount to compare, the only line when
+ * it is the only such item. Anything else is not guessed. Keys are indexes into model.items.
+ */
+function linesForImageNames(
+  model: ModelDraft,
+  text: string,
+  allOffers: ReadonlyMap<string, TextOffer[]>,
+  inText: (value: string) => boolean,
+): Map<number, LineOffer> {
+  // A line that follows any item name is that item's, even when no item ends up owning it.
+  const claimed = [...allOffers.values()].flat()
+  const lines = findLineOffers(text).filter(
+    (l) => !claimed.some((o) => l.at < o.end && o.at < l.end),
+  )
+  // An item the model returned more than once (same name and price) counts once: its first entry.
+  const seen = new Set<string>()
+  const orphans = [...model.items.entries()].flatMap(([i, raw]) => {
+    const name = raw.name.trim()
+    if (!FactItem.shape.name.safeParse(name).success || inText(name)) return []
+    if (allOffers.get(name)?.length) return []
+    const amount = toPrice(raw.price)?.amount
+    const key = `${norm(name)}\u0000${amount ?? ''}`
+    if (seen.has(key)) return []
+    seen.add(key)
+    return [{ i, amount }]
+  })
+  const chosen = new Map<number, LineOffer>()
+  const only = orphans[0]
+  if (orphans.length === 1 && only!.amount === undefined && lines.length === 1) {
+    return chosen.set(only!.i, lines[0]!)
+  }
+  for (const { i, amount } of orphans) {
+    if (amount === undefined) continue
+    const same = lines.filter((l) => l.price.amount === amount)
+    if (same.length === 1 && orphans.filter((o) => o.amount === amount).length === 1) {
+      chosen.set(i, same[0]!)
+    }
+  }
+  return chosen
 }
 
 /**

@@ -79,6 +79,17 @@ test('a customer reports a price, the merchant accepts it, the page shows the ne
   await pub.getByText('信息有误？告诉老板').click()
   await pub.getByLabel('哪一项有误').selectOption({ label: '拿铁 · 价格' })
   await pub.getByLabel('正确的是').fill('18元')
+  // A long number next to 支付宝 is refused; the page says how to rewrite the note.
+  await pub.getByLabel('补充说明（选填）').fill('支付宝付了 12800 元')
+  await pub.getByRole('button', { name: '提交' }).click()
+  await expect(
+    pub.getByText(
+      '请勿填写个人信息：提到 QQ、支付宝或微信时，不要同时写出号码、账号或 5 位以上的数字',
+    ),
+  ).toBeVisible()
+  expect(await pub.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(
+    true,
+  )
   await pub.getByLabel('补充说明（选填）').fill('店里价目表是 18')
   await pub.screenshot({ path: path.join(SHOT_DIR, 'customer-form.png'), fullPage: true })
   await pub.getByRole('button', { name: '提交' }).click()
