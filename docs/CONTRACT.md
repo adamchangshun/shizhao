@@ -288,7 +288,7 @@ queued → designing → writing → guarding → rendering → checking → suc
 ### R11 生成任务的 styleBrief
 
 - `POST /api/projects/:id/jobs` 接收可选请求体 `{ styleBrief? }`；不带请求体与以前完全相同。
-- `StyleBrief = { templateId?: TemplateId, moodKeywords?: string[], primary?: Hex }`（`lib/design/brief.ts`）：三项都可省略，整个对象可省略；`moodKeywords` 1～4 个、每个 1～6 个汉字，与模型输出的风格词同一条规则；不允许其他字段。空对象视为没有偏好。
+- `StyleBrief = { templateId?: TemplateId, moodKeywords?: string[], primary?: Hex }`（`lib/design/brief.ts`）：三项都可省略，整个对象可省略；`moodKeywords` 1～4 个、每个 1～6 个汉字，与模型输出的风格词同一条规则；不允许其他字段；`styleBrief: null` 不合法。空对象视为没有偏好。
 - 非法时返回 400 `{ error: { code: 'invalid_style_brief', message } }`，`message` 用中文说明是哪一项不合法，不创建任务。
 - `jobs` 表增加可空列 `brief`（json），保存校验后的 StyleBrief；没有偏好时为 null。版本表不另存 brief，结果已体现在 `designSpec`。
 - 生成结果必须遵守：指定了 `templateId` 就使用它（相似度判定不切换模板）；指定了 `primary` 就是最终的 `palette.primary`（统一小写），text 仍保证在 bg 与 surface 上 ≥ 4.5:1；指定了 `moodKeywords` 就是最终的风格词。`DesignSpec` 字段不变，seed 仍随机。

@@ -17,7 +17,13 @@ import s from '../../shell.module.css'
 import w from './wizard.module.css'
 import { CorrectionsTab, correctionsKey } from './corrections-tab'
 import { FactsStep } from './facts-step'
-import { EMPTY_BRIEF_DRAFT, GenerateStep } from './generate-step'
+import {
+  EMPTY_BRIEF_DRAFT,
+  GenerateStep,
+  loadBriefDraft,
+  saveBriefDraft,
+  type StyleBriefDraft,
+} from './generate-step'
 import { PreviewStep } from './preview-step'
 import { PublishStep } from './publish-step'
 import { SettingsTab } from './settings-tab'
@@ -62,8 +68,20 @@ export function Workspace({ projectId, publicBase }: { projectId: string; public
   // Extraction details (conflicts) only come with the extract response; they live for this visit.
   const [extract, setExtract] = useState<ExtractResponse | null>(null)
   const [materialChanged, setMaterialChanged] = useState(false)
-  // Style preferences for this visit: every later generation starts from what was last filled in.
-  const [brief, setBrief] = useState(EMPTY_BRIEF_DRAFT)
+  // Style preferences: every later generation, also after a reload, starts from the last ones.
+  const [brief, setBriefState] = useState(EMPTY_BRIEF_DRAFT)
+  useEffect(() => {
+    // Read after mount: storage does not exist during the server render.
+    const saved = loadBriefDraft(projectId)
+    if (saved) setBriefState(saved)
+  }, [projectId])
+  const setBrief = useCallback(
+    (next: StyleBriefDraft) => {
+      setBriefState(next)
+      saveBriefDraft(projectId, next)
+    },
+    [projectId],
+  )
 
   const tab: Tab =
     params.get('tab') === 'corrections'

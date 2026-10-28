@@ -28,12 +28,12 @@ const FIELD_MESSAGE: Record<string, string> = {
 }
 
 /**
- * Validates a styleBrief from a request: undefined/null or an object with no fields means
- * "no preference" (undefined); anything invalid is a 400 `invalid_style_brief` with a Chinese
- * message naming the field.
+ * Validates a styleBrief from a request: undefined or an object with no fields means
+ * "no preference" (undefined); anything invalid, null included, is a 400 `invalid_style_brief`
+ * with a Chinese message naming the field.
  */
 export function parseStyleBrief(input: unknown): StyleBrief | undefined {
-  if (input === undefined || input === null) return undefined
+  if (input === undefined) return undefined
   const result = StyleBrief.safeParse(input)
   if (!result.success) {
     const field = String(result.error.issues[0]?.path[0] ?? '')

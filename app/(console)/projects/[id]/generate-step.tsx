@@ -41,6 +41,37 @@ export const EMPTY_BRIEF_DRAFT: StyleBriefDraft = {
   primary: '#1f3a5f',
 }
 
+const draftKey = (projectId: string) => `shizhao:style-brief:${projectId}`
+
+/** The last style preferences used in this browser for the project, if any were saved. */
+export function loadBriefDraft(projectId: string): StyleBriefDraft | null {
+  try {
+    const raw: unknown = JSON.parse(localStorage.getItem(draftKey(projectId)) ?? 'null')
+    if (typeof raw !== 'object' || raw === null) return null
+    const d = raw as Record<string, unknown>
+    const templateId = TEMPLATES.find(([id]) => id === d.templateId)?.[0] ?? ''
+    return {
+      templateId,
+      keywords: typeof d.keywords === 'string' ? d.keywords.slice(0, 60) : '',
+      usePrimary: d.usePrimary === true,
+      primary:
+        typeof d.primary === 'string' && /^#[0-9a-f]{6}$/i.test(d.primary)
+          ? d.primary
+          : EMPTY_BRIEF_DRAFT.primary,
+    }
+  } catch {
+    return null
+  }
+}
+
+export function saveBriefDraft(projectId: string, draft: StyleBriefDraft): void {
+  try {
+    localStorage.setItem(draftKey(projectId), JSON.stringify(draft))
+  } catch {
+    // Storage may be unavailable (private mode); the draft then lives for this visit only.
+  }
+}
+
 export type BriefResult =
   { ok: true; body?: { styleBrief: StyleBrief } } | { ok: false; message: string }
 

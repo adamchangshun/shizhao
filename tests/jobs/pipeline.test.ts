@@ -279,6 +279,8 @@ describe('styleBrief', () => {
     [{ moodKeywords: ['japanese'] }, '风格词需要 1～4 个，每个 1～6 个汉字'],
     [{ primary: 'navy' }, '主色需要是 #RRGGBB 格式的颜色'],
     [{ primary: '#1f3a5' }, '主色需要是 #RRGGBB 格式的颜色'],
+    [null, '风格偏好格式不正确'],
+    [{ templateId: 'poster', layout: 'wide' }, '风格偏好格式不正确'],
   ])('rejects %j with 400 and creates no job', async (styleBrief, message) => {
     const { projectId } = await prepareProject()
     const res = await postJob(

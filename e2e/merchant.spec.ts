@@ -210,4 +210,11 @@ test('style preferences: the chosen template and mood words reach the version', 
     templateId: 'menu-board',
     moodKeywords: ['日式', '极简'],
   })
+
+  // After a reload the preview step's 换一个风格 starts from the same preferences.
+  await page.reload()
+  await waitForPreview(page)
+  await page.getByText('风格偏好（可选）').click()
+  await expect(page.getByRole('radio', { name: /^菜单板/ })).toBeChecked()
+  await expect(page.getByLabel('风格词')).toHaveValue('日式，极简')
 })
