@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises'
 import sharp from 'sharp'
 import { z } from 'zod'
 import type { Usage } from '../core/schemas'
-import { createCallControl } from './control'
+import { createCallControl, llmEndpoint, readResponse, upstreamFailure } from './control'
 import { ProviderError } from './errors'
 import { extractJSON } from './json'
 import { PROFILE_CAPABILITIES, outputTokenLimit, type LLMProfile } from './profiles'
@@ -49,25 +49,6 @@ const textOf = (message: Message) =>
         .map((p) => p.text)
         .join('')
 
-/** Redact before truncating; an upstream may reflect the entire request in its error. */
-function safeExcerpt(body: string, secrets: string[]): string {
-  let safe = body
-  try {
-    safe = JSON.stringify(JSON.parse(body))
-  } catch {
-    /* Plain error text. */
-  }
-  // Plain-text error pages may embed slash-escaped JSON without being JSON.
-  // Normalize those escapes before matching exact secrets and image data URLs.
-  safe = safe.replace(/\\+\//g, '/')
-  for (const secret of secrets) if (secret) safe = safe.split(secret).join('[redacted]')
-  safe = safe
-    .replace(/data:image\/[^\s"'<>]+/gi, '[image redacted]')
-    .replace(/Bearer\s+[^\s"'<>]+/gi, 'Bearer [redacted]')
-    .replace(/[\u0000-\u001f\u007f]/g, ' ')
-  return safe.slice(0, 200)
-}
-
 // Never downgrade for generic validation or authentication errors.
 function rejectsResponseFormat(body: string): boolean {
   // Some services echo the full request beside the actual error. Inspect only
@@ -86,29 +67,6 @@ function rejectsResponseFormat(body: string): boolean {
   )
 }
 
-/** Bound memory while reading, rather than trusting Content-Length. */
-async function readResponse(response: Response): Promise<string> {
-  if (!response.body) return ''
-  const reader = response.body.getReader()
-  const chunks: Uint8Array[] = []
-  let bytes = 0
-  try {
-    while (true) {
-      const next = await reader.read()
-      if (next.done) break
-      bytes += next.value.byteLength
-      if (bytes > 2 * 1024 * 1024) {
-        await reader.cancel()
-        throw new ProviderError('bad_response')
-      }
-      chunks.push(next.value)
-    }
-    return Buffer.concat(chunks).toString('utf8')
-  } finally {
-    reader.releaseLock()
-  }
-}
-
 export class OpenAICompatibleProvider implements LLMProvider {
   readonly name = 'openai-compatible'
   readonly profile: LLMProfile
@@ -122,21 +80,7 @@ export class OpenAICompatibleProvider implements LLMProvider {
     const capabilities = PROFILE_CAPABILITIES[this.profile]
     if (!capabilities) throw new ProviderError('bad_response')
     this.etaMultiplier = capabilities.etaMultiplier
-    try {
-      const base = new URL(options.baseUrl)
-      if (
-        !['http:', 'https:'].includes(base.protocol) ||
-        base.username ||
-        base.password ||
-        base.search ||
-        base.hash
-      )
-        throw new Error('Invalid URL')
-      base.pathname = `${base.pathname.replace(/\/+$/, '')}/chat/completions`
-      this.endpoint = base.toString()
-    } catch {
-      throw new ProviderError('bad_response')
-    }
+    this.endpoint = llmEndpoint(options.baseUrl, 'chat/completions')
     if (
       !options.textModel?.trim() ||
       !options.visionModel?.trim() ||
@@ -150,7 +94,6 @@ export class OpenAICompatibleProvider implements LLMProvider {
   async generateJSON<T>(req: GenerateJSONRequest<T>): Promise<{ data: T; usage: Usage }> {
     const started = performance.now()
     const control = createCallControl(req.timeoutMs, req.signal)
-    const secrets = [this.options.apiKey ?? '']
     try {
       control.check()
       const hasImages = (req.images?.length ?? 0) > 0
@@ -190,7 +133,6 @@ export class OpenAICompatibleProvider implements LLMProvider {
           throw new ProviderError('bad_response')
         }
         const encoded = bytes.toString('base64')
-        secrets.push(encoded)
         parts.push({
           type: 'image_url',
           image_url: { url: `data:${mime};base64,${encoded}` },
@@ -240,10 +182,7 @@ export class OpenAICompatibleProvider implements LLMProvider {
         }
         control.check()
         if (!response.ok) {
-          console.warn('Provider request failed', {
-            status: response.status,
-            body: safeExcerpt(raw, secrets),
-          })
+          console.warn('Provider request failed', upstreamFailure(response, raw))
           if ([400, 422].includes(response.status) && format && rejectsResponseFormat(raw)) {
             format = false
             continue

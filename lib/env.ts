@@ -1,5 +1,7 @@
 import path from 'node:path'
 import { z } from 'zod'
+import { HTTPS_REQUIRED_MESSAGE, isLocalHost } from './net'
+import { llmEndpoint } from './providers/control'
 
 const optionalString = z
   .string()
@@ -16,23 +18,13 @@ const bool = z
   .default('false')
   .transform((v) => v === 'true' || v === '1')
 
-/** Hosts where plain http is acceptable: loopback, RFC 1918 LAN addresses, mDNS names. */
-export function isLocalHost(hostname: string): boolean {
-  const h = hostname.toLowerCase()
-  if (h === 'localhost' || h.endsWith('.localhost') || h.endsWith('.local')) return true
-  if (h === '[::1]' || h === '::1') return true
-  const m = /^(\d{1,3})\.(\d{1,3})\.\d{1,3}\.\d{1,3}$/.exec(h)
-  if (!m) return false
-  const a = Number(m[1])
-  const b = Number(m[2])
-  return a === 127 || a === 10 || (a === 192 && b === 168) || (a === 172 && b >= 16 && b <= 31)
-}
+export { HTTPS_REQUIRED_MESSAGE, isLocalHost }
 
 const EnvSchema = z
   .object({
     PROVIDER: z
-      .enum(['mock', 'openai-compatible'], {
-        errorMap: () => ({ message: '只能是 mock 或 openai-compatible' }),
+      .enum(['mock', 'openai-compatible', 'anthropic'], {
+        errorMap: () => ({ message: '只能是 mock、openai-compatible 或 anthropic' }),
       })
       .default('mock'),
     LLM_PROFILE: z
@@ -81,16 +73,27 @@ const EnvSchema = z
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['PUBLIC_BASE_URL'],
-        message: '公网地址必须使用 https；http 只允许 localhost、局域网 IP 或 .local 域名',
+        message: HTTPS_REQUIRED_MESSAGE,
       })
     }
-    if (env.PROVIDER !== 'openai-compatible') return
+    if (env.PROVIDER === 'mock') return
+    if (env.LLM_BASE_URL) {
+      try {
+        llmEndpoint(env.LLM_BASE_URL, '')
+      } catch (error) {
+        ctx.addIssue({
+          code: z.ZodIssueCode.custom,
+          path: ['LLM_BASE_URL'],
+          message: error instanceof Error ? error.message : '必须是完整网址',
+        })
+      }
+    }
     for (const key of ['LLM_BASE_URL', 'LLM_MODEL_TEXT', 'LLM_MODEL_VISION'] as const) {
       if (!env[key]) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: [key],
-          message: 'PROVIDER=openai-compatible 时必需',
+          message: `PROVIDER=${env.PROVIDER} 时必需`,
         })
       }
     }

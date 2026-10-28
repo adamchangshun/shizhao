@@ -137,6 +137,7 @@ Set `PROVIDER=openai-compatible` in `.env` and fill in the variables below (both
 | DeepSeek | `deepseek` | `https://api.deepseek.com/v1` | No, text only |
 | MoArk (Gitee AI) | `generic` | `https://ai.gitee.com/v1` | No (`generic` is used as text-only) |
 | Ollama (local) | `ollama` | `http://localhost:11434/v1` | If the local model supports vision |
+| Anthropic Claude (Messages protocol) | Leave empty; set `PROVIDER=anthropic` instead | `https://api.anthropic.com/v1` | Yes (set a vision model) |
 
 ```bash
 PROVIDER=openai-compatible
@@ -148,6 +149,10 @@ LLM_MODEL_VISION=<vision model>
 LLM_PRICE_INPUT_PER_1K=0        # CNY per 1K tokens, for cost tracking only
 LLM_PRICE_OUTPUT_PER_1K=0
 ```
+
+With `PROVIDER=anthropic`, cost tracking applies Anthropic's published cache multipliers to the input price: cache writes 1.25x (5-minute) or 2x (1-hour), cache reads 0.1x (some newer models are cheaper, so this is an upper bound for them).
+
+For security, `LLM_BASE_URL` may use plain http only for loopback, LAN IPs, `.local` hosts or Docker's `host.docker.internal`; public endpoints must use https or startup fails (`host.docker.internal` is allowed for the model endpoint only, not for `PUBLIC_BASE_URL`).
 
 Under Docker, `localhost` inside the container is the container itself; to reach Ollama on the host, use `http://host.docker.internal:11434/v1` (provided by Docker Desktop).
 

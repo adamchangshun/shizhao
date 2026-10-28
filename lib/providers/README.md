@@ -22,20 +22,22 @@ recordUsage(db, result.usage, { projectId, jobId })
 - 普通 4xx 不重试；只有 400/422 明确表示不支持 `response_format` 时移除它一次。system 从第一次请求起带「只输出 JSON」。修正请求保留原消息与模型回复；提取失败时要求仅输出符合要求的 JSON（jsonMode 开启时要求对象），schema 不符时增加 zod 错误路径/代码摘要。
 - 回复支持字符串或 `[{type:'text',text:...}]`；先解析完整 JSON，再提取第一个 JSON 代码块或第一个平衡对象，正确跳过字符串中的括号和转义字符。JSON 提取失败与 schema 不符共享一次修正额度；修正后仍无法解析报 `bad_response`，能够解析但仍不符合 schema 则报 `schema_mismatch`。HTTP 成功响应本身不是合法协议 envelope 时仍立即报 `bad_response`。
 - 读响应限制为 2 MiB，超出即取消响应并报 `bad_response`。不跟随重定向，以免向另一个目标转发凭据。
-- 失败日志仅输出 HTTP 状态与脱敏后的前 200 字符；先处理转义 JSON 和纯文本中转义的斜杠，再删除配置密钥及已发送图片的 base64，最后截断。错误对象不附带响应正文、请求或底层 cause。
+- 失败日志不写响应正文，也不写 `error.message`（上游可能以转义形式回显提示词，任何脱敏都匹配不全）：只记 HTTP 状态，以及 JSON 中 `error.type`、`error.code` 两个字段；它们必须是 1–40 个小写字母或下划线、以字母开头（如 `rate_limit_error`），否则记为 `other`，所以密钥、base64 与文字都不会进日志。正文不是 JSON 时只记状态与 content-type：去参数、转小写后只保留 `application/json`、`application/problem+json`、`text/plain`、`text/html`、`text/event-stream`，其余记为 `other`。修正轮回传的内容同样不进日志。错误对象不附带响应正文、请求或底层 cause。
+- 端点校验统一由 `control.ts` 的 `llmEndpoint()` 完成，两个适配器与 `lib/env.ts` 共用：只接受不含用户名、密码、查询参数或锚点的 http(s) 网址；公网地址必须用 https，http 只允许本机、局域网 IP、`.local` 与 `host.docker.internal`。
 - 对外错误代码：`timeout`、`aborted`、`rate_limited`、`bad_response`、`schema_mismatch`、`upstream_error`；提示信息为简体中文。
 
 ## 配置与 profile
 
 工厂复用 `getEnv()`，默认 Mock。设置 `PROVIDER=openai-compatible` 后，端点、文本/视觉模型名和价格全部来自 `LLM_*` 环境变量。API Key 为空时不发送 Authorization。`LLM_PROFILE` 未设时使用 `generic`。
 
-| profile  | 图片                                | seed               | response_format                | ETA 倍数 |
-| -------- | ----------------------------------- | ------------------ | ------------------------------ | -------: |
-| qwen     | OpenAI `image_url: {url: data URL}` | 支持，0–2147483647 | JSON mode，拒绝时降级一次      |        1 |
-| glm      | OpenAI `image_url: {url: data URL}` | 不发送             | JSON mode，拒绝时降级一次      |        1 |
-| deepseek | 本项目契约限定为文本                | 不发送             | JSON mode，拒绝时降级一次      |        1 |
-| ollama   | 需要本机模型支持视觉；WebP 转 PNG   | 支持               | 不发送，使用提示词约束         |        3 |
-| generic  | 未验证接口只允许文本                | 不发送             | 尝试 JSON mode，拒绝时降级一次 |        1 |
+| profile                                               | 图片                                           | seed               | response_format                                                            | ETA 倍数 |
+| ----------------------------------------------------- | ---------------------------------------------- | ------------------ | -------------------------------------------------------------------------- | -------: |
+| qwen                                                  | OpenAI `image_url: {url: data URL}`            | 支持，0–2147483647 | JSON mode，拒绝时降级一次                                                  |        1 |
+| glm                                                   | OpenAI `image_url: {url: data URL}`            | 不发送             | JSON mode，拒绝时降级一次                                                  |        1 |
+| deepseek                                              | 本项目契约限定为文本                           | 不发送             | JSON mode，拒绝时降级一次                                                  |        1 |
+| ollama                                                | 需要本机模型支持视觉；WebP 转 PNG              | 支持               | 不发送，使用提示词约束                                                     |        3 |
+| generic                                               | 未验证接口只允许文本                           | 不发送             | 尝试 JSON mode，拒绝时降级一次                                             |        1 |
+| anthropic（`PROVIDER=anthropic`，不读 `LLM_PROFILE`） | Messages base64 `image` 块，WebP/PNG/JPEG 原样 | 不发送             | 强制调用 `submit_json` 工具，模型拒绝强制 tool_choice 时降级为 `auto` 一次 |        1 |
 
 `PROFILE_CAPABILITIES[profile].etaMultiplier` 供任务编排调整预计耗时；不会擅自延长调用超时。文本配置使用纯字符串 user content，有非空图片列表时使用视觉模型和多模态 content。
 
@@ -45,9 +47,22 @@ recordUsage(db, result.usage, { projectId, jobId })
 
 关闭 JSON 模式后，普通说明文字加裸 JSON 对象可直接提取，不消耗修正机会。第 3 轮审查 M1 指出的原有解析边界仍待独立处理：`<think>` 内的花括号可能先被选中；说明文字包裹的数组可能被截成首个对象。纯数组和 JSON 代码块内数组可直接解析。本次按范围要求不修改通用 `json.ts`，也不改变调用超时。
 
+已知限制（日志）：`error.type`/`error.code` 是格式白名单而非语义白名单，上游若把纯小写字母与下划线、不超过 40 个字符的片段放进这两个字段，仍会原样记录；这类片段不含密钥、base64 或成段文字，不构成有意义的泄露，因此保留以便排查非 Anthropic 服务的错误码。
+
 以上是项目明确支持的协议配置，不代表所有模型版本均已实测。各 profile 的本地 HTTP 协议测试均已覆盖；使用者必须选择自己服务中支持相应能力的模型。模型名不内置在适配器中。
 
 核验参考（2026-10-12）：[Qwen OpenAI Chat](https://help.aliyun.com/en/model-studio/qwen-api-via-openai-chat-completions)、[GLM 对话补全](https://docs.bigmodel.cn/api-reference/模型-api/对话补全)、[DeepSeek JSON](https://api-docs.deepseek.com/guides/json_mode/)、[Ollama OpenAI compatibility](https://docs.ollama.com/api/openai-compatibility)。功能契约中的 deepseek 文本限制优先于厂商后来扩展的能力。
+
+## Anthropic Messages 协议
+
+`PROVIDER=anthropic` 使用 `lib/providers/anthropic.ts`，复用同一组 `LLM_*` 变量，`LLM_BASE_URL` 填到 `/v1`，请求发往 `<base>/messages`，带 `x-api-key`（Key 为空时不发送）与 `anthropic-version: 2023-06-01`。超时、取消、重试次数与退避、2 MiB 响应上限、不跟随重定向、脱敏日志、错误代码和 usage 计费规则与 openai-compatible 完全一致，共用 `control.ts` 的 `llmEndpoint`/`readResponse`/`upstreamFailure`。
+
+- 结构化输出：请求带一个 `submit_json` 工具（`input_schema` 只约束 `result` 字段存在；zod 3 无法导出 JSON Schema，具体形状仍由提示词描述、zod 校验），`tool_choice` 强制调用该工具且关闭并行调用。Claude Opus 5.5、Sonnet 5.5、Fable 5.1 等新模型对强制 `tool_choice` 返回 400，此时只在错误体提到 `tool_choice` 不支持的情况下降级为 `auto` 一次，与 openai-compatible 的 `response_format` 降级共享同一套重试预算。
+- 取结果：优先读取 `submit_json` 的 `result`（若为字符串则按 `json.ts` 解析）；模型没有调用工具时退回 `json.ts` 从文本提取。提取失败或 schema 不符共享一次修正：上一轮 assistant 内容原样回传（含 thinking 块），工具调用以 `is_error` 的 `tool_result` 回复修正提示，否则以普通文本回复。
+- 不发送 `temperature`、`seed`：新模型对采样参数返回 400，Messages 协议没有 seed。`max_tokens` 固定 16000。
+- `stop_reason` 为 `max_tokens`、`model_context_window_exceeded` 或 `refusal` 时，工具输入可能残缺或被拒绝，直接报 `bad_response`，不进入修正。
+- usage：`inputTokens` 记普通输入、缓存写入、缓存读取三类 token 之和，`outputTokens` 记 `output_tokens`。成本按 [Anthropic 定价页](https://platform.claude.com/docs/en/about-claude/pricing) 的缓存倍率折算到 `LLM_PRICE_INPUT_PER_1K`：5 分钟写入 1.25×、1 小时写入 2×（读 `usage.cache_creation` 的 TTL 明细；没有明细的写入按 2× 计）、读取 0.1×（定价页的标准倍率，Fable 5.1、Opus 5.5、Sonnet 5.5 等更低，所以对这些模型是上限）。不新增环境变量。适配器不发送 `cache_control`，正常情况下缓存分项为 0。缺失时与 openai-compatible 相同，只按文本字符估算并标记 `~est`，工具定义、图片与 thinking 不计入，估算不等于账单。
+- 本地协议测试见 `tests/providers/anthropic.test.ts`，未调用真实接口。
 
 ## Usage
 

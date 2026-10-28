@@ -1,4 +1,5 @@
 import { setTimeout as sleep } from 'node:timers/promises'
+import { HTTPS_REQUIRED_MESSAGE, isLocalHost } from '../net'
 import { ProviderError } from './errors'
 
 /** One deadline for the whole call, including retries and local file reads. */
@@ -28,5 +29,97 @@ export function createCallControl(timeoutMs = 45000, external?: AbortSignal) {
     close() {
       clearTimeout(timer)
     },
+  }
+}
+
+/**
+ * Shared endpoint policy for every provider and the env parser. Public hosts need https so
+ * keys and merchant data never cross the network in plain text; Docker Desktop's host alias
+ * is allowed for LLM endpoints only (README: Ollama from a container).
+ */
+export function llmEndpoint(baseUrl: string, path: string): string {
+  let base: URL
+  try {
+    base = new URL(baseUrl)
+  } catch {
+    throw new ProviderError('bad_response', '必须是完整网址')
+  }
+  if (
+    !['http:', 'https:'].includes(base.protocol) ||
+    base.username ||
+    base.password ||
+    base.search ||
+    base.hash
+  )
+    throw new ProviderError('bad_response', '只能是不含用户名、密码、查询参数或锚点的 http(s) 网址')
+  const host = base.hostname.toLowerCase()
+  if (base.protocol !== 'https:' && !isLocalHost(host) && host !== 'host.docker.internal')
+    throw new ProviderError('bad_response', `${HTTPS_REQUIRED_MESSAGE}，或 host.docker.internal`)
+  base.pathname = `${base.pathname.replace(/\/+$/, '')}/${path}`
+  return base.toString()
+}
+
+/** Bound memory while reading, rather than trusting Content-Length. */
+export async function readResponse(response: Response): Promise<string> {
+  if (!response.body) return ''
+  const reader = response.body.getReader()
+  const chunks: Uint8Array[] = []
+  let bytes = 0
+  try {
+    while (true) {
+      const next = await reader.read()
+      if (next.done) break
+      bytes += next.value.byteLength
+      if (bytes > 2 * 1024 * 1024) {
+        await reader.cancel()
+        throw new ProviderError('bad_response')
+      }
+      chunks.push(next.value)
+    }
+    return Buffer.concat(chunks).toString('utf8')
+  } finally {
+    reader.releaseLock()
+  }
+}
+
+/**
+ * Allowlists only: lowercase snake_case error names, and a fixed set of MIME types.
+ * Keys (digits, hyphens), base64 (capitals, digits) and prose cannot match and become "other".
+ */
+const errorName = (value: unknown) =>
+  typeof value === 'string' && /^[a-z][a-z_]{0,39}$/.test(value) ? value : 'other'
+const MIME_TYPES = new Set([
+  'application/json',
+  'application/problem+json',
+  'text/plain',
+  'text/html',
+  'text/event-stream',
+])
+const mimeType = (header: string | null) => {
+  const mime = (header ?? '').split(';')[0]!.trim().toLowerCase()
+  return MIME_TYPES.has(mime) ? mime : 'other'
+}
+
+export function upstreamFailure(
+  response: Response,
+  body: string,
+): { status: number; type?: string; code?: string; contentType?: string } {
+  try {
+    const error = (JSON.parse(body) as { error?: unknown } | null)?.error
+    if (error && typeof error === 'object') {
+      const { type, code } = error as Record<string, unknown>
+      return {
+        status: response.status,
+        ...(type === undefined ? {} : { type: errorName(type) }),
+        ...(code === undefined ? {} : { code: errorName(code) }),
+      }
+    }
+    if (error !== undefined) return { status: response.status }
+  } catch {
+    /* Not JSON: discard the body. */
+  }
+  return {
+    status: response.status,
+    contentType: mimeType(response.headers.get('content-type')),
   }
 }
