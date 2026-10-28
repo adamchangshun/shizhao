@@ -34,7 +34,7 @@ const ID_TOKEN = /(?<![a-z0-9_-])(?=[a-z][-_a-z0-9]{5,19}(?![a-z0-9_-]))[a-z]*[-
 // the number, since no rule tells amounts from accounts reliably. So is one in the next clause
 // when that clause says it is an account ("支付宝收款，账号写在这里 2088…"). "QQ糖" and "QQ音乐" are
 // not cues.
-const ACCOUNT_SERVICE = String.raw`(?:q\s?q(?!\s?(?:糖|音乐))|扣\s?扣|企鹅号|q号|支\s?付\s?宝|alipay|zfb)`
+const ACCOUNT_SERVICE = String.raw`(?:q\s?q(?!\s?(?:糖|音乐))|扣\s?扣|企鹅号|q\s{0,3}号|支\s?付\s?宝|alipay|zfb)`
 const ACCOUNT_WORD = String.raw`(?:号码|号|账号|帐号|账户|id)`
 const ACCOUNT_CUE = `${ACCOUNT_SERVICE}${ACCOUNT_WORD}?`
 const ACCOUNT_DIRECT = new RegExp(`${ACCOUNT_CUE}[\\s:=是为]{0,3}\\d{5,20}(?!\\d)`, 'i')
