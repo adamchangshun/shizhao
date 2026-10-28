@@ -694,6 +694,12 @@ describe('item blurbs cannot borrow another item’s wording (v0.1.1 cross-item)
       expect(recheck(blurbB(sentence), sheet).copy.itemBlurbs.americano).toBe('')
   })
 
+  // Known limitation (review 1 #4, owner's call: no conversion dependency): only the traditional
+  // characters in fact-guard's mapping fold, so with A's tag 凤梨香气 the blurb 鳳梨香氣 still passes.
+  it.todo(
+    'matches traditional characters outside the fact-guard mapping, e.g. 鳳梨香氣 (review 1 #4)',
+  )
+
   it('a re-spaced variant of B’s own, a shared or a page-level text still passes (review 1)', () => {
     const base = w5Sheet()
     const sheet = {
