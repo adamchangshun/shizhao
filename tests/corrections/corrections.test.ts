@@ -334,6 +334,8 @@ describe('customer correction → merchant merge', () => {
       { ...base, field: 'other', suggestedValue: '联系 someone@example.com' },
       // A cue and a number on the next line, right after it, are still an account.
       { ...base, field: 'items.cake01.price', suggestedValue: '138', note: '支付宝\n12345678' },
+      // The cue in one field and the number in the other are checked together.
+      { ...base, field: 'other', suggestedValue: '支付宝账号', note: '12345678' },
     ]
     for (const body of refused) {
       const res = await submit(body)

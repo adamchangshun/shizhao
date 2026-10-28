@@ -77,13 +77,11 @@ export async function submitCorrection(request: Request, now: number = Date.now(
   if (!option.noValue && value === '') {
     throw new ApiError(400, 'value_required', '请填写正确的内容')
   }
-  // Checked with line breaks kept: they end a sentence for the QQ and Alipay rules.
-  if (
-    containsPersonalInfo(sanitizeLines(body.suggestedValue ?? '')) ||
-    containsPersonalInfo(sanitizeLines(body.note ?? ''))
-  ) {
-    throw personalInfo()
-  }
+  // Both free-text fields are checked as one text, so a cue in one and the number in the other
+  // ("支付宝账号" / "12345678") are still seen together. Line breaks are kept: they end a sentence
+  // for the QQ and Alipay rules.
+  const typed = [body.suggestedValue ?? '', body.note ?? ''].join('\n')
+  if (containsPersonalInfo(sanitizeLines(typed))) throw personalInfo()
 
   // Only valid reports count, keyed by the real project: made-up slugs or rejected requests
   // cannot fill the limiter or use up a page's budget. (Without a trusted proxy every visitor
