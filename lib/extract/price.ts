@@ -58,6 +58,24 @@ function escapeRegExp(s: string): string {
   return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
 }
 
+// A name ending in a digit must not run into more digits: in '套餐218元', 套餐2 is not followed by
+// a price of 18 元 (the text may as well mean 套餐 at 218 元).
+const digitBoundary = (name: string): string => (/\d$/.test(name) ? '(?!\\d)' : '')
+
+/**
+ * Where `name`, ending in a digit, runs straight into more digits in the text ('套餐2' in
+ * '套餐218元'). No other name may take a price starting inside such a span (see groundDraft).
+ */
+export function findGluedNames(name: string, text: string): Array<{ at: number; end: number }> {
+  const n = name.normalize('NFKC').trim()
+  if (!/\d$/.test(n)) return []
+  const re = new RegExp(`${escapeRegExp(n)}(?=\\d)`, 'gu')
+  return [...text.normalize('NFKC').matchAll(re)].map((m) => ({
+    at: m.index,
+    end: m.index + m[0].length,
+  }))
+}
+
 export interface TextOffer {
   price: Price
   /** The size written between the name and the price, e.g. '6 寸'. */
@@ -77,7 +95,10 @@ export interface TextOffer {
 export function findTextOffers(name: string, text: string): TextOffer[] {
   const n = name.normalize('NFKC').trim()
   if (n === '') return []
-  const re = new RegExp(`${escapeRegExp(n)}${GAP}(${PRICE_TOKEN})(?![\\d.~\\-])`, 'gu')
+  const re = new RegExp(
+    `${escapeRegExp(n)}${digitBoundary(n)}${GAP}(${PRICE_TOKEN})(?![\\d.~\\-])`,
+    'gu',
+  )
   const offers: TextOffer[] = []
   for (const match of text.normalize('NFKC').matchAll(re)) {
     const price = normalizePrice(match[2]!)

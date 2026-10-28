@@ -181,6 +181,12 @@ describe('findTextPrice', () => {
     expect(performance.now() - start).toBeLessThan(50)
   })
 
+  it('does not let a name ending in a digit run into the price digits', () => {
+    expect(findTextOffers('套餐2', '套餐218元')).toEqual([])
+    expect(findTextOffers('套餐2', '套餐2 18元').map((o) => o.price.amount)).toEqual([18])
+    expect(findTextOffers('拿铁', '拿铁18元').map((o) => o.price.amount)).toEqual([18])
+  })
+
   it('lists every price a name is followed by, in order', () => {
     expect(findTextOffers('拿铁', '拿铁 18元，冰拿铁 20元').map((o) => o.price.amount)).toEqual([
       18, 20,

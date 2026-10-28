@@ -118,12 +118,16 @@ describe('groundDraft: prices', () => {
     expect(out.lowConfidenceFields).toContain('items[1].price')
   })
 
-  it('counts a price as taken when it is written right after a name ending in a digit', () => {
-    // '套餐218元' is 套餐2 at 18 元; the amount reader sees 218 元 over the same characters.
+  it('gives no price to a name ending in a digit that runs into more digits (套餐2 in 套餐218元)', () => {
+    // The text may mean 套餐2 at 18 元 or 套餐 at 218 元: no price, and the merchant is asked.
     const d = draft({ items: [{ name: '套餐2' }, { name: '美式' }] })
     const out = groundDraft(d, ctx('套餐218元，美式', []))
-    expect(out.items[0]!.price?.amount).toBe(18)
-    expect(out.lowConfidenceFields).not.toContain('items[1].price')
+    expect(out.items[0]!.price).toBeUndefined()
+    expect(out.lowConfidenceFields).toContain('items[0].price')
+    // Written apart, the price is 套餐2's and the amount is taken.
+    const apart = groundDraft(d, ctx('套餐2 18元，美式', []))
+    expect(apart.items[0]!.price?.amount).toBe(18)
+    expect(apart.lowConfidenceFields).not.toContain('items[1].price')
   })
 
   it('does not flag a missing price for a number inside a code (编号RMB123abc)', () => {

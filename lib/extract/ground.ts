@@ -2,6 +2,7 @@ import { ApiError } from '../core/errors'
 import { newId } from '../core/ids'
 import { FactItem, Price, Shop, type FactSource } from '../core/schemas'
 import {
+  findGluedNames,
   findLineOffers,
   findTextAmounts,
   findTextOffers,
@@ -190,7 +191,7 @@ export function groundDraft(model: ModelDraft, ctx: GroundingContext): GroundedD
   const items: FactItem[] = []
   const seen = new Set<string>()
   const allOffers = allTextOffers(model, ctx.merchantText)
-  const offersOf = ownedOffers(allOffers)
+  const offersOf = ownedOffers(allOffers, ctx.merchantText)
   const lineOf = hasImages
     ? linesForImageNames(model, ctx.merchantText, allOffers, inText)
     : new Map<number, LineOffer>()
@@ -280,7 +281,7 @@ export function groundDraft(model: ModelDraft, ctx: GroundingContext): GroundedD
   // An amount the merchant wrote that no item took (e.g. a price after words the code does not
   // read as a size) may be a price the code missed: every item left without a price is flagged
   // so the confirm page asks the merchant to check it.
-  // Overlap, not equal start: in '套餐218元' item 套餐2 takes 18元 while the amount reader sees 218元.
+  // Overlap, not equal start: an offer and the amount reader may start a price at different digits.
   const isTaken = (a: { at: number; end: number }) =>
     taken.some((o) => a.at < o.end && o.at < a.end)
   if (findTextAmounts(ctx.merchantText).some((a) => !isTaken(a))) {
@@ -325,13 +326,20 @@ function allTextOffers(model: ModelDraft, text: string): Map<string, TextOffer[]
 
 /**
  * Each written price goes only to the longest name it follows: in '拿铁\n燕麦拿铁 25元' the 25
- * is 燕麦拿铁's, not also 拿铁's. When names read the same characters as different prices
- * ('套餐218元': 套餐 at 218 元 or 套餐2 at 18 元), the price goes to none of them.
+ * is 燕麦拿铁's, not also 拿铁's. When names read overlapping characters as different prices, the
+ * price goes to none of them; so it does when it starts inside a name that runs into it: in
+ * '套餐218元' 套餐 is not given 218 元 while the draft also has 套餐2 (which findTextOffers never
+ * gives 18 元), since the text may mean either.
  */
-function ownedOffers(all: ReadonlyMap<string, TextOffer[]>): Map<string, TextOffer[]> {
+function ownedOffers(
+  all: ReadonlyMap<string, TextOffer[]>,
+  text: string,
+): Map<string, TextOffer[]> {
   const len = (name: string) => [...name.normalize('NFKC').trim()].length
+  const glued = [...all.keys()].flatMap((name) => findGluedNames(name, text))
   const entries = [...all]
     .flatMap(([name, offers]) => offers.map((offer) => ({ offer, len: len(name) })))
+    .filter(({ offer }) => !glued.some((g) => g.at < offer.at && offer.at < g.end))
     .sort((a, b) => a.offer.at - b.offer.at)
   const kept = new Set<TextOffer>()
   // Sweep over groups of overlapping prices.
