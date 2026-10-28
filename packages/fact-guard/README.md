@@ -71,15 +71,15 @@ Global numeric and matched-term grounding does not establish which product a cla
 
 ### 隐形字符 / Invisible characters
 
-Unicode 格式控制字符（Cf，包括零宽字符）无论位置和数量均删除；命中范围仍指向原文 UTF-16 偏移。可见干扰字符仍只在两个汉字之间连续不超过 3 个时删除。
+Unicode 格式控制字符（Cf）及 Default_Ignorable_Code_Point（默认可忽略码点，包括零宽字符、组合字素连接符、变体选择符与填充符）无论位置和数量均删除；命中范围仍指向原文 UTF-16 偏移。可见干扰字符仍只在两个汉字之间连续不超过 3 个时删除。
 
-Unicode format controls (Cf, including zero-width characters) are removed at every position without a run-length limit. Hit ranges retain original UTF-16 offsets. Visible interference is still removed only in runs of at most three characters between Han characters.
+Unicode format controls (Cf) and Default_Ignorable_Code_Point characters (including zero-width characters, the combining grapheme joiner, variation selectors and fillers) are removed at every position without a run-length limit. Hit ranges retain original UTF-16 offsets. Visible interference is still removed only in runs of at most three characters between Han characters.
 
 ### Unicode 兼容规范化 / Unicode compatibility normalization
 
-去掉格式控制字符后，按字素簇做 NFKC，再执行现有繁简映射和大小写折叠。「𝟙𝟡元」等兼容数字会识别为价格；展开或合成出的字符映射至整个原文字素簇，位置仍为 UTF-16 偏移。NFKC 不是完整语义校验，也不提供完整繁简转换。
+去掉上述不可见字符后，按字素簇做 NFKC，再执行现有繁简映射和大小写折叠。「𝟙𝟡元」等来源字素属于 Nd 的兼容数字会识别为价格；由 No／So 符号展开的数字不作为独立数字，㎡／㎥ 的展开结果整体按单位处理。展开或合成出的字符映射至整个原文字素簇，位置仍为 UTF-16 偏移。NFKC 不是完整语义校验，也不提供完整繁简转换。
 
-After removing format controls, NFKC runs on grapheme clusters before the existing limited traditional-character mapping and lowercasing. Compatibility digits such as “𝟙𝟡元” are recognized as prices. Expanded or composed characters map to the complete original grapheme cluster using UTF-16 offsets. This is neither complete semantic validation nor full traditional-to-simplified conversion.
+After removing those invisible characters, NFKC runs on grapheme clusters before the existing limited traditional-character mapping and lowercasing. Compatibility digits such as “𝟙𝟡元” are recognized as prices when their source graphemes contain Nd characters. Digits expanded from No or So symbols are not independent numbers, and expansions of ㎡ or ㎥ are treated as complete units. Expanded or composed characters map to the complete original grapheme cluster using UTF-16 offsets. This is neither complete semantic validation nor full traditional-to-simplified conversion.
 
 ### 限定修辞 / Limited-edition metaphor
 

@@ -84,8 +84,13 @@ export interface NormalizedText {
 }
 const graphemes = new Intl.Segmenter('und', { granularity: 'grapheme' })
 const han = /\p{Script=Han}/u
+const ignorable = /^(?:\p{Cf}|\p{Default_Ignorable_Code_Point})$/u
 const interference =
   /^[\s\u200b-\u200f\u2060\ufeff*·~._\-+^|/\\#@]|\p{Extended_Pictographic}|[\ufe0e\ufe0f]$/u
+
+export function isIgnorable(char: string): boolean {
+  return ignorable.test(char)
+}
 
 function normalizeCompatibility(segment: string): string {
   let output = '',
@@ -110,7 +115,7 @@ export function normalizeText(input: string): NormalizedText {
     sourceEnds: number[] = []
   let offset = 0
   for (const char of input) {
-    if (!/^\p{Cf}$/u.test(char)) {
+    if (!isIgnorable(char)) {
       visible += char
       for (let i = 0; i < char.length; i++) {
         sourceStarts.push(offset)
