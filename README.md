@@ -234,6 +234,8 @@ pnpm eval:extract && pnpm eval:compare && pnpm eval:guard && pnpm eval:report
 
 ## 已知限制
 
+- 02/07：模型请求按场景限制输出 token；事实守卫删除任意位置的 Unicode Cf 与 Default_Ignorable_Code_Point 字符，并做带原文位置映射的 NFKC。天气保存谓语和限定修辞已有补强，但天气中的「新鲜／烘焙」及营业时刻中的「活动／结束」仍可能误拦；有限规则不能覆盖全部语义，详见 [fact-guard README](packages/fact-guard/README.md)。
+
 - F1：商品名和价格之间夹着规格时（如『巴斯克芝士蛋糕 6 寸 128 元』）会漏抽价格，计划在 v0.1.1 修复。在此之前，请在确认事实表前逐项核对并补上价格。
 
 ## 如何构建的

@@ -76,3 +76,9 @@ Mock 是固定数据演示，不执行任意业务提示词。批量 judge/rewri
 `pnpm typecheck && pnpm lint && pnpm test`；聚焦本模块可运行 `pnpm exec vitest run tests/providers/provider.test.ts`。
 
 本机 Ollama 真实 extract 的结果与其是否含图片详见未提交的 `CODEX_REVIEW_SUMMARY.md`。云端模型没有在本次任务中付费试调；本地协议测试通过不等于云端兼容验收。Claude 交叉审查按项目双模型协作规则另行执行。
+
+## 输出预算 / Output budgets
+
+每次请求（包括网络重试、格式降级和 schema 修正）都带 `max_tokens`：extract 8192、design 1024、copy 4096、guard-judge 8192、guard-rewrite 4096；未知 stage 2048。`profiles.ts` 的 `maxOutputTokens` 可按 profile 覆盖；Ollama extract 为 4096。上限是每次请求的输出预算，不是整项任务或账单上限；截断后仍走原有 JSON/schema 校验，不接受不完整数据。未进行真实模型额度或大批量完整性验收。
+
+Every request, including retries, format fallback and schema repair, carries `max_tokens`: extract 8192, design 1024, copy 4096, guard-judge 8192, guard-rewrite 4096, and 2048 for unknown stages. Profiles can override individual stages through `maxOutputTokens` in `profiles.ts`; Ollama extract uses 4096. These are per-request output budgets, not task or billing caps. Truncated output still has to pass JSON/schema validation. Real-model quota and large-batch completeness have not been validated.

@@ -68,3 +68,31 @@ Global numeric and matched-term grounding does not establish which product a cla
 - [houbb/sensitive-word](https://github.com/houbb/sensitive-word)（Apache-2.0）
 - [humingzhang/wordfilter](https://gitee.com/humingzhang/wordfilter)（Apache-2.0）
 - [cn2an](https://github.com/Ailln/cn2an)（MIT）
+
+### 隐形字符 / Invisible characters
+
+Unicode 格式控制字符（Cf）及 Default_Ignorable_Code_Point（默认可忽略码点，包括零宽字符、组合字素连接符、变体选择符与填充符）无论位置和数量均删除；命中范围仍指向原文 UTF-16 偏移。可见干扰字符仍只在两个汉字之间连续不超过 3 个时删除。
+
+Unicode format controls (Cf) and Default_Ignorable_Code_Point characters (including zero-width characters, the combining grapheme joiner, variation selectors and fillers) are removed at every position without a run-length limit. Hit ranges retain original UTF-16 offsets. Visible interference is still removed only in runs of at most three characters between Han characters.
+
+### Unicode 兼容规范化 / Unicode compatibility normalization
+
+去掉上述不可见字符后，按字素簇做 NFKC，再执行现有繁简映射和大小写折叠。「𝟙𝟡元」等来源字素属于 Nd 的兼容数字会识别为价格；由 No／So 符号展开的数字不作为独立数字，㎡／㎥ 的展开结果整体按单位处理。展开或合成出的字符映射至整个原文字素簇，位置仍为 UTF-16 偏移。NFKC 不是完整语义校验，也不提供完整繁简转换。
+
+After removing those invisible characters, NFKC runs on grapheme clusters before the existing limited traditional-character mapping and lowercasing. Compatibility digits such as “𝟙𝟡元” are recognized as prices when their source graphemes contain Nd characters. Digits expanded from No or So symbols are not independent numbers, and expansions of ㎡ or ㎥ are treated as complete units. Expanded or composed characters map to the complete original grapheme cluster using UTF-16 offsets. This is neither complete semantic validation nor full traditional-to-simplified conversion.
+
+### 限定修辞 / Limited-edition metaphor
+
+「限定的温柔」「把限定的温柔留给你」只在独立分句中豁免；供应、商品款式等前后文不再借该短语放行，真实声明仍可由事实表支持。M8 的慢烤工艺前后文已有修复；M9 的同分句促销时刻仍要求完整事实依据。
+
+“限定的温柔” and “把限定的温柔留给你” are exempt only as standalone clauses. Product or availability context cannot borrow that metaphor; actual merchant facts still provide evidence. The earlier slow-roasting context fix and complete-fact requirement for promotional clocks remain in force.
+
+### 天气与时间边界 / Weather and clock boundaries
+
+LOW-3 的六句保存／醒发反例已补强：天气后缀同分句中的「也能存放／长久储存／久放」「也不变质」「慢慢醒发」「静置一夜」仍须低温事实，且不越过下一处「低温」。这只是列举的谓语，不保证覆盖所有同义词。
+
+LOW-1/2 暂保留：如「低温天气里来杯新鲜果汁」「低温天里来麦香烘焙坐坐」，以及「7:30开门开启生活动力」「7:30开门迎接周末活动」「忙完工作结束后19:00前来坐坐」，仍可能保守拦截。单纯删除「新鲜／烘焙／活动／结束」会重新放开同分句工艺或促销声明；本次不以放宽这些规则换取局部放行。可拆成独立分句或提供真实完整事实。未验证真实模型是否能消除此类歧义。
+
+The six LOW-3 storage/proofing examples now require temperature evidence for the listed predicates in the same weather clause, stopping before the next temperature occurrence. This finite list does not cover every synonym.
+
+LOW-1/2 remain conservative: fresh-juice or bakery-name weather clauses and clock clauses containing “生活动力”, “周末活动”, or “工作结束” can still be blocked. Removing the broad fresh/baking/event/end signals would reopen process or promotional claims in the same clause; this change does not relax those signals. Separate clauses or complete truthful merchant facts can resolve the examples. Real-model disambiguation has not been validated.

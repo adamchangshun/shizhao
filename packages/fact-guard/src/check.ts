@@ -1,6 +1,6 @@
 import { extractNumbers } from './cn-number.js'
 import { displayFactRanges, numberEvidence } from './grounding.js'
-import { normalizeText, originalSpan, type NormalizedText } from './normalize.js'
+import { isIgnorable, normalizeText, originalSpan, type NormalizedText } from './normalize.js'
 import { defaultRules } from './rules/index.js'
 import type { FactCorpus, RuleHit, RuleSet } from './types.js'
 
@@ -39,7 +39,7 @@ function patternRanges(
         // Context must pass on the normalized sentence first. Then allow horizontal spaces
         // only if the same pattern explicitly matches the original, character-folded span.
         const literal = [...sentence.slice(span.start, span.end)]
-          .map((char) => normalizeText(char).text)
+          .map((char) => (isIgnorable(char) ? char : normalizeText(char).text))
           .join('')
         return (
           literal.replace(/[ \t]/gu, '') === match[0].replace(/[ \t]/gu, '') &&

@@ -82,28 +82,59 @@ export interface NormalizedText {
   starts: number[]
   ends: number[]
 }
+const graphemes = new Intl.Segmenter('und', { granularity: 'grapheme' })
 const han = /\p{Script=Han}/u
+const ignorable = /^(?:\p{Cf}|\p{Default_Ignorable_Code_Point})$/u
 const interference =
   /^[\s\u200b-\u200f\u2060\ufeff*·~._\-+^|/\\#@]|\p{Extended_Pictographic}|[\ufe0e\ufe0f]$/u
+
+export function isIgnorable(char: string): boolean {
+  return ignorable.test(char)
+}
+
+function normalizeCompatibility(segment: string): string {
+  let output = '',
+    pending = ''
+  for (const char of segment) {
+    if (char !== '\u2025' && char !== '\u2026') {
+      pending += char
+      continue
+    }
+    output += pending.normalize('NFKC') + char
+    pending = ''
+  }
+  return output + pending.normalize('NFKC')
+}
 
 /** Normalize with an explicit mapping; removed interference stays within matched source spans. */
 export function normalizeText(input: string): NormalizedText {
   const tokens: Array<{ text: string; start: number; end: number }> = []
+  // Remove controls before segmentation so they cannot split a combining sequence.
+  let visible = ''
+  const sourceStarts: number[] = [],
+    sourceEnds: number[] = []
   let offset = 0
   for (const char of input) {
-    const point = char.codePointAt(0)!
-    const half =
-      point >= 0xff01 && point <= 0xff5e
-        ? String.fromCodePoint(point - 0xfee0)
-        : char === '\u3000'
-          ? ' '
-          : char
-    tokens.push({
-      text: (simplified[half] ?? half).toLowerCase(),
-      start: offset,
-      end: offset + char.length,
-    })
+    if (!isIgnorable(char)) {
+      visible += char
+      for (let i = 0; i < char.length; i++) {
+        sourceStarts.push(offset)
+        sourceEnds.push(offset + char.length)
+      }
+    }
     offset += char.length
+  }
+  for (const { segment, index } of graphemes.segment(visible)) {
+    // Normalize whole graphemes for canonical composition as well as compatibility
+    // expansion, except horizontal ellipses that must not become clause-boundary dots.
+    // Every resulting code unit maps to the complete source cluster.
+    for (const char of normalizeCompatibility(segment)) {
+      tokens.push({
+        text: (simplified[char] ?? char).toLowerCase(),
+        start: sourceStarts[index]!,
+        end: sourceEnds[index + segment.length - 1]!,
+      })
+    }
   }
   const kept: typeof tokens = []
   for (let i = 0; i < tokens.length; i++) {

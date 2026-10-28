@@ -5,7 +5,7 @@ import type { Usage } from '../core/schemas'
 import { createCallControl } from './control'
 import { ProviderError } from './errors'
 import { extractJSON } from './json'
-import { PROFILE_CAPABILITIES, type LLMProfile } from './profiles'
+import { PROFILE_CAPABILITIES, outputTokenLimit, type LLMProfile } from './profiles'
 import type { GenerateJSONRequest, LLMProvider } from './types'
 
 export interface OpenAICompatibleOptions {
@@ -214,6 +214,7 @@ export class OpenAICompatibleProvider implements LLMProvider {
           messages,
           temperature: req.temperature ?? 0.7,
           stream: false,
+          max_tokens: outputTokenLimit(this.profile, req.stage),
           ...(capabilities.seed && req.seed !== undefined ? { seed: req.seed } : {}),
           ...(format ? { response_format: { type: 'json_object' } } : {}),
         }

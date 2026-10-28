@@ -6,7 +6,9 @@ const weatherTail = '(?=$|[，。！？；、,.!?;：:\\r\\n]|里|中|时|下|�
 const weatherContext = `(?:(?!低温)${clause})*`
 const weatherProcess = '发酵|保鲜|冷藏|新鲜|烘焙|熟成|冷冻|保存|萃取|加工|熏制|风干|醒面|慢煮'
 const weatherLead = `(?<!(?:模拟|仿照|控制|维持|调至|设为|恒定|冷库|${weatherProcess})${clause}{0,60})`
-const weatherProcessTail = `(?!${weatherContext}(?:${weatherProcess}))`
+// Narrow predicates from the reported storage regressions, not general mood words.
+const storagePredicate = '也能(?:存放|长久储存|久放)|也不变质|慢慢醒发|静置一夜'
+const weatherProcessTail = `(?!${weatherContext}(?:${weatherProcess}|${storagePredicate}))`
 const slowProcessLead = `(?<!(?:经|采用|使用|坚持|都是|均为|用(?!心)|通过|靠|(?<!所)以|全程|每一?(?:块|份|个))${clause}{0,60})`
 
 export const defaultRules: RuleSet = {
@@ -111,7 +113,10 @@ export const defaultRules: RuleSet = {
       id: 'positioning',
       reason: 'unsupported_claim',
       terms: ['招牌', '热销', '人气', '必点', '限量', '限定', '本周限定', '新鲜出炉'],
-      whitelist: ['招牌笑容', '限定的温柔'],
+      whitelist: ['招牌笑容'],
+      whitelistPatterns: [
+        '(?:^|(?<=[，。！？；、,.!?;：:\\r\\n]))(?:把)?限定的温柔(?:留给你)?(?=$|[，。！？；、,.!?;：:\\r\\n])',
+      ],
     },
     {
       id: 'effects',

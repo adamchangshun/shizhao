@@ -37,6 +37,12 @@ const units =
   '小时|分钟|千克|公斤|毫升|年|天|月|日|元|块钱|角|分|寸|米|种|个|份|杯|碗|块|口|次|人|件|倍|成|折|价|kg|ml|g|%'
 const valuePattern = `(?:[0-9]+(?:\\.[0-9]+)?(?:万|亿)?|[${numericChars}]+(?:[点.][${cnDigits}0-9]+)?)`
 
+function numberText(input: string, normalized: ReturnType<typeof normalizeText>): string {
+  return normalized.text.replace(/[0-9]/g, (digit, index) =>
+    /\p{Nd}/u.test(input.slice(normalized.starts[index], normalized.ends[index])) ? digit : '\ufffd',
+  )
+}
+
 function integer(text: string): number | null {
   if (/^\d+$/.test(text)) return Number(text)
   if (text === '半') return 0.5
@@ -92,8 +98,9 @@ function numericValue(text: string): number | null {
 /** Parses exactly one complete expression. Percentages use 90 + '%' (not 0.9). */
 export function parseCnNumber(input: string): ParsedNumber | null {
   const normalized = normalizeText(input)
-  const currency = /^[¥￥]\s*/u.exec(normalized.text)
-  const expression = currency ? normalized.text.slice(currency[0].length) : normalized.text
+  const numericText = numberText(input, normalized)
+  const currency = /^[¥￥]\s*/u.exec(numericText)
+  const expression = currency ? numericText.slice(currency[0].length) : numericText
   const match = new RegExp(`^(百分之)?(${valuePattern})\\s*(${units})?$`, 'u').exec(expression)
   if (!match) return null
   let value = numericValue(match[2]!)
@@ -120,12 +127,13 @@ export function parseCnNumber(input: string): ParsedNumber | null {
 /** Extract numerical claims, leaving idiomatic Chinese quantities to whitelists/context. */
 export function extractNumbers(input: string): ParsedNumber[] {
   const normalized = normalizeText(input)
+  const numericText = numberText(input, normalized)
   const pattern = new RegExp(
     `(?:[¥￥]\\s*${valuePattern}(?:\\s*(?:元|块钱|块))?|百分之${valuePattern}|${valuePattern}\\s*(?:${units})|[0-9]+(?:\\.[0-9]+)?(?:万|亿)?|[${numericChars}]+)`,
     'gu',
   )
   const output: ParsedNumber[] = []
-  for (const match of normalized.text.matchAll(pattern)) {
+  for (const match of numericText.matchAll(pattern)) {
     const parsed = parseCnNumber(match[0])
     if (!parsed) continue
     // Bare Arabic "128块" is a colloquial price; "128块蛋糕" is a piece count.
@@ -157,7 +165,7 @@ export function extractNumbers(input: string): ParsedNumber[] {
     output.push({ ...parsed, ...span, raw: input.slice(span.start, span.end) })
   }
   // Standalone Chinese numbers are useful corpus entries and explicit numerical text.
-  if (output.length === 0 && new RegExp(`^[${numericChars}]+$`, 'u').test(normalized.text)) {
+  if (output.length === 0 && new RegExp(`^[${numericChars}]+$`, 'u').test(numericText)) {
     const parsed = parseCnNumber(input)
     if (parsed) output.push(parsed)
   }
