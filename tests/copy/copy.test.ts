@@ -618,6 +618,16 @@ describe('item blurbs cannot borrow another item’s wording (v0.1.1 cross-item)
       expect(recheck(blurbB(sentence), sheet).copy.itemBlurbs.americano).toBe(sentence)
   })
 
+  it('a one-character tag of A is borrowing only as a whole sentence (review 2 #3)', () => {
+    const base = w5Sheet()
+    // 𠮷 is one code point but two UTF-16 units; it must count as one character too.
+    const sheet = { ...base, items: [{ ...base.items[0]!, tags: ['辣', '𠮷'] }, base.items[1]!] }
+    for (const sentence of ['辣。', '辣！', ' 辣 。', '𠮷。'])
+      expect(recheck(blurbB(sentence), sheet).copy.itemBlurbs.americano).toBe('')
+    for (const sentence of ['麻辣。', '辣得过瘾。', '𠮷野家风味。'])
+      expect(recheck(blurbB(sentence), sheet).copy.itemBlurbs.americano).toBe(sentence)
+  })
+
   it('a tag both items carry is not borrowing; the same tag on A alone is', () => {
     const base = w5Sheet()
     const shared = {

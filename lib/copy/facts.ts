@@ -151,8 +151,10 @@ export function crossItemBorrowing(
     if (!isPath(i, /^items\..+\.(?:spec|description|tags\.\d+)$/)) continue
     for (const piece of splitSentences(fact)) {
       const word = canonical(piece).text
-      // Single characters are too common to identify another item's wording.
-      if (word.length < 2 || support.some((source) => affirmed(source, word))) continue
+      if (!word || support.some((source) => affirmed(source, word))) continue
+      // A single character ("辣") is too common inside other words ("麻辣") to identify another
+      // item's wording, so it counts only as the whole sentence.
+      if ([...word].length === 1 && text.text !== word) continue
       if (affirmed(text, word, (start) => inName(start, start + word.length)))
         return piece.replace(/[。！？；!?;\s]+$/u, '').trim()
     }
