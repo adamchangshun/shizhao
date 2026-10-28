@@ -39,8 +39,11 @@ const tokenUsage = z.object({
 })
 const envelopeSchema = z.object({
   content: z.array(z.object({ type: z.string() }).passthrough()).min(1),
+  stop_reason: z.string().nullish(),
   usage: z.unknown().optional(),
 })
+// Truncated or refused turns may carry partial tool input; never accept or repair them.
+const unusableStops = new Set(['max_tokens', 'model_context_window_exceeded', 'refusal'])
 const toolUseSchema = z.object({
   type: z.literal('tool_use'),
   id: z.string().min(1),
@@ -211,6 +214,7 @@ export class AnthropicProvider implements LLMProvider {
         } catch {
           throw new ProviderError('bad_response')
         }
+        if (unusableStops.has(envelope.stop_reason ?? '')) throw new ProviderError('bad_response')
         const text = envelope.content
           .map((b) => (b.type === 'text' && typeof b.text === 'string' ? b.text : ''))
           .join('')

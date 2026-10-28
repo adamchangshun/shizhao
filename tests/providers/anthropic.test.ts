@@ -61,6 +61,7 @@ function reply(
   res: ServerResponse,
   content: unknown[] = [toolUse({ result: { answer: 'ok' } })],
   usage: unknown = { input_tokens: 1000, output_tokens: 300, cache_read_input_tokens: 200 },
+  stopReason = 'tool_use',
 ) {
   res.setHeader('Content-Type', 'application/json')
   res.end(
@@ -69,7 +70,7 @@ function reply(
       type: 'message',
       role: 'assistant',
       content,
-      stop_reason: 'tool_use',
+      stop_reason: stopReason,
       ...(usage === null ? {} : { usage }),
     }),
   )
@@ -198,6 +199,18 @@ describe('Anthropic Messages provider HTTP boundary', () => {
     expect(results[0]!.content).toContain('answer: invalid_type')
     expect(results[0]!.content).not.toContain('42')
   })
+  it.each(['max_tokens', 'model_context_window_exceeded', 'refusal'])(
+    'rejects a %s turn without accepting or repairing its tool input',
+    async (stopReason) => {
+      const server = await serve((_, res) =>
+        reply(res, [toolUse({ result: { answer: 'ok' } })], undefined, stopReason),
+      )
+      await expect(provider(server.baseUrl).generateJSON(request)).rejects.toMatchObject({
+        code: 'bad_response',
+      })
+      expect(server.bodies).toHaveLength(1)
+    },
+  )
   it('fails after exactly two schema mismatches', async () => {
     const server = await serve((_, res) => reply(res, [toolUse({ result: { answer: 1 } })]))
     await expect(provider(server.baseUrl).generateJSON(request)).rejects.toMatchObject({
