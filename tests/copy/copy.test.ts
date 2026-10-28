@@ -640,6 +640,24 @@ describe('item blurbs cannot borrow another item’s wording (v0.1.1 cross-item)
     expect(recheck(blurbB('不加糖。加糖。'), sheet).copy.itemBlurbs.americano).toBe('不加糖。')
   })
 
+  it('punctuation ends a negation, so "不，<A’s tag>" is still borrowing (review 2 #1)', () => {
+    for (const sentence of [
+      '不，燕麦奶可选。',
+      '不,燕麦奶可选。',
+      '不、燕麦奶可选。',
+      '不 —— 燕麦奶可选。',
+    ])
+      expect(recheck(blurbB(sentence)).copy.itemBlurbs.americano).toBe('')
+    // Only spaces and zero-width characters may sit between the negation and the wording.
+    for (const sentence of [
+      '不燕麦奶可选。',
+      '不 燕麦奶可选。',
+      '不​燕麦奶可选。',
+      '没有燕麦奶可选。',
+    ])
+      expect(recheck(blurbB(sentence)).copy.itemBlurbs.americano).toBe(sentence)
+  })
+
   it('matches across spaces, full-width letters, zero-width characters, punctuation and mapped traditional characters', () => {
     for (const sentence of ['燕麦奶 可选。', '燕麦奶，可选。', '燕麦奶​可选。', '燕麥奶可選。'])
       expect(recheck(blurbB(sentence)).copy.itemBlurbs.americano).toBe('')

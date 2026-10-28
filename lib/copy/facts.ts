@@ -64,9 +64,41 @@ export function fieldCorpus<T extends FactCorpus>(corpus: T, field: string): T {
   return { ...corpus, facts: kept.map(([fact]) => fact), paths: kept.map(([, path]) => path) }
 }
 
-/** Letters and digits only, after NFKC and fact-guard folding; hits and support share it. */
-function canonical(text: string): string {
-  return normalizeText(text.normalize('NFKC')).text.replace(/[^\p{L}\p{N}]/gu, '')
+/**
+ * Letters and digits only, after NFKC and fact-guard folding; hits and support share it.
+ * `cut[k]` marks anything but spaces and zero-width characters (punctuation, symbols, folded-away
+ * interference) between `text[k - 1]` and `text[k]` in the source, so checks that need adjacency
+ * can still see the boundaries the canonical text drops.
+ */
+interface Canonical {
+  text: string
+  cut: boolean[]
+}
+function canonical(raw: string): Canonical {
+  const source = raw.normalize('NFKC')
+  const folded = normalizeText(source)
+  let text = '',
+    last = -1,
+    i = 0
+  const cut: boolean[] = []
+  for (const char of folded.text) {
+    const start = folded.starts[i]!,
+      end = folded.ends[i]!
+    i += char.length
+    if (!/[\p{L}\p{N}]/u.test(char)) continue
+    const gap = last < 0 ? '' : source.slice(last, Math.max(last, start))
+    cut.push(
+      /[^\s\u200b-\u200f\u2060\ufeff]/u.test(gap),
+      ...Array<boolean>(char.length - 1).fill(false),
+    )
+    text += char
+    last = Math.max(last, end)
+  }
+  return { text, cut }
+}
+/** No boundary inside `text[from, to)`. */
+function joined(form: Canonical, from: number, to: number): boolean {
+  return !form.cut.slice(from + 1, to).includes(true)
 }
 function occurrences(text: string, word: string): number[] {
   const starts: number[] = []
@@ -74,7 +106,14 @@ function occurrences(text: string, word: string): number[] {
   return starts
 }
 // A negated mention ("不加糖" next to another item's "加糖") does not repeat that item's claim.
-const negated = /(?:不是|并非|不含|没有|非|不|未)$/u
+// Only spaces and zero-width characters may separate the two: "不，燕麦奶可选" affirms it.
+const negations = ['不是', '并非', '不含', '没有', '非', '不', '未']
+function negated(form: Canonical, start: number): boolean {
+  return negations.some(
+    (word) =>
+      form.text.slice(0, start).endsWith(word) && joined(form, start - word.length, start + 1),
+  )
+}
 
 /**
  * The other item's wording that an `itemBlurbs.<id>` sentence repeats, or undefined. Candidates
@@ -96,20 +135,18 @@ export function crossItemBorrowing(
   const isPath = (i: number, pattern: RegExp) => pattern.test(corpus.paths?.[i] ?? '')
   const names = corpus.facts
     .filter((fact, i) => isPath(i, /^items\..+\.name$/))
-    .map(canonical)
+    .map((name) => canonical(name).text)
     .filter(Boolean)
   const inName = (start: number, end: number) =>
     names.some((name) =>
-      occurrences(text, name).some((left) => left <= start && end <= left + name.length),
+      occurrences(text.text, name).some((left) => left <= start && end <= left + name.length),
     )
-  const affirmed = (source: string, word: string, exempt?: (start: number) => boolean) =>
-    occurrences(source, word).some(
-      (start) => !negated.test(source.slice(0, start)) && !exempt?.(start),
-    )
+  const affirmed = (source: Canonical, word: string, exempt?: (start: number) => boolean) =>
+    occurrences(source.text, word).some((start) => !negated(source, start) && !exempt?.(start))
   for (const [i, fact] of corpus.facts.entries()) {
     if (!isPath(i, /^items\..+\.(?:spec|description|tags\.\d+)$/)) continue
     for (const piece of splitSentences(fact)) {
-      const word = canonical(piece)
+      const word = canonical(piece).text
       // Single characters are too common to identify another item's wording.
       if (word.length < 2 || support.some((source) => affirmed(source, word))) continue
       if (affirmed(text, word, (start) => inName(start, start + word.length)))
