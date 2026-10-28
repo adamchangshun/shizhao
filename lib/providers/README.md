@@ -29,14 +29,14 @@ recordUsage(db, result.usage, { projectId, jobId })
 
 工厂复用 `getEnv()`，默认 Mock。设置 `PROVIDER=openai-compatible` 后，端点、文本/视觉模型名和价格全部来自 `LLM_*` 环境变量。API Key 为空时不发送 Authorization。`LLM_PROFILE` 未设时使用 `generic`。
 
-| profile  | 图片                                | seed               | response_format                | ETA 倍数 |
-| -------- | ----------------------------------- | ------------------ | ------------------------------ | -------: |
-| qwen     | OpenAI `image_url: {url: data URL}` | 支持，0–2147483647 | JSON mode，拒绝时降级一次      |        1 |
-| glm      | OpenAI `image_url: {url: data URL}` | 不发送             | JSON mode，拒绝时降级一次      |        1 |
-| deepseek | 本项目契约限定为文本                | 不发送             | JSON mode，拒绝时降级一次      |        1 |
-| ollama   | 需要本机模型支持视觉；WebP 转 PNG   | 支持               | 不发送，使用提示词约束         |        3 |
-| generic  | 未验证接口只允许文本                | 不发送             | 尝试 JSON mode，拒绝时降级一次 |        1 |
-| anthropic（`PROVIDER=anthropic`，不读 `LLM_PROFILE`） | Messages base64 `image` 块，WebP/PNG/JPEG 原样 | 不发送 | 强制调用 `submit_json` 工具，模型拒绝强制 tool_choice 时降级为 `auto` 一次 | 1 |
+| profile                                               | 图片                                           | seed               | response_format                                                            | ETA 倍数 |
+| ----------------------------------------------------- | ---------------------------------------------- | ------------------ | -------------------------------------------------------------------------- | -------: |
+| qwen                                                  | OpenAI `image_url: {url: data URL}`            | 支持，0–2147483647 | JSON mode，拒绝时降级一次                                                  |        1 |
+| glm                                                   | OpenAI `image_url: {url: data URL}`            | 不发送             | JSON mode，拒绝时降级一次                                                  |        1 |
+| deepseek                                              | 本项目契约限定为文本                           | 不发送             | JSON mode，拒绝时降级一次                                                  |        1 |
+| ollama                                                | 需要本机模型支持视觉；WebP 转 PNG              | 支持               | 不发送，使用提示词约束                                                     |        3 |
+| generic                                               | 未验证接口只允许文本                           | 不发送             | 尝试 JSON mode，拒绝时降级一次                                             |        1 |
+| anthropic（`PROVIDER=anthropic`，不读 `LLM_PROFILE`） | Messages base64 `image` 块，WebP/PNG/JPEG 原样 | 不发送             | 强制调用 `submit_json` 工具，模型拒绝强制 tool_choice 时降级为 `auto` 一次 |        1 |
 
 `PROFILE_CAPABILITIES[profile].etaMultiplier` 供任务编排调整预计耗时；不会擅自延长调用超时。文本配置使用纯字符串 user content，有非空图片列表时使用视觉模型和多模态 content。
 
