@@ -73,6 +73,11 @@ describe('personal information', () => {
     '我的QQ账号已经换了很久目前这个号码也停用了请不要再联系我了 12345元旦后停用',
     '支付宝 012345',
     'Q 号: 12345678',
+    // The cue covers the whole sentence: commas and enumeration commas do not end it.
+    '支付宝收款，写在这里 2088102134567890',
+    '支付宝付了，12800 元',
+    '支付宝付了、12800 元',
+    '支持支付宝付款，商品编号 12345 写错了',
     '我的 Q  号是 tian 88abc',
     '支付宝收款，账号 012345',
     'QQ 支付异常 tian 88abc',
@@ -101,11 +106,12 @@ describe('personal information', () => {
     '大杯 18 元 / 中杯 15 元',
     '2 杯 ---- 3 杯',
     '价格 13，不是 15',
-    '支持支付宝付款，商品编号 12345 写错了',
     'QQ音乐可以播放，订单号 abc_123 有误',
     '支付宝付款 tian 写错了',
     '支付宝 payment method 2 is unavailable',
     'QQ login option 2 is broken',
+    '支付宝付了 128 元。会员号 12345 写错了',
+    '可以用 QQ 联系！订单 12345 有误',
   ])('allows %s', (text) => {
     expect(containsPersonalInfo(text)).toBe(false)
   })

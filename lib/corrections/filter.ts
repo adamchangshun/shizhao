@@ -29,41 +29,47 @@ const WECHAT_DIRECT = new RegExp(
 )
 const ID_TOKEN = /(?<![a-z0-9_-])(?=[a-z][-_a-z0-9]{5,19}(?![a-z0-9_-]))[a-z]*[-_0-9][-_a-z0-9]*/i
 // QQ numbers and Alipay accounts are also only recognisable next to a cue word (spaces inside
-// the cue are allowed: "Q Q", "支 付 宝"). Anywhere in the cue's clause, a 5–20 digit number or an
-// id-shaped token is refused, amounts included: "支付宝付了 12800 元" has to be rewritten without
-// the number, since no rule tells amounts from accounts reliably. So is one in the next clause
-// when that clause says it is an account ("支付宝收款，账号写在这里 2088…"). "QQ糖" and "QQ音乐" are
-// not cues.
+// the cue are allowed: "Q Q", "支 付 宝"). Anywhere in the cue's sentence (up to 。, ., !, ? or a
+// line break; commas do not end it), a 5–20 digit number or an id-shaped token is refused,
+// amounts included: "支付宝付了，12800 元" has to be rewritten without the number, since no rule
+// tells amounts from accounts reliably. So is one in the next sentence when that sentence says it
+// is an account ("支付宝收款。账号写在这里 2088…"). "QQ糖" and "QQ音乐" are not cues.
 const ACCOUNT_SERVICE = String.raw`(?:q\s?q(?!\s?(?:糖|音乐))|扣\s?扣|企鹅号|q\s{0,3}号|支\s?付\s?宝|alipay|zfb)`
 const ACCOUNT_WORD = String.raw`(?:号码|号|账号|帐号|账户|id)`
 const ACCOUNT_CUE = `${ACCOUNT_SERVICE}${ACCOUNT_WORD}?`
 const ACCOUNT_DIRECT = new RegExp(`${ACCOUNT_CUE}[\\s:=是为]{0,3}\\d{5,20}(?!\\d)`, 'i')
 const ACCOUNT_ID = String.raw`(?:(?<!\d)\d{5,20}(?!\d)|${ID_TOKEN.source})`
-const CLAUSE = String.raw`[^,.;!?\n。、]*`
-const ACCOUNT_NEARBY = new RegExp(`${ACCOUNT_CUE}${CLAUSE}?${ACCOUNT_ID}`, 'i')
+const SENTENCE = String.raw`[^.!?\n。]*`
+const ACCOUNT_NEARBY = new RegExp(`${ACCOUNT_CUE}${SENTENCE}?${ACCOUNT_ID}`, 'i')
 const ACCOUNT_LABEL = String.raw`(?:账号|帐号|账户|号码)`
-const ACCOUNT_NEXT_CLAUSE = new RegExp(
-  `${ACCOUNT_CUE}${CLAUSE}[,.;!?\\n。、]${CLAUSE}?${ACCOUNT_LABEL}${CLAUSE}?${ACCOUNT_ID}`,
+const ACCOUNT_NEXT_SENTENCE = new RegExp(
+  `${ACCOUNT_CUE}${SENTENCE}[.!?\\n。]${SENTENCE}?${ACCOUNT_LABEL}${SENTENCE}?${ACCOUNT_ID}`,
   'i',
 )
 
 // "支付宝账号 tian 88abc", "QQ：t i a n x 8": an id split by spaces. In the rest of the cue's
-// clause, words separated only by spaces are joined one at a time (up to 20 characters, the
+// sentence, words separated only by spaces are joined one at a time (up to 20 characters, the
 // longest id), and the text is refused as soon as the joined words have the shape of an id,
 // whatever follows them ("QQ：tian 88 abc please confirm"). Words right after a cue that names
 // an account ("QQ：", "支付宝账号") always count; elsewhere ("QQ login option 2 is broken") only
-// when one of them mixes letters with digits, "_" or "-" ("QQ 支付异常 tian 88abc"). In a next
-// clause that says it is an account ("支付宝收款，账号 tian 888") the words after that label count.
+// when one of them mixes letters with digits, "_" or "-" ("QQ 支付异常 tian 88abc"). Words after an
+// account label ("支付宝收款，账号 tian 888"), in the cue's sentence or the next one, count too.
 const CUE_SCAN = new RegExp(`(${ACCOUNT_SERVICE})(${ACCOUNT_WORD})?([\\s:=是为]{0,3})`, 'gi')
-const CLAUSE_SEP = /[,.;!?\n。、]/g
+const SENTENCE_END = /[.!?\n。]/g
 const LABEL = new RegExp(ACCOUNT_LABEL)
 const WORD = /[-_a-z0-9]+/gi
 const WHOLE_ID = new RegExp(`^(?:\\d{5,20}|${ID_TOKEN.source})$`, 'i')
 const MIXED = /(?=.*[a-z])(?=.*[-_\d])/i
 
-function clauseEnd(text: string, from: number): number {
-  CLAUSE_SEP.lastIndex = from
-  return CLAUSE_SEP.exec(text)?.index ?? text.length
+function sentenceEnd(text: string, from: number): number {
+  SENTENCE_END.lastIndex = from
+  return SENTENCE_END.exec(text)?.index ?? text.length
+}
+
+/** Where the first account label in text[from, end) ends, if there is one. */
+function afterLabel(text: string, from: number, end: number): number | undefined {
+  const label = LABEL.exec(text.slice(from, end))
+  return label ? from + label.index + label[0].length : undefined
 }
 
 /** Whether words in text[from, end) with only spaces between them join into an id. */
@@ -100,19 +106,20 @@ function spacedAccount(text: string): boolean {
       .filter((c) => c[2] !== undefined || /[:=是为]/.test(c[3]!) || c[1]!.includes('号'))
       .map((c) => c.index + c[0].length),
   )
-  // Each clause is scanned from its first cue only, and at most once more as a next clause.
+  // Each sentence is scanned from its first cue only, and at most once more as a next sentence.
   let scanned = -1
   for (const cue of cues) {
     const from = cue.index + cue[0].length
     if (from <= scanned) continue
-    const end = clauseEnd(text, from)
+    const end = sentenceEnd(text, from)
     scanned = end
-    if (joinsToId(text, from, end, (at) => strong.has(at))) return true
+    // Words after an account label in the same sentence count too ("支付宝收款，账号 tian 888").
+    const labelEnd = afterLabel(text, from, end) ?? end
+    if (joinsToId(text, from, end, (at) => strong.has(at) || at >= labelEnd)) return true
     if (end >= text.length) continue
-    const nextEnd = clauseEnd(text, end + 1)
-    const label = LABEL.exec(text.slice(end + 1, nextEnd))
-    const after = end + 1 + (label ? label.index + label[0].length : 0)
-    if (label && joinsToId(text, after, nextEnd, () => true)) return true
+    const nextEnd = sentenceEnd(text, end + 1)
+    const after = afterLabel(text, end + 1, nextEnd)
+    if (after !== undefined && joinsToId(text, after, nextEnd, () => true)) return true
   }
   return false
 }
@@ -137,7 +144,7 @@ export function containsPersonalInfo(text: string): boolean {
     (WECHAT_CUE.test(n) && ID_TOKEN.test(n)) ||
     ACCOUNT_DIRECT.test(ids) ||
     ACCOUNT_NEARBY.test(ids) ||
-    ACCOUNT_NEXT_CLAUSE.test(ids) ||
+    ACCOUNT_NEXT_SENTENCE.test(ids) ||
     spacedAccount(ids)
   )
 }
