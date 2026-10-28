@@ -412,7 +412,7 @@ describe('Anthropic Messages provider HTTP boundary', () => {
       expect(logged).not.toContain(fragment)
   })
   it.each([
-    ['an sk- key as type', { type: 'sk-ant-api03-secret-value' }, { type: 'other' }],
+    ['an sk- key as type', { type: 'sk-ant-secretval' }, { type: 'other' }],
     ['base64 image data as code', { code: 'iVBORw0KGgoAAAANSUhEUg' }, { code: 'other' }],
     [
       'a prose type beside a valid code',
@@ -447,7 +447,7 @@ describe('Anthropic Messages provider HTTP boundary', () => {
     const log = vi.spyOn(console, 'warn').mockImplementation(() => {})
     const server = await serve((_, res) => {
       res.statusCode = 400
-      res.setHeader('Content-Type', 'application/sk-ant-api03-secret-value')
+      res.setHeader('Content-Type', 'application/sk-ant-secretval')
       res.end('denied')
     })
     await expect(provider(server.baseUrl).generateJSON(request)).rejects.toMatchObject({
