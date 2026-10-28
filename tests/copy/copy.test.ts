@@ -749,4 +749,38 @@ describe('item blurbs cannot borrow another item’s wording (v0.1.1 cross-item)
       .flatMap((r) => sentencesIn(r.input))
     expect(judged).toEqual(['午后', '慢慢喝。'])
   })
+
+  it('guardCopy keeps a model verdict apart from a borrowed sentence whose field and text join the same way (review 2 #5)', async () => {
+    // Ids and blurbs may contain NUL: "itemBlurbs.a" + "b\0燕麦奶可选。" and "itemBlurbs.a\0b" +
+    // "燕麦奶可选。" would collide as NUL-joined keys.
+    const base = w5Sheet()
+    const sheet = {
+      ...base,
+      items: [
+        { ...base.items[0]!, id: 'a' },
+        { ...base.items[1]!, id: 'a\u0000b' },
+      ],
+    }
+    const provider = new ScriptedProvider((stage, input) =>
+      stage === 'guard-judge'
+        ? sentencesIn(input).map(() => ({ unsupported: true, reason: '模型判定' }))
+        : (input.items as unknown[]).map(() => ''),
+    )
+    const result = await copyApi.guardCopy(
+      {
+        copy: {
+          headline: '午后',
+          subhead: '',
+          itemBlurbs: { a: 'b\u0000燕麦奶可选。', 'a\u0000b': '燕麦奶可选。' },
+          closing: '',
+        },
+        factSheet: sheet,
+      },
+      { provider },
+    )
+    const evidenceOf = (field: string) =>
+      result.violations.filter((v) => v.field === field).map((v) => v.evidence)
+    expect(evidenceOf('itemBlurbs.a\u0000b')).toEqual(['燕麦奶可选'])
+    expect(evidenceOf('itemBlurbs.a')).not.toContain('燕麦奶可选')
+  })
 })

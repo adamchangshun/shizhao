@@ -121,7 +121,8 @@ export async function guardCopy(
   // Cross-item hits answer as judge verdicts, so guardDocument also rechecks rewrites with them;
   // those sentences never reach the model and are relabeled as rule hits afterwards.
   const borrowed = new Map<string, string>()
-  const key = (field: string, sentence: string) => `${field}\u0000${sentence}`
+  // Ids and sentences may contain any character, so no separator keeps the pair apart.
+  const key = (field: string, sentence: string) => JSON.stringify([field, sentence])
   const result = await guardDocument(fields, corpus, {
     rules: foodRules,
     corpusFor: (field) => fieldCorpus(corpus, field),
