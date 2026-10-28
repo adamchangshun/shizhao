@@ -511,3 +511,317 @@ describe('item blurbs rest only on their own item facts (A4 H2)', () => {
     expect(evidence[1]!.facts).toEqual(['午后小店', '拿铁', '约450ml', '28元', '¥28'])
   })
 })
+
+describe('item blurbs cannot borrow another item’s wording (v0.1.1 cross-item)', () => {
+  // W5 sheet. A: 拿铁 ¥28 约450ml, tag 燕麦奶可选; B: 美式 ¥18 约300ml.
+  // Shop hours 每天8:00-22:00; extraClaims 可外带.
+  function w5Sheet(): FactSheet {
+    return {
+      projectId: insertProject({ type: 'menu', title: '午后小店' }).id,
+      revision: 1,
+      shop: { name: '午后小店', hours: '每天8:00-22:00' },
+      items: [
+        {
+          id: 'latte',
+          name: '拿铁',
+          price: { amount: 28, currency: 'CNY' },
+          spec: '约450ml',
+          tags: ['燕麦奶可选'],
+          imageAssetIds: [],
+          sources: {},
+        },
+        {
+          id: 'americano',
+          name: '美式',
+          price: { amount: 18, currency: 'CNY' },
+          spec: '约300ml',
+          tags: [],
+          imageAssetIds: [],
+          sources: {},
+        },
+      ],
+      extraClaims: ['可外带'],
+      confirmedAt: '2026-10-21T08:00:00.000Z',
+    }
+  }
+  const blurbB = (americano: string): CopyDraft => ({
+    headline: '午后',
+    subhead: '',
+    itemBlurbs: { latte: '', americano },
+    closing: '',
+  })
+  const recheck = (copy: CopyDraft, sheet: FactSheet = w5Sheet()) =>
+    copyApi.guardWithRulesOnly(copy, copyApi.buildFactCorpus(sheet))
+
+  it("① removes B's blurb that repeats A's tag, which carries no number", () => {
+    const result = recheck(blurbB('燕麦奶可选。慢慢喝。'))
+    expect(result.copy.itemBlurbs.americano).toBe('慢慢喝。')
+    expect(result.violations).toEqual([
+      {
+        field: 'itemBlurbs.americano',
+        sentence: '燕麦奶可选。',
+        reason: 'unsupported_claim',
+        evidence: '燕麦奶可选',
+      },
+    ])
+    expect(result.removed).toBe(1)
+  })
+
+  it("②③ A's spec and price stay blocked by the number rule", () => {
+    const spec = recheck(blurbB('约450ml。'))
+    expect(spec.copy.itemBlurbs.americano).toBe('')
+    expect(spec.violations.map((v) => [v.reason, v.evidence])).toEqual([
+      ['unsupported_number', '450ml'],
+    ])
+    const price = recheck(blurbB('仅售28元。'))
+    expect(price.copy.itemBlurbs.americano).toBe('')
+    expect(price.violations.map((v) => [v.reason, v.evidence])).toEqual([
+      ['unsupported_number', '28元'],
+    ])
+    expect(spec.removed + price.removed).toBe(2)
+  })
+
+  it('④⑤⑥ shop hours, extraClaims and B’s own price pass', () => {
+    for (const sentence of ['每天8点开门。', '可外带。', '仅售18元。']) {
+      const result = recheck(blurbB(sentence))
+      expect(result.copy.itemBlurbs.americano).toBe(sentence)
+      expect(result.violations).toEqual([])
+    }
+  })
+
+  it("lets B compare itself with A by name, even when A's name contains A's tag", () => {
+    expect(recheck(blurbB('比拿铁更清爽。')).copy.itemBlurbs.americano).toBe('比拿铁更清爽。')
+    const base = w5Sheet()
+    const sheet = {
+      ...base,
+      items: [{ ...base.items[0]!, name: '燕麦拿铁', tags: ['燕麦'] }, base.items[1]!],
+    }
+    expect(recheck(blurbB('比燕麦拿铁更清爽。燕麦香气。'), sheet).copy.itemBlurbs.americano).toBe(
+      '比燕麦拿铁更清爽。',
+    )
+  })
+
+  it('a name split by punctuation is no name, so its pieces are still borrowing (review 2 #2)', () => {
+    const base = w5Sheet()
+    const sheet = {
+      ...base,
+      items: [{ ...base.items[0]!, name: '燕麦奶可选拿铁' }, base.items[1]!],
+    }
+    for (const sentence of ['燕麦奶可选，拿铁更香。', '燕麦奶可选·拿铁更香。'])
+      expect(recheck(blurbB(sentence), sheet).copy.itemBlurbs.americano).toBe('')
+    // A name written with spaces or zero-width characters inside is still that name.
+    for (const sentence of [
+      '比燕麦奶可选拿铁更香。',
+      '比燕麦奶可选 拿铁更香。',
+      '比燕麦奶可选​拿铁更香。',
+    ])
+      expect(recheck(blurbB(sentence), sheet).copy.itemBlurbs.americano).toBe(sentence)
+  })
+
+  it('any invisible format character keeps a negation or a name joined; bidi controls do not (review 2, codex #2)', () => {
+    const base = w5Sheet()
+    const sheet = {
+      ...base,
+      items: [{ ...base.items[0]!, name: '燕麦奶可选拿铁' }, base.items[1]!],
+    }
+    for (const gap of ['\u2063', '\u180e', '\u00ad', '\u2064']) {
+      for (const sentence of [`不${gap}燕麦奶可选。`, `比燕麦奶可选${gap}拿铁更香。`])
+        expect(recheck(blurbB(sentence), sheet).copy.itemBlurbs.americano).toBe(sentence)
+    }
+    // Bidi overrides and isolates reorder what the reader sees, so they stay boundaries.
+    for (const gap of ['\u202e', '\u2067'])
+      expect(recheck(blurbB(`不${gap}燕麦奶可选。`), sheet).copy.itemBlurbs.americano).toBe('')
+  })
+
+  it('checks items whose id contains a line break (review 2, codex #1)', () => {
+    const base = w5Sheet()
+    for (const id of ['a\nb', 'a\rb', 'a\u2028b', 'a\u2029b']) {
+      const sheet = {
+        ...base,
+        items: [{ ...base.items[0]!, id, name: '燕麦奶可选拿铁' }, base.items[1]!],
+      }
+      const copy: CopyDraft = {
+        headline: '午后',
+        subhead: '',
+        itemBlurbs: { [id]: '', americano: '燕麦奶可选，拿铁更香。' },
+        closing: '',
+      }
+      expect(recheck(copy, sheet).copy.itemBlurbs.americano).toBe('')
+      // The name is still recognized, so a comparison keeps its exemption.
+      const compare = { ...copy, itemBlurbs: { [id]: '', americano: '比燕麦奶可选拿铁更香。' } }
+      expect(recheck(compare, sheet).copy.itemBlurbs.americano).toBe('比燕麦奶可选拿铁更香。')
+    }
+  })
+
+  it('a one-character tag of A is borrowing only as a whole sentence (review 2 #3)', () => {
+    const base = w5Sheet()
+    // 𠮷 is one code point but two UTF-16 units; it must count as one character too.
+    const sheet = { ...base, items: [{ ...base.items[0]!, tags: ['辣', '𠮷'] }, base.items[1]!] }
+    for (const sentence of ['辣。', '辣！', ' 辣 。', '𠮷。'])
+      expect(recheck(blurbB(sentence), sheet).copy.itemBlurbs.americano).toBe('')
+    for (const sentence of ['麻辣。', '辣得过瘾。', '𠮷野家风味。'])
+      expect(recheck(blurbB(sentence), sheet).copy.itemBlurbs.americano).toBe(sentence)
+  })
+
+  it('a tag both items carry is not borrowing; the same tag on A alone is', () => {
+    const base = w5Sheet()
+    const shared = {
+      ...base,
+      extraClaims: [],
+      items: [
+        { ...base.items[0]!, tags: ['可外带'] },
+        { ...base.items[1]!, tags: ['可外带'] },
+      ],
+    }
+    expect(recheck(blurbB('可外带。'), shared).copy.itemBlurbs.americano).toBe('可外带。')
+    const aOnly = { ...shared, items: [shared.items[0]!, { ...base.items[1]!, tags: [] }] }
+    expect(recheck(blurbB('可外带。'), aOnly).copy.itemBlurbs.americano).toBe('')
+  })
+
+  it("leaves page-level fields and A's own blurb free to use A's tag", () => {
+    const copy: CopyDraft = {
+      headline: '燕麦奶可选',
+      subhead: '燕麦奶可选。',
+      itemBlurbs: { latte: '燕麦奶可选。', americano: '' },
+      closing: '燕麦奶可选。',
+    }
+    const result = recheck(copy)
+    expect(result.copy).toEqual(copy)
+    expect(result.violations).toEqual([])
+  })
+
+  it("does not read B's own negated tag as A's positive one", () => {
+    const base = w5Sheet()
+    const sheet = {
+      ...base,
+      items: [
+        { ...base.items[0]!, tags: ['加糖'] },
+        { ...base.items[1]!, tags: ['不加糖'] },
+      ],
+    }
+    expect(recheck(blurbB('不加糖。加糖。'), sheet).copy.itemBlurbs.americano).toBe('不加糖。')
+  })
+
+  it('punctuation ends a negation, so "不，<A’s tag>" is still borrowing (review 2 #1)', () => {
+    for (const sentence of [
+      '不，燕麦奶可选。',
+      '不,燕麦奶可选。',
+      '不、燕麦奶可选。',
+      '不 —— 燕麦奶可选。',
+    ])
+      expect(recheck(blurbB(sentence)).copy.itemBlurbs.americano).toBe('')
+    // Only spaces and zero-width characters may sit between the negation and the wording.
+    for (const sentence of [
+      '不燕麦奶可选。',
+      '不 燕麦奶可选。',
+      '不​燕麦奶可选。',
+      '没有燕麦奶可选。',
+    ])
+      expect(recheck(blurbB(sentence)).copy.itemBlurbs.americano).toBe(sentence)
+  })
+
+  it('matches across spaces, full-width letters, zero-width characters, punctuation and mapped traditional characters', () => {
+    for (const sentence of ['燕麦奶 可选。', '燕麦奶，可选。', '燕麦奶​可选。', '燕麥奶可選。'])
+      expect(recheck(blurbB(sentence)).copy.itemBlurbs.americano).toBe('')
+    const base = w5Sheet()
+    const sheet = { ...base, items: [{ ...base.items[0]!, tags: ['Oat Milk'] }, base.items[1]!] }
+    for (const sentence of ['ＯＡＴＭＩＬＫ。', 'Oat​Milk。', 'oat-milk。'])
+      expect(recheck(blurbB(sentence), sheet).copy.itemBlurbs.americano).toBe('')
+  })
+
+  // Known limitation (review 1 #4, owner's call: no conversion dependency): only the traditional
+  // characters in fact-guard's mapping fold, so with A's tag 凤梨香气 the blurb 鳳梨香氣 still passes.
+  it.todo(
+    'matches traditional characters outside the fact-guard mapping, e.g. 鳳梨香氣 (review 1 #4)',
+  )
+
+  it('a re-spaced variant of B’s own, a shared or a page-level text still passes (review 1)', () => {
+    const base = w5Sheet()
+    const sheet = {
+      ...base,
+      items: [
+        { ...base.items[0]!, tags: ['Oat Milk', '燕麦奶可选'] },
+        { ...base.items[1]!, tags: ['Oat Milk'] },
+      ],
+    }
+    const copy: CopyDraft = {
+      headline: '燕麦奶，可选',
+      subhead: 'OatMilk。',
+      itemBlurbs: { latte: 'OatMilk。', americano: 'OatMilk。' },
+      closing: '',
+    }
+    const result = recheck(copy, sheet)
+    expect(result.copy).toEqual(copy)
+    expect(result.violations).toEqual([])
+  })
+
+  it("splits A's description like the guard does, so one copied sentence of it is caught (review 1)", () => {
+    const base = w5Sheet()
+    const sheet = {
+      ...base,
+      items: [{ ...base.items[0]!, description: '奶香浓郁。顺滑如丝' }, base.items[1]!],
+    }
+    expect(recheck(blurbB('顺滑如丝。慢慢喝。'), sheet).copy.itemBlurbs.americano).toBe('慢慢喝。')
+    expect(recheck(blurbB('奶香浓郁。'), sheet).copy.itemBlurbs.americano).toBe('')
+  })
+
+  it('guardCopy keeps the borrowed sentence from the judge and rejects a rewrite that repeats it', async () => {
+    const provider = new ScriptedProvider((stage, input) =>
+      stage === 'guard-judge'
+        ? sentencesIn(input).map(() => ({ unsupported: false }))
+        : (input.items as unknown[]).map(() => '燕麦奶可选，慢慢喝。'),
+    )
+    const result = await copyApi.guardCopy(
+      { copy: blurbB('燕麦奶可选。慢慢喝。'), factSheet: w5Sheet() },
+      { provider },
+    )
+    expect(result.copy.itemBlurbs.americano).toBe('慢慢喝。')
+    expect(result).toMatchObject({ rewritten: 0, removed: 1 })
+    expect(result.violations).toEqual([
+      {
+        field: 'itemBlurbs.americano',
+        sentence: '燕麦奶可选。',
+        reason: 'unsupported_claim',
+        evidence: '燕麦奶可选',
+      },
+    ])
+    const judged = provider.requests
+      .filter((r) => r.stage === 'guard-judge')
+      .flatMap((r) => sentencesIn(r.input))
+    expect(judged).toEqual(['午后', '慢慢喝。'])
+  })
+
+  it('guardCopy keeps a model verdict apart from a borrowed sentence whose field and text join the same way (review 2 #5)', async () => {
+    // Ids and blurbs may contain NUL: "itemBlurbs.a" + "b\0燕麦奶可选。" and "itemBlurbs.a\0b" +
+    // "燕麦奶可选。" would collide as NUL-joined keys.
+    const base = w5Sheet()
+    const sheet = {
+      ...base,
+      items: [
+        { ...base.items[0]!, id: 'a' },
+        { ...base.items[1]!, id: 'a\u0000b' },
+      ],
+    }
+    const provider = new ScriptedProvider((stage, input) =>
+      stage === 'guard-judge'
+        ? sentencesIn(input).map(() => ({ unsupported: true, reason: '模型判定' }))
+        : (input.items as unknown[]).map(() => ''),
+    )
+    const result = await copyApi.guardCopy(
+      {
+        copy: {
+          headline: '午后',
+          subhead: '',
+          itemBlurbs: { a: 'b\u0000燕麦奶可选。', 'a\u0000b': '燕麦奶可选。' },
+          closing: '',
+        },
+        factSheet: sheet,
+      },
+      { provider },
+    )
+    const evidenceOf = (field: string) =>
+      result.violations.filter((v) => v.field === field).map((v) => v.evidence)
+    expect(evidenceOf('itemBlurbs.a\u0000b')).toEqual(['燕麦奶可选'])
+    expect(evidenceOf('itemBlurbs.a')).not.toContain('燕麦奶可选')
+  })
+})

@@ -1,5 +1,10 @@
 import { FactSheet, type CopyDraft, type CopyRefs } from '../core/schemas'
-import { computeDocumentRefs, type FactCorpus } from '../../packages/fact-guard/src/index'
+import {
+  computeDocumentRefs,
+  normalizeText,
+  splitSentences,
+  type FactCorpus,
+} from '../../packages/fact-guard/src/index'
 
 export interface CopyCorpus extends FactCorpus {
   shopName?: string
@@ -57,6 +62,105 @@ export function fieldCorpus<T extends FactCorpus>(corpus: T, field: string): T {
     return usable(path) ? [[fact, path!] as const] : []
   })
   return { ...corpus, facts: kept.map(([fact]) => fact), paths: kept.map(([, path]) => path) }
+}
+
+/**
+ * Letters and digits only, after NFKC and fact-guard folding; hits and support share it.
+ * `cut[k]` marks a `boundary` (punctuation, symbols, folded-away interference) between
+ * `text[k - 1]` and `text[k]` in the source, so checks that need adjacency can still see the
+ * boundaries the canonical text drops.
+ */
+interface Canonical {
+  text: string
+  cut: boolean[]
+}
+// Spaces and invisible format characters (zero-width, soft hyphen, ...) do not separate words;
+// bidi embeddings, overrides and isolates do, since they reorder what the reader sees.
+const boundary = /[^\s\p{Cf}]|[\u202a-\u202e\u2066-\u2069]/u
+function canonical(raw: string): Canonical {
+  const source = raw.normalize('NFKC')
+  const folded = normalizeText(source)
+  let text = '',
+    last = -1,
+    i = 0
+  const cut: boolean[] = []
+  for (const char of folded.text) {
+    const start = folded.starts[i]!,
+      end = folded.ends[i]!
+    i += char.length
+    if (!/[\p{L}\p{N}]/u.test(char)) continue
+    const gap = last < 0 ? '' : source.slice(last, Math.max(last, start))
+    cut.push(boundary.test(gap), ...Array<boolean>(char.length - 1).fill(false))
+    text += char
+    last = Math.max(last, end)
+  }
+  return { text, cut }
+}
+/** No boundary inside `text[from, to)`. */
+function joined(form: Canonical, from: number, to: number): boolean {
+  return !form.cut.slice(from + 1, to).includes(true)
+}
+function occurrences(text: string, word: string): number[] {
+  const starts: number[] = []
+  for (let i = text.indexOf(word); i !== -1; i = text.indexOf(word, i + 1)) starts.push(i)
+  return starts
+}
+// A negated mention ("不加糖" next to another item's "加糖") does not repeat that item's claim.
+// Only spaces and zero-width characters may separate the two: "不，燕麦奶可选" affirms it.
+const negations = ['不是', '并非', '不含', '没有', '非', '不', '未']
+function negated(form: Canonical, start: number): boolean {
+  return negations.some(
+    (word) =>
+      form.text.slice(0, start).endsWith(word) && joined(form, start - word.length, start + 1),
+  )
+}
+
+/**
+ * The other item's wording that an `itemBlurbs.<id>` sentence repeats, or undefined. Candidates
+ * are every item's spec, tags and description sentences (split like the guard splits copy);
+ * support is `fieldCorpus`, so only wording outside the blurb's own item, shop facts and
+ * extraClaims counts, and page-level fields never hit. Mentions inside an unbroken item name are
+ * exempt: a blurb may compare with another item. Checked deterministically because the live judge does
+ * not honor `evidence[i]` for this (A4 W5).
+ */
+export function crossItemBorrowing(
+  sentence: string,
+  field: string,
+  corpus: FactCorpus,
+): string | undefined {
+  if (!field.startsWith('itemBlurbs.')) return undefined
+  const own = fieldCorpus(corpus, field)
+  const support = [...own.facts, ...(own.spanFacts ?? [])].map(canonical)
+  const text = canonical(sentence)
+  // Ids may contain line breaks, so path patterns need the `s` flag.
+  const isPath = (i: number, pattern: RegExp) => pattern.test(corpus.paths?.[i] ?? '')
+  const names = corpus.facts
+    .filter((fact, i) => isPath(i, /^items\..+\.name$/s))
+    .map((name) => canonical(name).text)
+    .filter(Boolean)
+  // A name counts only where it is written out unbroken: "燕麦奶可选，拿铁" is no "燕麦奶可选拿铁".
+  const inName = (start: number, end: number) =>
+    names.some((name) =>
+      occurrences(text.text, name).some(
+        (left) =>
+          left <= start && end <= left + name.length && joined(text, left, left + name.length),
+      ),
+    )
+  const affirmed = (source: Canonical, word: string, exempt?: (start: number) => boolean) =>
+    occurrences(source.text, word).some((start) => !negated(source, start) && !exempt?.(start))
+  for (const [i, fact] of corpus.facts.entries()) {
+    if (!isPath(i, /^items\..+\.(?:spec|description|tags\.\d+)$/s)) continue
+    for (const piece of splitSentences(fact)) {
+      const word = canonical(piece).text
+      if (!word || support.some((source) => affirmed(source, word))) continue
+      // A single character ("辣") is too common inside other words ("麻辣") to identify another
+      // item's wording, so it counts only as the whole sentence.
+      if ([...word].length === 1 && text.text !== word) continue
+      if (affirmed(text, word, (start) => inName(start, start + word.length)))
+        return piece.replace(/[。！？；!?;\s]+$/u, '').trim()
+    }
+  }
+  return undefined
 }
 
 export function copyFields(copy: CopyDraft): Record<string, string> {

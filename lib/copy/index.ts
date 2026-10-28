@@ -14,10 +14,16 @@ import {
 import { CopyDraft, DesignSpec, FactSheet, GuardResult, type CopyRefs } from '../core/schemas'
 import { getDb } from '../db/client'
 import { getProvider, recordUsage, type GenerateJSONRequest, type LLMProvider } from '../providers'
-import { buildFactCorpus, copyFields, fieldCorpus, type CopyCorpus } from './facts'
+import {
+  buildFactCorpus,
+  copyFields,
+  crossItemBorrowing,
+  fieldCorpus,
+  type CopyCorpus,
+} from './facts'
 import { COPY_SYSTEM, JUDGE_SYSTEM, REWRITE_SYSTEM } from './prompt'
 
-export { buildFactCorpus, computeCopyRefs, fieldCorpus } from './facts'
+export { buildFactCorpus, computeCopyRefs, crossItemBorrowing, fieldCorpus } from './facts'
 export type { CopyCorpus } from './facts'
 export interface CopyOptions {
   provider?: LLMProvider
@@ -112,6 +118,11 @@ export async function guardCopy(
     corpus = buildFactCorpus(sheet)
   const call = caller(sheet, opts),
     fields = copyFields(copy)
+  // Cross-item hits answer as judge verdicts, so guardDocument also rechecks rewrites with them;
+  // those sentences never reach the model and are relabeled as rule hits afterwards.
+  const borrowed = new Map<string, string>()
+  // Ids and sentences may contain any character, so no separator keeps the pair apart.
+  const key = (field: string, sentence: string) => JSON.stringify([field, sentence])
   const result = await guardDocument(fields, corpus, {
     rules: foodRules,
     corpusFor: (field) => fieldCorpus(corpus, field),
@@ -121,18 +132,47 @@ export async function guardCopy(
         field === 'headline' ? 20 : field.startsWith('itemBlurbs.') ? 60 : 40,
       ]),
     ),
-    judge: async (input) =>
-      call({
-        stage: 'guard-judge',
-        system: JUDGE_SYSTEM,
-        prompt: JSON.stringify(input),
-        temperature: 0,
-        schema: z
-          .array(
-            z.object({ unsupported: z.boolean(), reason: z.string().max(200).optional() }).strict(),
-          )
-          .length(input.sentences.length),
-      }),
+    judge: async (input) => {
+      const local = input.sentences.map((sentence, i) => {
+        const field = input.fields?.[i]
+        const found = field === undefined ? undefined : crossItemBorrowing(sentence, field, corpus)
+        if (field !== undefined && found !== undefined) borrowed.set(key(field, sentence), found)
+        return found
+      })
+      const ask = local.flatMap((found, i) => (found === undefined ? [i] : []))
+      const pick = <T>(values: T[]) => ask.map((i) => values[i]!)
+      const asked =
+        ask.length === local.length
+          ? input
+          : {
+              ...input,
+              sentences: pick(input.sentences),
+              ...(input.fields ? { fields: pick(input.fields) } : {}),
+              ...(input.evidence ? { evidence: pick(input.evidence) } : {}),
+            }
+      const remote =
+        ask.length === 0
+          ? []
+          : await call({
+              stage: 'guard-judge',
+              system: JUDGE_SYSTEM,
+              prompt: JSON.stringify(asked),
+              temperature: 0,
+              schema: z
+                .array(
+                  z
+                    .object({ unsupported: z.boolean(), reason: z.string().max(200).optional() })
+                    .strict(),
+                )
+                .length(ask.length),
+            })
+      let next = 0
+      return local.map((found) =>
+        found === undefined
+          ? remote[next++]!
+          : { unsupported: true, reason: `借用其他商品的事实：${found}` },
+      )
+    },
     rewriter: async (input) =>
       call({
         stage: 'guard-rewrite',
@@ -142,7 +182,13 @@ export async function guardCopy(
         schema: z.array(z.string().max(60)).length(input.items.length),
       }),
   })
-  return finish(copy, result.fields, corpus, result.hits, result.rewritten, result.removed)
+  const hits = result.hits.map((hit) => {
+    const found = hit.ruleId === 'judge' ? borrowed.get(key(hit.field, hit.sentence)) : undefined
+    return found === undefined
+      ? hit
+      : { ...hit, reason: 'unsupported_claim' as const, ruleId: 'cross-item', evidence: found }
+  })
+  return finish(copy, result.fields, corpus, hits, result.rewritten, result.removed)
 }
 
 /** Synchronous, deterministic correction-time recheck. Never opens a database or provider. */
@@ -161,6 +207,16 @@ export function guardWithRulesOnly(
       splitSentences(text)
         .filter((sentence) => {
           const sentenceHits = checkSentence(sentence, fieldCorpus(corpus, field), rules)
+          const found =
+            sentenceHits.length === 0 ? crossItemBorrowing(sentence, field, corpus) : undefined
+          if (found !== undefined)
+            sentenceHits.push({
+              reason: 'unsupported_claim',
+              ruleId: 'cross-item',
+              evidence: found,
+              start: 0,
+              end: sentence.length,
+            })
           if (sentenceHits.length === 0) return true
           hits.push(
             ...sentenceHits.map((hit) => ({ ...hit, field, sentence, phase: 'original' as const })),
