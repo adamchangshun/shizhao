@@ -23,7 +23,7 @@ Among the open-source projects we searched on GitHub and Gitee, we found none th
 | Model time to generate one page | 19.12 s per run on average, end to end (qwen-plus + qwen3-vl-plus, 3 samples × 3 runs, 2026-10-20) | [Evaluation and validation](#evaluation-and-validation) |
 | Comparison: fact errors per page | AI writes the whole page: 0.14; Shizhao end to end: 0.33 (both from raw photos and text, merchant changes nothing; small sample, see below) | [Evaluation and validation](#evaluation-and-validation) |
 | Rule-layer holdout block rate / false-positive rate | 63.5% / 21.4% (80 cases, rule layer only) | [Evaluation and validation](#evaluation-and-validation) |
-| Automated tests | 1245 tests, all passing (2026-10-21, 58 test files) | `pnpm test` |
+| Automated tests | 1490 tests passing plus 1 todo (2026-10-28, 65 test files) | `pnpm test` |
 
 ## Pipeline
 
@@ -55,7 +55,8 @@ flowchart LR
 | Style generation, rendering with 3 templates, fact guard and copy, job orchestration | Done |
 | Publishing and QR codes, public page and visit stats, merchant console | Done |
 | Evaluation suite, copy-check page and API, Docker one-click run and `pnpm demo` | Done |
-| Customer corrections, CI, public deployment guide | To do |
+| Customer corrections, CI, public deployment guide | Done (0.1.0); the on-device acceptance record is not filled in yet |
+| 0.2.0: Anthropic adapter, merchant style brief, cross-item borrowing check, fixes for 0.1.0 known issues | Done, see the [CHANGELOG](CHANGELOG.md) |
 
 ## Quick start
 
@@ -156,7 +157,7 @@ For security, `LLM_BASE_URL` may use plain http only for loopback, LAN IPs, `.lo
 
 Under Docker, `localhost` inside the container is the container itself; to reach Ollama on the host, use `http://host.docker.internal:11434/v1` (provided by Docker Desktop).
 
-Fact extraction reads photos, so the full flow needs at least one image-capable profile (`qwen`, `glm`, or `ollama` with a vision model). Protocol details: [lib/providers/README.md](lib/providers/README.md).
+Fact extraction reads photos, so the full flow needs at least one image-capable profile (`qwen`, `glm`, `ollama` with a vision model, or `PROVIDER=anthropic`). Protocol details: [lib/providers/README.md](lib/providers/README.md).
 
 ## External services
 
@@ -220,7 +221,7 @@ Numbers below come from [eval/reports/2026-10-20/report.md](eval/reports/2026-10
 | B: Shizhao (field consistency guaranteed by design) | Gold fact sheet (confirmed) | 8/9 | 0.00 | 0.00 | 0.00 | 0.0024 | 11.09 |
 | B: Shizhao (end to end) | Raw photos and text → extract → merchant changes nothing → generate | 9/9 | 0.33 | 0.33 | 0.44 | 0.0038 | 19.12 |
 
-The zeros in the B gold row come from code filling in and checking every field; they are guaranteed by design, not a model result. Only the end-to-end row compares with group A's "raw photos and text" row: all 3 of its errors are the same missed price ("巴斯克芝士蛋糕 6 寸 128 元", see [Known limitations](#known-limitations)), which reaches the page when the merchant changes nothing.
+The zeros in the B gold row come from code filling in and checking every field; they are guaranteed by design, not a model result. Only the end-to-end row compares with group A's "raw photos and text" row: all 3 of its errors are the same missed price ("巴斯克芝士蛋糕 6 寸 128 元"), which reaches the page when the merchant changes nothing. This miss (F1) is fixed in 0.2.0, see the [CHANGELOG](CHANGELOG.md); the experiment has not been re-run since the fix.
 
 **Experiment 3: guard block rate and false-positive rate** (`packages/fact-guard/test/cases.zh.json`, 120 cases)
 
@@ -239,11 +240,11 @@ pnpm eval:extract && pnpm eval:compare && pnpm eval:guard && pnpm eval:report
 
 ## Known limitations
 
-- 02/07: Model requests have stage-specific output token limits. Fact-guard removes Unicode Cf and Default_Ignorable_Code_Point characters at any position and applies NFKC with source-span mapping. Storage predicates and limited-edition metaphors are hardened, but fresh/bakery weather phrases and event/end wording beside opening hours may still be conservatively blocked. Finite rules do not cover all semantics; see the [fact-guard README](packages/fact-guard/README.md).
-
+- 02/07: openai-compatible model requests have stage-specific output token limits (Anthropic always uses 16000). Fact-guard removes Unicode Cf and Default_Ignorable_Code_Point characters at any position and applies NFKC with source-span mapping. Storage predicates and limited-edition metaphors are hardened, but fresh/bakery weather phrases and event/end wording beside opening hours may still be conservatively blocked. Finite rules do not cover all semantics; see the [fact-guard README](packages/fact-guard/README.md).
+- The cross-item borrowing check maps traditional characters only for those in the rule word lists: if item A's tag is 「凤梨香气」, item B writing 「鳳梨香氣」 passes.
 - Customer corrections that mention QQ or Alipay are refused whenever the same sentence (up to a full stop, question mark, exclamation mark or line break; commas do not end it) contains a number of 5 or more digits, amounts included ("支付宝付了 12800 元" has to be resubmitted without the number), because amounts and account numbers cannot be told apart reliably. Detection is best effort and deliberately disguised numbers can still get through; see [docs/PRIVACY.md](docs/PRIVACY.md).
-- When the vision model names an item only from the image and no price is found in the text, the item takes the name and price of the merchant line with the matching amount. Reworded instructions or plain notes (e.g. "本店最低消费 20元") can still become an item name, as can a Chinese label followed directly by a price-shaped code (e.g. "商品编号123元"); the new name is flagged, so check every field before confirming the fact sheet.
-- F1: when a spec sits between the product name and the price (e.g. "巴斯克芝士蛋糕 6 寸 128 元"), the price is missed; a fix is planned for v0.1.1. Until then, check every field and add the price before confirming the fact sheet.
+- When the vision model names an item only from the image and no price is found in the text, the item takes the name and price of the merchant line with the matching amount. Reworded instructions or plain notes (e.g. "本店最低消费 20元") can still become an item name, as can a Chinese label followed directly by a price-shaped code (e.g. "商品编号123元"); if the vision model misreads a price, the amount may also match another item's line. The new name is flagged, so check every field before confirming the fact sheet.
+- Other known issues, including items left over from the security review, are listed under "Known issues" for each release in the [CHANGELOG](CHANGELOG.md).
 
 ## How it was built
 

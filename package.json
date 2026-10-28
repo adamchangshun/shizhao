@@ -1,6 +1,6 @@
 {
   "name": "shizhao",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "description": "实招 Shizhao：AI 只改颜值，不改事实的小商家宣传页生成器",
   "license": "Apache-2.0",
