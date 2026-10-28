@@ -94,7 +94,6 @@ export class OpenAICompatibleProvider implements LLMProvider {
   async generateJSON<T>(req: GenerateJSONRequest<T>): Promise<{ data: T; usage: Usage }> {
     const started = performance.now()
     const control = createCallControl(req.timeoutMs, req.signal)
-    const secrets = [this.options.apiKey ?? '']
     try {
       control.check()
       const hasImages = (req.images?.length ?? 0) > 0
@@ -134,7 +133,6 @@ export class OpenAICompatibleProvider implements LLMProvider {
           throw new ProviderError('bad_response')
         }
         const encoded = bytes.toString('base64')
-        secrets.push(encoded)
         parts.push({
           type: 'image_url',
           image_url: { url: `data:${mime};base64,${encoded}` },
@@ -184,10 +182,7 @@ export class OpenAICompatibleProvider implements LLMProvider {
         }
         control.check()
         if (!response.ok) {
-          console.warn(
-            'Provider request failed',
-            upstreamFailure(response, raw, secrets, [req.system, req.prompt]),
-          )
+          console.warn('Provider request failed', upstreamFailure(response, raw))
           if ([400, 422].includes(response.status) && format && rejectsResponseFormat(raw)) {
             format = false
             continue

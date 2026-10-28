@@ -22,7 +22,7 @@ recordUsage(db, result.usage, { projectId, jobId })
 - 普通 4xx 不重试；只有 400/422 明确表示不支持 `response_format` 时移除它一次。system 从第一次请求起带「只输出 JSON」。修正请求保留原消息与模型回复；提取失败时要求仅输出符合要求的 JSON（jsonMode 开启时要求对象），schema 不符时增加 zod 错误路径/代码摘要。
 - 回复支持字符串或 `[{type:'text',text:...}]`；先解析完整 JSON，再提取第一个 JSON 代码块或第一个平衡对象，正确跳过字符串中的括号和转义字符。JSON 提取失败与 schema 不符共享一次修正额度；修正后仍无法解析报 `bad_response`，能够解析但仍不符合 schema 则报 `schema_mismatch`。HTTP 成功响应本身不是合法协议 envelope 时仍立即报 `bad_response`。
 - 读响应限制为 2 MiB，超出即取消响应并报 `bad_response`。不跟随重定向，以免向另一个目标转发凭据。
-- 失败日志不写响应正文：只解析 JSON 的 `error.type`（OpenAI 兼容接口为 `error.code`）与 `error.message`（`error` 是字符串时按 message 处理），各自经 `safeExcerpt` 脱敏后截取前 200 字符；脱敏先处理转义 JSON 和转义的斜杠，再删除配置密钥、已发送图片的 base64，以及本次的 system 与 prompt 原文（不少于 8 个字符时）。正文不是 JSON 时只记 HTTP 状态与 content-type。错误对象不附带响应正文、请求或底层 cause。
+- 失败日志不写响应正文，也不写 `error.message`（上游可能以转义形式回显提示词，任何脱敏都匹配不全）：只记 HTTP 状态，以及 JSON 中 `error.type`、`error.code` 两个字段（都保留，且必须是 1–100 个字母、数字、`_.:-` 组成的标识符，否则丢弃）。正文不是 JSON 时只记状态与 content-type。修正轮回传的内容同样不进日志。错误对象不附带响应正文、请求或底层 cause。
 - 端点校验统一由 `control.ts` 的 `llmEndpoint()` 完成，两个适配器与 `lib/env.ts` 共用：只接受不含用户名、密码、查询参数或锚点的 http(s) 网址；公网地址必须用 https，http 只允许本机、局域网 IP、`.local` 与 `host.docker.internal`。
 - 对外错误代码：`timeout`、`aborted`、`rate_limited`、`bad_response`、`schema_mismatch`、`upstream_error`；提示信息为简体中文。
 

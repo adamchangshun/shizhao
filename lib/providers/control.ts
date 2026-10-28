@@ -59,25 +59,6 @@ export function llmEndpoint(baseUrl: string, path: string): string {
   return base.toString()
 }
 
-/** Redact before truncating; an upstream may reflect the entire request in its error. */
-export function safeExcerpt(body: string, secrets: string[]): string {
-  let safe = body
-  try {
-    safe = JSON.stringify(JSON.parse(body))
-  } catch {
-    /* Plain error text. */
-  }
-  // Plain-text error pages may embed slash-escaped JSON without being JSON.
-  // Normalize those escapes before matching exact secrets and image data URLs.
-  safe = safe.replace(/\\+\//g, '/')
-  for (const secret of secrets) if (secret) safe = safe.split(secret).join('[redacted]')
-  safe = safe
-    .replace(/data:image\/[^\s"'<>]+/gi, '[image redacted]')
-    .replace(/Bearer\s+[^\s"'<>]+/gi, 'Bearer [redacted]')
-    .replace(/[\u0000-\u001f\u007f]/g, ' ')
-  return safe.slice(0, 200)
-}
-
 /** Bound memory while reading, rather than trusting Content-Length. */
 export async function readResponse(response: Response): Promise<string> {
   if (!response.body) return ''
@@ -101,34 +82,32 @@ export async function readResponse(response: Response): Promise<string> {
   }
 }
 
+/** Error identifiers only; anything else (prompt echoes, escaped text) is dropped. */
+const identifier = (value: unknown) =>
+  (typeof value === 'string' || typeof value === 'number') && /^[\w.:-]{1,100}$/.test(String(value))
+    ? String(value)
+    : undefined
+
 /**
- * Log-safe summary of a failed upstream call. Never logs the body itself: only the JSON
- * error type/code and message, redacted; otherwise just status and content type.
+ * Log-safe summary of a failed upstream call. Never logs the body or `error.message`, which
+ * may echo prompts in escaped forms no redaction can match: only status plus the JSON
+ * `error.type` / `error.code` identifiers, or the content type when the body is not JSON.
  */
 export function upstreamFailure(
   response: Response,
   body: string,
-  secrets: string[],
-  texts: string[] = [],
-): { status: number; type?: string; message?: string; contentType?: string } {
-  // Very short prompt text would redact ordinary words; keys and image data are always long.
-  const redact = [...secrets, ...texts.filter((text) => text.length >= 8)]
+): { status: number; type?: string; code?: string; contentType?: string } {
   try {
     const error = (JSON.parse(body) as { error?: unknown } | null)?.error
-    // Some OpenAI-compatible services return the message as a bare string.
-    if (typeof error === 'string')
-      return { status: response.status, message: safeExcerpt(error, redact) }
     if (error && typeof error === 'object') {
-      const { type, code, message } = error as Record<string, unknown>
-      const kind = type ?? code
+      const { type, code } = error as Record<string, unknown>
       return {
         status: response.status,
-        ...(typeof kind === 'string' || typeof kind === 'number'
-          ? { type: safeExcerpt(String(kind), redact) }
-          : {}),
-        ...(typeof message === 'string' ? { message: safeExcerpt(message, redact) } : {}),
+        ...(identifier(type) ? { type: identifier(type) } : {}),
+        ...(identifier(code) ? { code: identifier(code) } : {}),
       }
     }
+    if (error !== undefined) return { status: response.status }
   } catch {
     /* Not JSON: discard the body. */
   }

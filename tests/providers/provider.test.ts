@@ -639,7 +639,7 @@ describe('OpenAI compatible provider HTTP boundary', () => {
     expect(logs).not.toContain('iVBORw==')
     expect(logs).not.toContain('data:image')
     expect(log.mock.calls[0]![1]).toMatchObject({ status: 400 })
-    expect((log.mock.calls[0]![1] as { message: string }).message.length).toBeLessThanOrEqual(200)
+    expect(log.mock.calls[0]![1]).toEqual({ status: 400 })
     expect(JSON.stringify(error)).not.toContain(key)
   })
   it.each(['qwen', 'glm', 'ollama'] as const)(
@@ -689,14 +689,18 @@ describe('OpenAI compatible provider HTTP boundary', () => {
       expect(server.bodies).toHaveLength(1)
     },
   )
-  it('logs only OpenAI error code and message with prompts redacted', async () => {
+  it('logs both OpenAI error type and code but never the message', async () => {
     const system = 'MERCHANT-SYSTEM-PROMPT 老王面馆'
     const log = vi.spyOn(console, 'warn').mockImplementation(() => {})
     const server = await serve((_, res, body) => {
       res.statusCode = 400
       res.end(
         JSON.stringify({
-          error: { code: 'invalid_parameter', message: `bad: ${system}` },
+          error: {
+            type: 'invalid_request_error',
+            code: 'invalid_parameter',
+            message: `bad: ${system}`,
+          },
           echoed: body.messages,
         }),
       )
@@ -706,8 +710,8 @@ describe('OpenAI compatible provider HTTP boundary', () => {
     ).rejects.toMatchObject({ code: 'upstream_error', status: 400 })
     expect(log.mock.calls[0]![1]).toEqual({
       status: 400,
-      type: 'invalid_parameter',
-      message: 'bad: [redacted]',
+      type: 'invalid_request_error',
+      code: 'invalid_parameter',
     })
     expect(JSON.stringify(log.mock.calls)).not.toContain('老王面馆')
   })

@@ -358,12 +358,12 @@ describe('Anthropic Messages provider HTTP boundary', () => {
       .generateJSON({ ...request, images: [img] })
       .catch((e: unknown) => e as Error)
     const logged = JSON.stringify(log.mock.calls)
-    expect(logged).toContain('[redacted]')
+    expect(log.mock.calls[0]![1]).toEqual({ status: 401, type: 'invalid_request_error' })
     expect(logged).not.toContain(key)
     expect(logged).not.toContain(bytes.toString('base64'))
     expect((error as Error).message).not.toContain(key)
   })
-  it('logs only the redacted error type and message, never an echoed prompt or image', async () => {
+  it('logs only status and error type, never the message, echoed prompt or image', async () => {
     const system = 'MERCHANT-SYSTEM-PROMPT 老王面馆 13800000000'
     const prompt = 'MERCHANT-USER-PROMPT 招牌牛肉面 18 元'
     const bytes = Buffer.from('echoed-image-bytes-should-never-be-logged')
@@ -384,15 +384,43 @@ describe('Anthropic Messages provider HTTP boundary', () => {
     const error = await provider(server.baseUrl)
       .generateJSON({ ...request, system, prompt, images: [img] })
       .catch((e: unknown) => e as Error)
-    expect(log.mock.calls[0]![1]).toEqual({
-      status: 400,
-      type: 'invalid_request_error',
-      message: 'rejected: [redacted] [redacted]',
-    })
+    expect(log.mock.calls[0]![1]).toEqual({ status: 400, type: 'invalid_request_error' })
     const visible =
       JSON.stringify(log.mock.calls) + (error as Error).message + JSON.stringify(error)
     for (const secret of [system, prompt, encoded, '老王面馆', 'MERCHANT-USER-PROMPT'])
       expect(visible).not.toContain(secret)
+  })
+  it('does not log a message carrying JSON-escaped multi-line system text', async () => {
+    const system = '商家资料："老王面馆"\n地址：人民路 8 号\\后门'
+    const log = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const server = await serve((_, res) => {
+      res.statusCode = 400
+      res.setHeader('Content-Type', 'application/json')
+      // The escaped form (\n, \", \\) never matches the raw text, so only omission is safe.
+      res.end(
+        JSON.stringify({
+          type: 'error',
+          error: { type: 'invalid_request_error', message: `bad: ${JSON.stringify(system)}` },
+        }),
+      )
+    })
+    await expect(
+      provider(server.baseUrl).generateJSON({ ...request, system }),
+    ).rejects.toMatchObject({ code: 'upstream_error', status: 400 })
+    const logged = JSON.stringify(log.mock.calls)
+    for (const fragment of ['老王面馆', '人民路', '后门', 'bad:'])
+      expect(logged).not.toContain(fragment)
+  })
+  it('drops error type or code values that are not identifiers', async () => {
+    const log = vi.spyOn(console, 'warn').mockImplementation(() => {})
+    const server = await serve((_, res) => {
+      res.statusCode = 400
+      res.end(JSON.stringify({ error: { type: 'echo 老王面馆 prompt', code: 'rate_limit_error' } }))
+    })
+    await expect(provider(server.baseUrl).generateJSON(request)).rejects.toMatchObject({
+      code: 'upstream_error',
+    })
+    expect(log.mock.calls[0]![1]).toEqual({ status: 400, code: 'rate_limit_error' })
   })
   it('rejects a public plain-http endpoint before any request', () => {
     expect(() => provider('http://api.example.com/v1')).toThrow(

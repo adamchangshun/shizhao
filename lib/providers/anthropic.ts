@@ -128,7 +128,6 @@ export class AnthropicProvider implements LLMProvider {
   async generateJSON<T>(req: GenerateJSONRequest<T>): Promise<{ data: T; usage: Usage }> {
     const started = performance.now()
     const control = createCallControl(req.timeoutMs, req.signal)
-    const secrets = [this.options.apiKey ?? '']
     try {
       control.check()
       const hasImages = (req.images?.length ?? 0) > 0
@@ -147,7 +146,6 @@ export class AnthropicProvider implements LLMProvider {
           throw new ProviderError('bad_response')
         }
         const encoded = bytes.toString('base64')
-        secrets.push(encoded)
         blocks.push({
           type: 'image',
           source: { type: 'base64', media_type: image.mime, data: encoded },
@@ -199,10 +197,7 @@ export class AnthropicProvider implements LLMProvider {
         }
         control.check()
         if (!response.ok) {
-          console.warn(
-            'Provider request failed',
-            upstreamFailure(response, raw, secrets, [req.system, req.prompt]),
-          )
+          console.warn('Provider request failed', upstreamFailure(response, raw))
           if (response.status === 400 && forced && rejectsForcedTool(raw)) {
             forced = false
             continue
