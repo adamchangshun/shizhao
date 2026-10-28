@@ -31,8 +31,8 @@ export function isLocalHost(hostname: string): boolean {
 const EnvSchema = z
   .object({
     PROVIDER: z
-      .enum(['mock', 'openai-compatible'], {
-        errorMap: () => ({ message: '只能是 mock 或 openai-compatible' }),
+      .enum(['mock', 'openai-compatible', 'anthropic'], {
+        errorMap: () => ({ message: '只能是 mock、openai-compatible 或 anthropic' }),
       })
       .default('mock'),
     LLM_PROFILE: z
@@ -84,13 +84,13 @@ const EnvSchema = z
         message: '公网地址必须使用 https；http 只允许 localhost、局域网 IP 或 .local 域名',
       })
     }
-    if (env.PROVIDER !== 'openai-compatible') return
+    if (env.PROVIDER === 'mock') return
     for (const key of ['LLM_BASE_URL', 'LLM_MODEL_TEXT', 'LLM_MODEL_VISION'] as const) {
       if (!env[key]) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
           path: [key],
-          message: 'PROVIDER=openai-compatible 时必需',
+          message: `PROVIDER=${env.PROVIDER} 时必需`,
         })
       }
     }

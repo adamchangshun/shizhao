@@ -50,7 +50,7 @@ const textOf = (message: Message) =>
         .join('')
 
 /** Redact before truncating; an upstream may reflect the entire request in its error. */
-function safeExcerpt(body: string, secrets: string[]): string {
+export function safeExcerpt(body: string, secrets: string[]): string {
   let safe = body
   try {
     safe = JSON.stringify(JSON.parse(body))
@@ -87,7 +87,7 @@ function rejectsResponseFormat(body: string): boolean {
 }
 
 /** Bound memory while reading, rather than trusting Content-Length. */
-async function readResponse(response: Response): Promise<string> {
+export async function readResponse(response: Response): Promise<string> {
   if (!response.body) return ''
   const reader = response.body.getReader()
   const chunks: Uint8Array[] = []

@@ -1,9 +1,12 @@
 import { getEnv, type Env } from '../env'
+import { AnthropicProvider } from './anthropic'
 import { ProviderError } from './errors'
 import { MockProvider } from './mock'
 import { OpenAICompatibleProvider } from './openai-compatible'
 import type { LLMProvider } from './types'
 
+export { AnthropicProvider } from './anthropic'
+export type { AnthropicOptions } from './anthropic'
 export { ProviderError } from './errors'
 export type { ProviderErrorCode } from './errors'
 export { MockProvider } from './mock'
@@ -19,6 +22,15 @@ export function getProvider(env: Env = getEnv()): LLMProvider {
   if (env.PROVIDER === 'mock') return new MockProvider({ sampleFacts: true })
   if (!env.LLM_BASE_URL || !env.LLM_MODEL_TEXT || !env.LLM_MODEL_VISION)
     throw new ProviderError('bad_response')
+  if (env.PROVIDER === 'anthropic')
+    return new AnthropicProvider({
+      baseUrl: env.LLM_BASE_URL,
+      apiKey: env.LLM_API_KEY,
+      textModel: env.LLM_MODEL_TEXT,
+      visionModel: env.LLM_MODEL_VISION,
+      inputPricePer1K: env.LLM_PRICE_INPUT_PER_1K,
+      outputPricePer1K: env.LLM_PRICE_OUTPUT_PER_1K,
+    })
   return new OpenAICompatibleProvider({
     baseUrl: env.LLM_BASE_URL,
     apiKey: env.LLM_API_KEY,

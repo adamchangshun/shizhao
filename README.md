@@ -135,6 +135,7 @@ curl -X POST http://localhost:6688/api/guard \
 | DeepSeek | `deepseek` | `https://api.deepseek.com/v1` | 不支持，只能处理文字 |
 | 模力方舟 | `generic` | `https://ai.gitee.com/v1` | 不支持（`generic` 只按文字接口使用） |
 | Ollama（本机运行） | `ollama` | `http://localhost:11434/v1` | 需要本机模型支持视觉 |
+| Anthropic Claude（Messages 协议） | 不填；改设 `PROVIDER=anthropic` | `https://api.anthropic.com/v1` | 支持（需填写视觉模型） |
 
 ```bash
 PROVIDER=openai-compatible

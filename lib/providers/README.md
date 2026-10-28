@@ -36,6 +36,7 @@ recordUsage(db, result.usage, { projectId, jobId })
 | deepseek | 本项目契约限定为文本                | 不发送             | JSON mode，拒绝时降级一次      |        1 |
 | ollama   | 需要本机模型支持视觉；WebP 转 PNG   | 支持               | 不发送，使用提示词约束         |        3 |
 | generic  | 未验证接口只允许文本                | 不发送             | 尝试 JSON mode，拒绝时降级一次 |        1 |
+| anthropic（`PROVIDER=anthropic`，不读 `LLM_PROFILE`） | Messages base64 `image` 块，WebP/PNG/JPEG 原样 | 不发送 | 强制调用 `submit_json` 工具，模型拒绝强制 tool_choice 时降级为 `auto` 一次 | 1 |
 
 `PROFILE_CAPABILITIES[profile].etaMultiplier` 供任务编排调整预计耗时；不会擅自延长调用超时。文本配置使用纯字符串 user content，有非空图片列表时使用视觉模型和多模态 content。
 
@@ -48,6 +49,16 @@ recordUsage(db, result.usage, { projectId, jobId })
 以上是项目明确支持的协议配置，不代表所有模型版本均已实测。各 profile 的本地 HTTP 协议测试均已覆盖；使用者必须选择自己服务中支持相应能力的模型。模型名不内置在适配器中。
 
 核验参考（2026-10-12）：[Qwen OpenAI Chat](https://help.aliyun.com/en/model-studio/qwen-api-via-openai-chat-completions)、[GLM 对话补全](https://docs.bigmodel.cn/api-reference/模型-api/对话补全)、[DeepSeek JSON](https://api-docs.deepseek.com/guides/json_mode/)、[Ollama OpenAI compatibility](https://docs.ollama.com/api/openai-compatibility)。功能契约中的 deepseek 文本限制优先于厂商后来扩展的能力。
+
+## Anthropic Messages 协议
+
+`PROVIDER=anthropic` 使用 `lib/providers/anthropic.ts`，复用同一组 `LLM_*` 变量，`LLM_BASE_URL` 填到 `/v1`，请求发往 `<base>/messages`，带 `x-api-key`（Key 为空时不发送）与 `anthropic-version: 2023-06-01`。超时、取消、重试次数与退避、2 MiB 响应上限、不跟随重定向、脱敏日志、错误代码和 usage 计费规则与 openai-compatible 完全一致，`readResponse`/`safeExcerpt` 直接复用。
+
+- 结构化输出：请求带一个 `submit_json` 工具（`input_schema` 只约束 `result` 字段存在；zod 3 无法导出 JSON Schema，具体形状仍由提示词描述、zod 校验），`tool_choice` 强制调用该工具且关闭并行调用。Claude Opus 5.5、Sonnet 5.5、Fable 5.1 等新模型对强制 `tool_choice` 返回 400，此时只在错误体提到 `tool_choice` 不支持的情况下降级为 `auto` 一次，与 openai-compatible 的 `response_format` 降级共享同一套重试预算。
+- 取结果：优先读取 `submit_json` 的 `result`（若为字符串则按 `json.ts` 解析）；模型没有调用工具时退回 `json.ts` 从文本提取。提取失败或 schema 不符共享一次修正：上一轮 assistant 内容原样回传（含 thinking 块），工具调用以 `is_error` 的 `tool_result` 回复修正提示，否则以普通文本回复。
+- 不发送 `temperature`、`seed`：新模型对采样参数返回 400，Messages 协议没有 seed。`max_tokens` 固定 16000。
+- usage：`input_tokens` 加缓存写入/读取 token 计入输入，`output_tokens` 计入输出；缺失时同样按字符估算并标记 `~est`。
+- 本地协议测试见 `tests/providers/anthropic.test.ts`，未调用真实接口。
 
 ## Usage
 

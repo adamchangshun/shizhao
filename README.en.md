@@ -137,6 +137,7 @@ Set `PROVIDER=openai-compatible` in `.env` and fill in the variables below (both
 | DeepSeek | `deepseek` | `https://api.deepseek.com/v1` | No, text only |
 | MoArk (Gitee AI) | `generic` | `https://ai.gitee.com/v1` | No (`generic` is used as text-only) |
 | Ollama (local) | `ollama` | `http://localhost:11434/v1` | If the local model supports vision |
+| Anthropic Claude (Messages protocol) | Leave empty; set `PROVIDER=anthropic` instead | `https://api.anthropic.com/v1` | Yes (set a vision model) |
 
 ```bash
 PROVIDER=openai-compatible
