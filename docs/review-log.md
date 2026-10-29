@@ -604,3 +604,14 @@ MEDIUM 不阻塞，留待后续：①氛围白名单只覆盖原句，「低温�
 - LOW-3：未列出的同义词仍然放行，例如「低温下也不变质的奶油」。这是规则层枚举的已知限制。
 
 移植后复验：typecheck、lint 通过；`pnpm test` 1245 通过（main 为 1077，分支为 1198）；A1 拦截 45/47、误杀 0/23（SHA256 未变）；Chinese rules 78/78、0/42；A4 H2 跨商品回归（商品 A 28 元，B 的描述写「仅售28元」→ unsupported_number）仍然通过。用三轮报告中的 113 句探针和 8 组重写复查，对 6dcd579 与移植后的 HEAD 各跑一遍，输出逐字节一致。报告：提示词目录 `审查报告/07gap-22006fc-增量核验.md`、`07gap-ee4da65-增量核验.md`、`07gap-6dcd579-增量核验.md`。
+
+## 2026-10-29 维护：清理已合并分支与建 GitHub Release（总控执行，无代码改动）
+
+本轮由总控会话（Claude Fable）按 `conductor` 四段流程执行，不涉及业务代码，没有写码方 / 审查方互审，核验全部由总控实跑命令完成。
+
+| 任务 | 执行方 | 内容 | 核验结果 |
+|---|---|---|---|
+| T1 | 总控 | 删除已合并分支 `fix/07-rules-gap`（内容已于 10-21 经 rebase 合并为 db5f167）、`feat/17-deploy`、`feat/02-providers`；移除旧 worktree `shizhao-17`、`shizhao-providers-review-r1`；`shizhao-codex` 保留并切到 detached main | `git branch --no-merged main` 为空；worktree 只剩主检出与 `shizhao-codex` |
+| T2 | Claude 子 agent（sonnet） | 建 GitHub Release v0.1.0、v0.2.0，正文逐字取 CHANGELOG 对应节，v0.2.0 标 Latest | 总控复核正文与 CHANGELOG diff 为空；tag 未动，仍指向 e221912 |
+
+main 在本轮开始与结束时均为 `e221912`，1490 测试通过。台账与快照在 `~/Desktop/shizhao-总控/`。
