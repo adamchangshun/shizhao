@@ -103,7 +103,7 @@ for (const sentence of data.sentences) {
 
 先运行 `pnpm db:migrate`。单实例长期Node进程、持久SQLite磁盘是部署前提。
 
-Next.js Request不提供可靠的直连对端IP。默认 `GUARD_TRUST_PROXY=false`，忽略客户端转发头，匿名请求共用安全预算。部署到可信反向代理后，可设置 `GUARD_TRUST_PROXY=true`，由代理覆盖 `X-Real-IP` 为规范化真实地址，禁止从公网直连应用端口；应用只接受合法单一IP并以进程随机盐哈希分桶。不使用客户端可任意拼接的X-Forwarded-For。未配置可信入口时无法声称精确按访客IP区分。
+Next.js Request不提供可靠的直连对端IP。默认 `GUARD_TRUST_PROXY=false`，忽略客户端转发头，匿名请求共用安全预算。部署到可信反向代理后，可设置 `GUARD_TRUST_PROXY=true`，由代理覆盖 `X-Real-IP` 为规范化真实地址，禁止从公网直连应用端口；应用只接受合法单一IP，原生 IPv6 按 /64 前缀、IPv4 按单一地址分桶，再计算进程随机盐哈希。IPv4-mapped IPv6 保持按完整规范化地址分桶，与对应 IPv4 桶独立；有效 Bearer API Key 的额度仍按 Key 计算。此开关独立于统计与纠错的 `TRACK_TRUST_PROXY`。不使用客户端可任意拼接的X-Forwarded-For。未配置可信入口时无法声称精确按访客IP区分。
 
 代理示例要点：`proxy_set_header X-Real-IP $remote_addr; proxy_request_buffering off; client_max_body_size 100k; client_body_timeout 30s;`；同时设置连接/读取期限并禁用请求体日志和正文缓存落盘。请结合实际代理部署配置，不把客户端声明的转发头当作可信数据。
 
