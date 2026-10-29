@@ -40,6 +40,84 @@ const payload = (p: ReturnType<typeof setup>) => ({
 const events = (id: string) =>
   getDb().select().from(visitEvents).where(eq(visitEvents.projectId, id)).all()
 
+it.each([
+  [{ origin: 'https://outside.example', 'content-type': 'application/json' }, 403],
+  [{}, 415],
+])('rejects requests without pulling their body stream: %j', async (headers, status) => {
+  let pulls = 0
+  const body = new ReadableStream<Uint8Array>(
+    {
+      pull(controller) {
+        pulls++
+        controller.enqueue(new TextEncoder().encode('{'))
+        controller.close()
+      },
+    },
+    { highWaterMark: 0 },
+  )
+  const response = await POST(
+    new Request('http://localhost:6688/api/track', {
+      method: 'POST',
+      headers: headers as Record<string, string>,
+      body,
+      duplex: 'half',
+    } as RequestInit),
+  )
+  expect(response.status).toBe(status)
+  expect(pulls).toBe(0)
+})
+
+it.each([
+  [{ origin: 'https://outside.example' }, 403],
+  [{ 'sec-fetch-site': 'cross-site' }, 403],
+  [{ origin: 'http://localhost:6688', 'sec-fetch-site': 'cross-site' }, 403],
+  [{ origin: 'null' }, 403],
+  [{ origin: 'not-a-url' }, 403],
+  [{ origin: 'https://outside.example', 'content-type': 'text/plain' }, 403],
+  [{ 'content-type': 'text/plain;charset=UTF-8' }, 415],
+  [{ 'content-type': 'application/x-www-form-urlencoded' }, 415],
+  [{ 'content-type': 'application/jsonp' }, 415],
+  [{ 'content-type': '' }, 415],
+])('rejects disallowed tracking headers before reading the body: %j', async (headers, status) => {
+  const request = new Request('http://localhost:6688/api/track', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', ...headers } as Record<string, string>,
+    body: '{invalid json',
+  })
+  const response = await POST(request)
+  expect(response.status).toBe(status)
+  expect(request.bodyUsed).toBe(false)
+  expect(response.headers.get('cache-control')).toBe('no-store')
+})
+
+it.each([
+  ['origin', 'https://outside.example'],
+  ['content-type', 'text/plain'],
+])(
+  'rejected tracking requests neither write events nor consume the budget: %s=%s',
+  async (name, value) => {
+    vi.useFakeTimers({ toFake: ['Date'] })
+    vi.setSystemTime(new Date('2026-10-30T00:00:00Z'))
+    const p = setup()
+    for (let i = 0; i < 31; i++) await send(payload(p), { [name]: value })
+    expect(events(p.id)).toHaveLength(0)
+    expect((await send(payload(p))).status).toBe(204)
+    expect(events(p.id)).toHaveLength(1)
+  },
+)
+
+it.each([
+  {},
+  { origin: 'http://localhost:6688', 'sec-fetch-site': 'same-origin' },
+  { origin: 'http://127.0.0.1:6690', host: '127.0.0.1:6690' },
+  { 'content-type': 'Application/JSON; charset=UTF-8' },
+  { authorization: 'Bearer test-admin-token-0123' },
+])('records JSON tracking for same-origin and non-browser clients: %j', async (headers) => {
+  const p = setup()
+  expect((await send(payload(p), headers as Record<string, string>)).status).toBe(204)
+  expect(events(p.id)).toHaveLength(1)
+})
+
 it('records one anonymous event, deduplicates concurrently across sources and ignores spoofed forwarding headers', async () => {
   vi.useFakeTimers({ toFake: ['Date'] })
   vi.setSystemTime(new Date('2026-10-13T12:00:00Z'))
@@ -93,7 +171,15 @@ it('rejects malformed/oversized/extra fields and invalid enums or IDs without lo
     }
     for (const body of ['{', '', 'null', '[]', 'x'.repeat(4000)]) {
       expect(
-        (await POST(new Request('http://localhost/api/track', { method: 'POST', body }))).status,
+        (
+          await POST(
+            new Request('http://localhost/api/track', {
+              method: 'POST',
+              headers: { 'content-type': 'application/json' },
+              body,
+            }),
+          )
+        ).status,
       ).toBe(204)
     }
     expect(events(p.id)).toHaveLength(0)
@@ -120,6 +206,7 @@ it('accepts only the live current version, including a publication change during
   })
   const req = new Request('http://localhost/api/track', {
     method: 'POST',
+    headers: { 'content-type': 'application/json' },
     body: stream,
     duplex: 'half',
   } as RequestInit)

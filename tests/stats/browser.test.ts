@@ -98,7 +98,11 @@ it.each(['beacon', 'missing-beacon', 'rejected-beacon'] as const)(
             value: mode === 'missing-beacon' ? undefined : () => false,
           })
         }, mode)
+      const viewRequest = page.waitForRequest(
+        (request) => new URL(request.url()).pathname === '/api/track',
+      )
       await page.goto(`${base}/p/${p.slug}?src=qr`)
+      expect((await viewRequest).headers()['content-type']).toBe('application/json')
       expect(page.url()).toBe(`${base}/p/${p.slug}/?src=qr`)
       await expect
         .poll(() => events(p.id).map((e) => [e.action, e.source]))
