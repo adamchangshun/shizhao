@@ -5,9 +5,14 @@ import { closeDb, getDb, runMigrations } from '@/lib/db/client'
 import { guardQuota, usageRecords } from '@/lib/db/schema'
 import { MockProvider, type GenerateJSONRequest, type LLMProvider } from '@/lib/providers'
 import { FixedWindowLimiter } from '@/lib/rate-limit'
+import { resetEnvCache } from '@/lib/env'
 
 beforeAll(runMigrations)
-afterEach(() => vi.useRealTimers())
+afterEach(() => {
+  vi.useRealTimers()
+  vi.unstubAllEnvs()
+  resetEnvCache()
+})
 const KEY = 'guard-test-key-not-a-secret'
 function request(body: unknown, key?: string, ip = '192.0.2.1') {
   return new Request('http://localhost:6690/api/guard', {
@@ -127,6 +132,68 @@ describe('public guard API', () => {
         200,
       )
     expect((await handle(request({ text: '暖意' }, 'minute-key'))).status).toBe(429)
+  })
+  it.each([
+    ['2001:db8:abcd:1234::1', '2001:db8:abcd:1234:ffff:ffff:ffff:ffff', 429, '0'],
+    ['2001:DB8:ABCD:1234::1', '2001:0db8:abcd:1234:0000:0000:0000:0002', 429, '0'],
+    ['2001:db8::1', '2001:db8:0:0:ffff::2', 429, '0'],
+    ['::', '::1', 429, '0'],
+    ['::', 'invalid', 200, '19'],
+    ['::ffff:192.0.2.1', '::1', 200, '19'],
+    ['::192.0.2.1', '::198.51.100.2', 429, '0'],
+    ['2001:db8:abcd:1234::1', '2001:db8:abcd:1235::1', 200, '19'],
+    ['2001:db8:abcd:1234::1', '2001:db8:abce:1234::1', 200, '19'],
+    ['192.0.2.1', '192.0.2.2', 200, '19'],
+    // Guard historically keeps mapped IPv6 separate from IPv4; preserve that contract.
+    ['::ffff:192.0.2.1', '192.0.2.1', 200, '19'],
+    ['::ffff:192.0.2.1', '::FFFF:C000:0201', 429, '0'],
+    ['::ffff:192.0.2.1', '::ffff:192.0.2.2', 200, '19'],
+    ['invalid', '192.0.2.1, 192.0.2.2', 429, '0'],
+  ])(
+    'preserves trusted-proxy guard budget buckets for %s then %s',
+    async (first, next, status, remaining) => {
+      vi.useFakeTimers({ toFake: ['Date'] })
+      const handle = createGuardHandler({ trustProxy: true })
+      for (let i = 0; i < 20; i++) {
+        expect((await handle(request({ text: '暖意' }, undefined, first))).status).toBe(200)
+      }
+      const res = await handle(request({ text: '暖意' }, undefined, next))
+      expect(res.status).toBe(status)
+      expect(res.headers.get('x-ratelimit-remaining')).toBe(remaining)
+    },
+  )
+  it.each([
+    ['false', 'false', undefined, '18'],
+    ['true', 'false', undefined, '18'],
+    ['false', 'true', undefined, '19'],
+    ['false', 'false', true, '19'],
+    ['false', 'true', false, '18'],
+  ])(
+    'keeps guard proxy configuration independent: track=%s guard=%s override=%s',
+    async (track, guard, override, remaining) => {
+      vi.stubEnv('TRACK_TRUST_PROXY', track)
+      vi.stubEnv('GUARD_TRUST_PROXY', guard)
+      resetEnvCache()
+      const handle = createGuardHandler({ trustProxy: override })
+      expect((await handle(request({ text: '暖意' }, undefined, '2001:db8:1::1'))).status).toBe(200)
+      const res = await handle(request({ text: '暖意' }, undefined, '2001:db8:2::1'))
+      expect(res.status).toBe(200)
+      expect(res.headers.get('x-ratelimit-remaining')).toBe(remaining)
+    },
+  )
+  it('keeps valid Bearer budgets separate from an exhausted anonymous IPv6 prefix', async () => {
+    const handle = createGuardHandler({ trustProxy: true, keys: ['ipv6-key-a', 'ipv6-key-b'] })
+    for (let i = 0; i < 20; i++) await handle(request({ text: '暖意' }, undefined, '2001:db8::1'))
+    expect((await handle(request({ text: '暖意' }, undefined, '2001:db8::2'))).status).toBe(429)
+    const a = await handle(request({ text: '暖意' }, 'ipv6-key-a', '2001:db8::2'))
+    const b = await handle(request({ text: '暖意' }, 'ipv6-key-a', '2001:db8:1::1'))
+    const c = await handle(request({ text: '暖意' }, 'ipv6-key-b', '2001:db8::2'))
+    expect([a.status, b.status, c.status]).toEqual([200, 200, 200])
+    expect([a, b, c].map((r) => r.headers.get('x-ratelimit-remaining'))).toEqual([
+      '119',
+      '118',
+      '119',
+    ])
   })
   it.each([
     [{ text: '字'.repeat(5001) }, 400],

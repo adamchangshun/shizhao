@@ -1,7 +1,7 @@
 import fs from 'node:fs'
 import { eq } from 'drizzle-orm'
 import { parse } from 'node-html-parser'
-import { beforeAll, describe, expect, it } from 'vitest'
+import { beforeAll, describe, expect, it, vi } from 'vitest'
 import { POST as postCorrection } from '@/app/api/corrections/route'
 import { POST as postAccept } from '@/app/api/corrections/[id]/accept/route'
 import { POST as postReject } from '@/app/api/corrections/[id]/reject/route'
@@ -20,6 +20,7 @@ import { rerenderWithFacts } from '@/lib/jobs/rerender'
 import { publishVersion, unpublishProject } from '@/lib/publish'
 import { generateProjectQr } from '@/lib/publish/qr'
 import { servePublished } from '@/lib/stats/public-page'
+import { resetEnvCache } from '@/lib/env'
 import { designFor } from '../render/fixtures'
 
 const BASE = 'http://localhost:6688'
@@ -27,6 +28,41 @@ const bearer = { authorization: 'Bearer test-admin-token-0123' }
 const ctx = (id: string) => ({ params: Promise.resolve({ id }) })
 
 beforeAll(() => runMigrations())
+
+it('shares the correction source budget across one trusted IPv6 /64', async () => {
+  vi.stubEnv('TRACK_TRUST_PROXY', 'true')
+  resetEnvCache()
+  try {
+    const p = await published()
+    const statuses = []
+    for (const ip of [
+      '2001:db8:abcd:1234::1',
+      '2001:db8:abcd:1234::2',
+      '2001:0DB8:abcd:1234:ffff::3',
+      '2001:db8:abcd:1234:ffff:ffff:ffff:ffff',
+      '2001:db8:abcd:1235::1',
+    ]) {
+      statuses.push(
+        (
+          await submit(
+            {
+              slug: p.slug,
+              versionId: p.versionId,
+              field: 'items.tart02.price',
+              suggestedValue: '9元',
+            },
+            { 'content-type': 'application/json', 'x-real-ip': ip },
+          )
+        ).status,
+      )
+    }
+    expect(statuses).toEqual([201, 201, 201, 429, 201])
+    expect((await pending(p.projectId)).pendingCount).toBe(4)
+  } finally {
+    vi.unstubAllEnvs()
+    resetEnvCache()
+  }
+})
 
 // Hand-written v1 copy: the subhead and the cake's blurb cite the cake's description.
 const COPY: CopyDraft = {

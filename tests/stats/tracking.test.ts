@@ -268,6 +268,45 @@ it('uses salted canonical IP hashes only with explicit trusted proxy configurati
   expect(clientHash(req('192.0.2.1'))).not.toContain('192.0.2.1')
 })
 
+it.each([
+  ['2001:db8:abcd:1234::1', '2001:db8:abcd:1234:ffff:ffff:ffff:ffff', 1],
+  ['2001:DB8:ABCD:1234::1', '2001:0db8:abcd:1234:0000:0000:0000:0002', 1],
+  ['2001:db8::1', '2001:db8:0:0:ffff::2', 1],
+  ['::', '::1', 1],
+  ['::', 'invalid', 2],
+  ['::ffff:192.0.2.1', '::1', 2],
+  ['::192.0.2.1', '::198.51.100.2', 1],
+  ['2001:db8:abcd:1234::1', '2001:db8:abcd:1235::1', 2],
+  ['2001:db8:abcd:1234::1', '2001:db8:abce:1234::1', 2],
+  ['192.0.2.1', '192.0.2.2', 2],
+  ['::ffff:192.0.2.1', '192.0.2.1', 1],
+  ['::ffff:192.0.2.1', '::FFFF:C000:0201', 1],
+  ['::ffff:192.0.2.1', '::ffff:192.0.2.2', 2],
+  ['invalid', '192.0.2.1, 192.0.2.2', 1],
+])('preserves trusted-proxy tracking budget buckets for %s then %s', async (first, next, count) => {
+  vi.stubEnv('TRACK_TRUST_PROXY', 'true')
+  resetEnvCache()
+  vi.useFakeTimers({ toFake: ['Date'] })
+  vi.setSystemTime(new Date('2026-10-30T01:00:00Z'))
+  const p = setup()
+  for (let i = 0; i < 30; i++) {
+    expect((await send(payload(p), { 'x-real-ip': first })).status).toBe(204)
+  }
+  // Past the dedup interval but inside the exhausted minute budget.
+  vi.setSystemTime(new Date('2026-10-30T01:00:10Z'))
+  expect((await send(payload(p), { 'x-real-ip': next })).status).toBe(204)
+  expect(events(p.id)).toHaveLength(count)
+})
+
+it('ignores rotated IPv6 proxy headers when tracking trust is disabled', async () => {
+  vi.stubEnv('TRACK_TRUST_PROXY', 'false')
+  resetEnvCache()
+  const p = setup()
+  await send(payload(p), { 'x-real-ip': '2001:db8:1::1' })
+  await send(payload(p), { 'x-real-ip': '2001:db8:2::1' })
+  expect(events(p.id)).toHaveLength(1)
+})
+
 it('keeps only contract columns and deletes all events when the project is deleted', async () => {
   const columns = getDb().all<{ name: string }>(sql`pragma table_info(visit_events)`)
   expect(columns.map((c) => c.name).sort()).toEqual([

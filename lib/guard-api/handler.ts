@@ -6,6 +6,7 @@ import { ApiError, toErrorResponse } from '../core/errors'
 import { getDb } from '../db/client'
 import { getEnv } from '../env'
 import { readJsonLimited } from '../http'
+import { ipv6RateLimitKey } from '../net'
 import { FixedWindowLimiter } from '../rate-limit'
 import { getProvider, ProviderError, type LLMProvider } from '../providers'
 import { consumeDailyQuota } from './accounting'
@@ -68,11 +69,7 @@ export function createGuardHandler(options: GuardOptions = {}) {
           ? (request.headers.get('x-real-ip') ?? '')
           : ''
       const ip =
-        isIP(rawIP) === 6
-          ? new URL(`http://[${rawIP}]/`).hostname
-          : isIP(rawIP) === 4
-            ? rawIP
-            : 'unverified-peer'
+        isIP(rawIP) === 6 ? ipv6RateLimitKey(rawIP) : isIP(rawIP) === 4 ? rawIP : 'unverified-peer'
       const capacity = keyHash
         ? keyed.take(keyHash)
         : anonymous.take(createHmac('sha256', ipSalt).update(ip).digest('hex'))
