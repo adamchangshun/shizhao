@@ -615,3 +615,5 @@ MEDIUM 不阻塞，留待后续：①氛围白名单只覆盖原句，「低温�
 | T2 | Claude 子 agent（sonnet） | 建 GitHub Release v0.1.0、v0.2.0，正文逐字取 CHANGELOG 对应节，v0.2.0 标 Latest | 总控复核正文与 CHANGELOG diff 为空；tag 未动，仍指向 e221912 |
 
 main 在本轮开始与结束时均为 `e221912`，1490 测试通过。台账与快照在 `~/Desktop/shizhao-总控/`。
+
+**2026-10-30 补充**：Gitee `sheng-changshun/shizhao` 的 Release v0.1.0（id 1254481，绑定 c7396c0）与 v0.2.0（id 1254482，绑定 e221912）已建，正文与 CHANGELOG 对应节逐字一致，tag 未动；由总控经 Gitee API 创建，用 MCP `list_releases` 与正文 diff 核验。
