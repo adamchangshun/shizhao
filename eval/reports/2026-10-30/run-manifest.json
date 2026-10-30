@@ -1,0 +1,89 @@
+{
+  "testedCommit": "38dd2acd9cc6",
+  "version": "0.2.0",
+  "runId": "openai-compatible-qwen-plus-1030",
+  "timezone": "Asia/Shanghai",
+  "N": 3,
+  "temperatureA": 0.6,
+  "provider": "openai-compatible",
+  "profile": "qwen",
+  "textModel": "qwen-plus",
+  "visionModel": "qwen3-vl-plus",
+  "configuredPricesCnyPer1K": {
+    "input": 0.0008,
+    "output": 0.002
+  },
+  "codeAndCases": {
+    "eval/lib/page-text.ts": "680e38aa7c51a49f",
+    "eval/lib/page-facts.ts": "e4658e51fa0bb273",
+    "eval/lib/page-metrics.ts": "5a79e4c22b69a4f1",
+    "eval/lib/extract-compare.ts": "12f7ba1f9be1ebaa",
+    "eval/lib/aggregate.ts": "6d61f1f43839a05d",
+    "eval/lib/group-a.ts": "98632f66be13ea26",
+    "packages/fact-guard/test/cases.zh.json": "c46256e8ceb24761"
+  },
+  "sampleGold": {
+    "eval/samples/bakery-croissant-single/gold.json": "751f2d841d54bc89",
+    "eval/samples/bakery-dessert-menu/gold.json": "2c7f009dff9a40e1",
+    "eval/samples/drink-cafe-menu/gold.json": "0f43bb251b371ee7"
+  },
+  "anthropic": {
+    "status": "未验证",
+    "reason": "无 Key",
+    "stop_reason": null,
+    "usage": null,
+    "latencyMs": null,
+    "estimatedCost": null
+  },
+  "date": "2026-10-30",
+  "formalCommands": {
+    "pnpm eval:extract": {
+      "runs": 1,
+      "exitCode": 0,
+      "scriptRetries": 0
+    },
+    "pnpm eval:compare": {
+      "runs": 1,
+      "exitCode": 0,
+      "scriptRetries": 0
+    },
+    "pnpm eval:guard": {
+      "runs": 1,
+      "exitCode": 0,
+      "scriptRetries": 0
+    },
+    "pnpm eval:report": {
+      "runs": 1,
+      "exitCode": 0,
+      "scriptRetries": 0
+    }
+  },
+  "singleSampleSmoke": {
+    "sample": "bakery-croissant-single",
+    "ok": true,
+    "reusedByExtract": true
+  },
+  "comparison": {
+    "attempts": 36,
+    "successfulPages": 28,
+    "recordedFailures": 8,
+    "missing": []
+  },
+  "guardJudgeUsageRecords": 19,
+  "failureUsageMissing": true,
+  "review": {
+    "rows": 28,
+    "independentReview": "X6 pending"
+  },
+  "proReview": "methodology only; no page annotations",
+  "unchangedComparedWith1020": [
+    "eval/samples",
+    "eval/lib/page-text.ts",
+    "eval/lib/page-facts.ts",
+    "eval/lib/page-metrics.ts",
+    "eval/lib/extract-compare.ts",
+    "eval/lib/aggregate.ts",
+    "eval/lib/group-a.ts",
+    "packages/fact-guard/test/cases.zh.json"
+  ]
+}
