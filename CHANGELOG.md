@@ -14,9 +14,11 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
 - **0.1.0 已知问题 → 已修复：L1 外站可触发登出**（`app/api/auth/logout/route.ts`）：复用 M3 来源检查，外站请求返回 403 且不发送清除 cookie 的 `Set-Cookie`；同源与没有 Origin 的非浏览器客户端保持原有登出行为。
 - **0.1.0 已知问题 → 已修复：M11 原生 IPv6 换地址可绕过匿名限流**（`lib/net.ts`、`lib/stats/limiter.ts`、`lib/guard-api/handler.ts`）：可信代理模式下，原生 IPv6 在规范化后按 /64 前缀计算内存限流哈希，同一网段不能通过更换后 64 位刷新额度。统计与纠错继续由 `TRACK_TRUST_PROXY` 控制，Guard API 继续由独立的 `GUARD_TRUST_PROXY` 控制；未信任代理时仍忽略转发头。IPv4 与 IPv4-mapped IPv6 保留各模块原有分桶方式（统计将 mapped 并入对应 IPv4，Guard 保持两者独立），有效 Bearer API Key 仍按 Key 计数。M1 登录失败全局预算保持不变；没有新增依赖。
 
+- **X1 第 1 轮 LOW-1 已修复**：`64:ff9b::/96` 与 `::ffff:0:0:0/96` 中的 IPv4 内嵌地址保留完整规范化地址，不按 /64 合桶；同一地址的点分、十六进制及大小写写法仍共用额度。其他原生 IPv6 继续按 /64。已废弃的 `::/96` 兼容地址和未配置识别的网络专用转换前缀仍按 /64，可能合并不同 IPv4 访客的额度。
+
 #### 测试
 
-- `pnpm typecheck`、`pnpm lint`、`pnpm test`、`pnpm check:secrets` 全部通过：66 个测试文件，1554 个测试通过，1 个既有 todo；新增 64 条回归，覆盖来源拒绝无副作用、浏览器 JSON 埋点、IPv6 /64 及 IPv4/mapped/Bearer 兼容性。秘密扫描 0 发现。
+- `pnpm typecheck`、`pnpm lint`、`pnpm test`、`pnpm check:secrets` 全部通过：66 个测试文件，1566 个测试通过，1 个既有 todo；新增 76 条回归，覆盖来源拒绝无副作用、浏览器 JSON 埋点、IPv6 /64 及 IPv4/mapped/Bearer 兼容性。秘密扫描 0 发现。
 - `pnpm test:e2e`：14/14 通过（mock provider）；运行前用 `ports` 确认 6688、6689 及 E2E 默认端口 6699 空闲。
 
 ### English
@@ -27,9 +29,11 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
 - **0.1.0 known issue → fixed: L1, cross-site logout** (`app/api/auth/logout/route.ts`): reuses M3's origin check, returning 403 without a cookie-clearing `Set-Cookie` for foreign requests. Same-origin and Origin-less non-browser clients keep the existing logout behavior.
 - **0.1.0 known issue → fixed: M11, anonymous rate-limit bypass by rotating native IPv6 addresses** (`lib/net.ts`, `lib/stats/limiter.ts`, `lib/guard-api/handler.ts`): in trusted-proxy mode, native IPv6 addresses are normalized and grouped by /64 before hashing for in-memory limits. Rotating the lower 64 bits no longer refreshes the budget. Tracking and corrections retain `TRACK_TRUST_PROXY`; Guard retains its independent `GUARD_TRUST_PROXY`. Forwarding headers remain ignored without proxy trust. Each module preserves its existing IPv4 and IPv4-mapped IPv6 buckets (tracking folds mapped addresses into IPv4; Guard keeps them separate), and valid Bearer API keys remain limited by key. M1's global login-failure budget is unchanged; no dependencies were added.
 
+- **X1 review round 1 LOW-1 fixed**: IPv4-embedded addresses in `64:ff9b::/96` and `::ffff:0:0:0/96` retain their full canonical identity instead of sharing a /64 bucket. Dotted, hexadecimal, and case variants of the same address still share a budget. Other native IPv6 continues to use /64. Deprecated `::/96` compatible addresses and unrecognized network-specific translation prefixes still use /64 and may group different IPv4 visitors together.
+
 #### Tests
 
-- `pnpm typecheck`, `pnpm lint`, `pnpm test`, and `pnpm check:secrets` passed: 66 test files, 1554 passing tests and one existing todo; 64 new regressions cover side-effect-free origin rejection, browser JSON tracking, IPv6 /64 limits, and IPv4/mapped/Bearer compatibility. The secret scan found no issues.
+- `pnpm typecheck`, `pnpm lint`, `pnpm test`, and `pnpm check:secrets` passed: 66 test files, 1566 passing tests and one existing todo; 76 new regressions cover side-effect-free origin rejection, browser JSON tracking, IPv6 /64 limits, and IPv4/mapped/Bearer compatibility. The secret scan found no issues.
 - `pnpm test:e2e`: 14/14 passed using the mock provider. `ports` confirmed 6688, 6689, and the default E2E port 6699 were free before the run.
 
 ## [0.2.0] - 2026-10-28

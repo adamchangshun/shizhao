@@ -6,6 +6,8 @@
 
 ## 去重、限流和代理前提
 
+IPv6 分桶的固定例外：`64:ff9b::/96`（NAT64）和 `::ffff:0:0:0/96`（IPv4-translated）按完整规范化地址分桶；统计与纠错共用这项规则。已废弃的 `::/96` 兼容地址及未识别的网络专用转换前缀继续按 /64，可能合并不同 IPv4 访客的额度。
+
 同一「进程随机盐 HMAC-SHA256(来源地址桶) + slug + action」10 秒内仅计一次；同键每 60 秒最多处理 30 次合法请求尝试（重复事件也消耗预算）。可信代理模式下，原生 IPv6 按 /64 前缀分桶，IPv4 按单一地址分桶，IPv4-mapped IPv6 并入对应 IPv4 桶。切换 source 或 versionId 不重置键。只有当前已发布且未删除、未下线的版本能写入，检查与写入位于同一 SQLite 事务。
 
 `POST /api/track` 在读取请求体和计入预算前校验来源及媒体类型：跨站 `Sec-Fetch-Site` 或外站 `Origin` 返回 403，非 `application/json` 返回 415。同源和没有 Origin 的 JSON 客户端继续可用；前端 sendBeacon 与 fetch 均发送 JSON。业务无效或超限事件仍统一返回 204。
