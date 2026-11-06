@@ -19,16 +19,23 @@ const adversarialAccountInputs = [
   ['780 characters with account labels', 'QQ，账号 '.repeat(130)],
 ] as const
 
-async function checkPersonalInfoInChild(text: string): Promise<void> {
+async function checkPersonalInfoInChild(label: string, text: string): Promise<void> {
   const filter = path.resolve('lib/corrections/filter.ts')
   const code = `import(${JSON.stringify(filter)}).then(({ containsPersonalInfo }) => {
     if (containsPersonalInfo(process.argv[1])) process.exitCode = 1
   })`
   // This guards only against a hang or catastrophic backtracking, not machine speed.
-  await execFileAsync(process.execPath, ['--import', 'tsx', '-e', code, text], {
-    timeout: 5_000,
-    killSignal: 'SIGKILL',
-  })
+  try {
+    await execFileAsync(process.execPath, ['--import', 'tsx', '-e', code, text], {
+      timeout: 5_000,
+      killSignal: 'SIGKILL',
+    })
+  } catch (error: unknown) {
+    const childError = error as { killed?: boolean; code?: string | number }
+    if (childError.killed) throw new Error(`${label}: child process timed out`)
+    if (childError.code === 1) throw new Error(`${label}: containsPersonalInfo returned true`)
+    throw error
+  }
 }
 
 describe('personal information', () => {
@@ -146,14 +153,10 @@ describe('personal information', () => {
     expect(containsPersonalInfo(text)).toBe(false)
   })
 
-  it.each(adversarialAccountInputs)('allows repeated account cues with %s', (_label, text) => {
-    expect(containsPersonalInfo(text)).toBe(false)
-  })
-
   it(
     'does not hang on repeated account cues near the correction length limit',
     async () => {
-      for (const [, text] of adversarialAccountInputs) await checkPersonalInfoInChild(text)
+      for (const [label, text] of adversarialAccountInputs) await checkPersonalInfoInChild(label, text)
     },
     30_000,
   )
