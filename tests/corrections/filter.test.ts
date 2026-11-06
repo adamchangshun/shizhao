@@ -1,3 +1,6 @@
+import { execFile } from 'node:child_process'
+import path from 'node:path'
+import { promisify } from 'node:util'
 import { describe, expect, it } from 'vitest'
 import {
   containsPersonalInfo,
@@ -5,6 +8,45 @@ import {
   sanitizeLines,
   sanitizeText,
 } from '@/lib/corrections/filter'
+
+const execFileAsync = promisify(execFile)
+
+// Exit code reserved for a completed child check that found personal information.
+const PERSONAL_INFO_FOUND_EXIT_CODE = 42
+
+const adversarialAccountInputs = [
+  ['200 characters', 'QQ'.repeat(100)],
+  ['400 characters', 'QQ'.repeat(200)],
+  ['800 characters', 'QQ'.repeat(400)],
+  ['800 characters with spaced words', 'QQ a'.repeat(200)],
+  ['780 characters with account labels', 'QQ，账号 '.repeat(130)],
+] as const
+
+async function checkPersonalInfoInChild(label: string, text: string): Promise<void> {
+  const filter = path.resolve('lib/corrections/filter.ts')
+  const code = `import(${JSON.stringify(filter)}).then(({ containsPersonalInfo }) => {
+    if (containsPersonalInfo(process.argv[1])) process.exitCode = ${PERSONAL_INFO_FOUND_EXIT_CODE}
+  }).catch((error) => {
+    console.error(error)
+    process.exit(1)
+  })`
+  // This guards only against a hang or catastrophic backtracking, not machine speed.
+  try {
+    await execFileAsync(process.execPath, ['--import', 'tsx', '-e', code, text], {
+      timeout: 5_000,
+      killSignal: 'SIGKILL',
+    })
+  } catch (error: unknown) {
+    const childError = error as { killed?: boolean; code?: string | number; stderr?: string | Buffer }
+    if (childError.killed) throw new Error(`${label}: child process timed out`)
+    if (childError.code === PERSONAL_INFO_FOUND_EXIT_CODE) {
+      throw new Error(`${label}: containsPersonalInfo returned true`)
+    }
+    throw new Error(
+      `${label}: child process exited with code ${String(childError.code)}; stderr: ${String(childError.stderr)}`,
+    )
+  }
+}
 
 describe('personal information', () => {
   it.each([
@@ -121,13 +163,18 @@ describe('personal information', () => {
     expect(containsPersonalInfo(text)).toBe(false)
   })
 
-  it('checks an 800-character note of repeated cues quickly', () => {
-    containsPersonalInfo('QQ')
-    for (const text of ['QQ'.repeat(400), 'QQ a'.repeat(200), 'QQ，账号 '.repeat(130)]) {
-      const start = performance.now()
-      containsPersonalInfo(text)
-      expect(performance.now() - start).toBeLessThan(30)
-    }
+  it(
+    'does not hang on repeated account cues near the correction length limit',
+    async () => {
+      for (const [label, text] of adversarialAccountInputs) await checkPersonalInfoInChild(label, text)
+    },
+    30_000,
+  )
+
+  it('reports a matching child result as returned true', async () => {
+    await expect(checkPersonalInfoInChild('phone number', '我的电话13800138000')).rejects.toThrow(
+      'phone number: containsPersonalInfo returned true',
+    )
   })
 })
 

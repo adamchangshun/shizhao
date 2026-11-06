@@ -7,7 +7,7 @@ import { ID_PATTERN, SLUG_PATTERN, newId } from '../core/ids'
 import { getDb } from '../db/client'
 import { findFactSheet } from '../db/repo/fact-sheets'
 import { corrections, projects, versions } from '../db/schema'
-import { isJsonRequest, isSameOriginRequest, readJsonLimited } from '../http'
+import { isJsonRequest, isSameOriginRequest, readJsonLimited, unsupportedMediaType } from '../http'
 import { FixedWindowLimiter } from '../rate-limit'
 import { clientHash } from '../stats/limiter'
 import { containsPersonalInfo, looksLikeSpam, sanitizeLines, sanitizeText } from './filter'
@@ -42,7 +42,7 @@ export async function submitCorrection(request: Request, now: number = Date.now(
   // send no-cors text/plain reports and use up a page's daily budget from their addresses.
   if (!isSameOriginRequest(request)) throw Errors.forbidden()
   if (!isJsonRequest(request)) {
-    throw new ApiError(415, 'unsupported_media_type', '请求格式不正确')
+    throw unsupportedMediaType()
   }
   const body = SubmitBody.parse(await readJsonLimited(request, MAX_BODY_BYTES))
 

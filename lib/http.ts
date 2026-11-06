@@ -87,3 +87,8 @@ export function isJsonRequest(request: Request): boolean {
   const type = request.headers.get('content-type')?.split(';')[0]?.trim().toLowerCase()
   return type === 'application/json'
 }
+
+/** Shared response for public endpoints that accept JSON only. */
+export function unsupportedMediaType(): ApiError {
+  return new ApiError(415, 'unsupported_media_type', '请求格式不正确')
+}

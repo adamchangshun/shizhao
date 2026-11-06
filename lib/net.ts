@@ -1,12 +1,21 @@
 export const HTTPS_REQUIRED_MESSAGE =
   '公网地址必须使用 https；http 只允许 localhost、局域网 IP 或 .local 域名'
 
+/** Converts a canonical bracketed IPv4-mapped IPv6 address to its IPv4 identity. */
+export function mappedIpv4Address(address: string): string | null {
+  const mapped = /^\[::ffff:([a-f0-9]+):([a-f0-9]+)\]$/.exec(address)
+  if (!mapped) return null
+  const hi = parseInt(mapped[1]!, 16)
+  const lo = parseInt(mapped[2]!, 16)
+  return [hi >> 8, hi & 255, lo >> 8, lo & 255].join('.')
+}
+
 /** Rate-limit identity for IPv6 after removing an optional zone id; mapped and known translated IPv4 keep full identity. */
 export function ipv6RateLimitKey(address: string): string {
   const addressWithoutZone = address.split('%', 1)[0] ?? ''
   const canonical = new URL(`http://[${addressWithoutZone}]/`).hostname
   // Classify mapped IPv4 before masking: /64 would put all mapped addresses in one bucket.
-  if (/^\[::ffff:[a-f0-9]+:[a-f0-9]+\]$/.test(canonical)) return canonical
+  if (mappedIpv4Address(canonical)) return canonical
 
   const [head, tail] = canonical.slice(1, -1).split('::')
   const left = head ? head.split(':') : []

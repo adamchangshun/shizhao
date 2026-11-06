@@ -1,5 +1,5 @@
-import { ApiError, Errors, toErrorResponse } from '@/lib/core/errors'
-import { isJsonRequest, isSameOriginRequest } from '@/lib/http'
+import { Errors, toErrorResponse } from '@/lib/core/errors'
+import { isJsonRequest, isSameOriginRequest, unsupportedMediaType } from '@/lib/http'
 import { track } from '@/lib/stats/track'
 
 export const runtime = 'nodejs'
@@ -9,7 +9,7 @@ export async function POST(request: Request): Promise<Response> {
   const error = !isSameOriginRequest(request)
     ? Errors.forbidden()
     : !isJsonRequest(request)
-      ? new ApiError(415, 'unsupported_media_type', '请求格式不正确')
+      ? unsupportedMediaType()
       : null
   if (error) {
     const response = toErrorResponse(error)
