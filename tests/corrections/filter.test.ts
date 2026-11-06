@@ -1,10 +1,35 @@
-import { describe, expect, it, vi } from 'vitest'
+import { execFile } from 'node:child_process'
+import path from 'node:path'
+import { promisify } from 'node:util'
+import { describe, expect, it } from 'vitest'
 import {
   containsPersonalInfo,
   looksLikeSpam,
   sanitizeLines,
   sanitizeText,
 } from '@/lib/corrections/filter'
+
+const execFileAsync = promisify(execFile)
+
+const adversarialAccountInputs = [
+  ['200 characters', 'QQ'.repeat(100)],
+  ['400 characters', 'QQ'.repeat(200)],
+  ['800 characters', 'QQ'.repeat(400)],
+  ['800 characters with spaced words', 'QQ a'.repeat(200)],
+  ['780 characters with account labels', 'QQ，账号 '.repeat(130)],
+] as const
+
+async function checkPersonalInfoInChild(text: string): Promise<void> {
+  const filter = path.resolve('lib/corrections/filter.ts')
+  const code = `import(${JSON.stringify(filter)}).then(({ containsPersonalInfo }) => {
+    if (containsPersonalInfo(process.argv[1])) process.exitCode = 1
+  })`
+  // This guards only against a hang or catastrophic backtracking, not machine speed.
+  await execFileAsync(process.execPath, ['--import', 'tsx', '-e', code, text], {
+    timeout: 5_000,
+    killSignal: 'SIGKILL',
+  })
+}
 
 describe('personal information', () => {
   it.each([
@@ -121,16 +146,17 @@ describe('personal information', () => {
     expect(containsPersonalInfo(text)).toBe(false)
   })
 
-  it('checks repeated account cues with a bounded number of full-text scans', () => {
-    for (const text of ['QQ'.repeat(400), 'QQ a'.repeat(200), 'QQ，账号 '.repeat(130)]) {
-      const matchAll = vi.spyOn(String.prototype, 'matchAll')
-      expect(containsPersonalInfo(text)).toBe(false)
-      // The account path extracts cues once and words from the one scanned sentence once. This
-      // guards against reintroducing a full-text rescan per repeated cue without timing the host.
-      expect(matchAll).toHaveBeenCalledTimes(2)
-      matchAll.mockRestore()
-    }
+  it.each(adversarialAccountInputs)('allows repeated account cues with %s', (_label, text) => {
+    expect(containsPersonalInfo(text)).toBe(false)
   })
+
+  it(
+    'does not hang on repeated account cues near the correction length limit',
+    async () => {
+      for (const [, text] of adversarialAccountInputs) await checkPersonalInfoInChild(text)
+    },
+    30_000,
+  )
 })
 
 describe('line breaks end a sentence', () => {

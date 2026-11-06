@@ -188,13 +188,13 @@ nc -zv -w 3 <服务器IP> 6688                           # 在你自己的电脑
 
 ### 埋点来源校验与备用域名
 
-`POST /api/track` 只接受当前站点发出的 JSON 请求；外站 `Origin` 或跨站 `Sec-Fetch-Site` 会返回 403。页面优先用 `sendBeacon` 上报，而浏览器不会把这个响应展示给访客：如果访问量突然不再增长，应优先检查域名和反代，而不是把 403 当作页面故障。
+`POST /api/track` 只接受 JSON 请求。`Sec-Fetch-Site: cross-site` 一律返回 403；带 `Origin` 时，Origin 的主机（含端口）必须等于 `PUBLIC_BASE_URL` 的主机，或等于该请求的 `Host`。没有 `Origin` 的非浏览器客户端仍可用。页面优先用 `sendBeacon` 上报，而浏览器不会把这个响应展示给访客：如果访问量突然不再增长，应优先检查域名和反代，而不是把 403 当作页面故障。
 
 - 把 `.env` 的 `PUBLIC_BASE_URL` 设为唯一的公开 HTTPS 地址，例如 `https://shop.example.com`；二维码和公开页都以它为准。
-- 备用域名（包括 `www` 与裸域）必须在到达 `reverse_proxy` **之前**永久 301/308 到该地址，并保留路径和查询参数。不要把多个域名都反代到应用；否则页面的 `Origin`、请求 `Host` 和 `PUBLIC_BASE_URL` 不一致时，埋点会被 403 拒绝。
-- 若另有 CDN 或负载均衡器，确认它把访客请求的原始 `Host` 传给 Caddy；不要改写为内部服务名。用浏览器开发者工具的 Network 面板检查 `/api/track`，它应为 204，而不是 403。
+- 建议将备用域名（包括 `www` 与裸域）在到达 `reverse_proxy` **之前**永久 301/308 到该地址，并保留路径和查询参数，统一二维码、公开页和分享链接的域名。这是统一域名的部署建议，不是避免 403 的必要条件。
+- 若备用域名也反代到应用，反代必须保留访客请求的原始 `Host`：此时备用域名页面的 `Origin` 与请求 `Host` 相同，即使不同于 `PUBLIC_BASE_URL` 也会通过来源校验。若 CDN 或负载均衡器把 `Host` 改写为内部服务名，则该备用域名的 `Origin` 不再匹配，应恢复原始 `Host` 或跳转到 `PUBLIC_BASE_URL`。用浏览器开发者工具的 Network 面板检查 `/api/track`，它应为 204，而不是 403。
 
-示例：`www` 只作跳转，主域名才反代应用（将域名替换为自己的）：
+示例：推荐让 `www` 只作跳转，主域名才反代应用（将域名替换为自己的）：
 
 ```caddyfile
 www.shop.example.com {

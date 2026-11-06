@@ -1,5 +1,7 @@
+import { createElement } from 'react'
+import { renderToStaticMarkup } from 'react-dom/server'
 import { afterEach, expect, it, vi } from 'vitest'
-import { performLogout } from '@/app/(console)/providers'
+import { LogoutFailure, performLogout } from '@/app/(console)/providers'
 
 afterEach(() => {
   vi.unstubAllGlobals()
@@ -7,8 +9,7 @@ afterEach(() => {
 
 it('keeps the console open when the logout endpoint refuses to clear the session', async () => {
   const assign = vi.fn()
-  const alert = vi.fn()
-  vi.stubGlobal('window', { alert, location: { assign } })
+  vi.stubGlobal('window', { location: { assign } })
   vi.stubGlobal(
     'fetch',
     vi.fn().mockResolvedValue(
@@ -20,16 +21,16 @@ it('keeps the console open when the logout endpoint refuses to clear the session
 
   await expect(performLogout()).resolves.toBe(false)
   expect(assign).not.toHaveBeenCalled()
-  expect(alert).toHaveBeenCalledWith('退出失败，请刷新后重试')
+  const error = renderToStaticMarkup(createElement(LogoutFailure))
+  expect(error).toContain('role="alert"')
+  expect(error).toContain('退出失败，请刷新后重试')
 })
 
 it('redirects to login only after the logout endpoint clears the session', async () => {
   const assign = vi.fn()
-  const alert = vi.fn()
-  vi.stubGlobal('window', { alert, location: { assign } })
+  vi.stubGlobal('window', { location: { assign } })
   vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(null, { status: 200 })))
 
   await expect(performLogout()).resolves.toBe(true)
   expect(assign).toHaveBeenCalledWith('/login')
-  expect(alert).not.toHaveBeenCalled()
 })
