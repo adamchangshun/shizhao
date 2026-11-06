@@ -6,6 +6,8 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-11-06
+
 ### 中文
 
 #### 修复

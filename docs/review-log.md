@@ -628,3 +628,13 @@ main 在本轮开始与结束时均为 `e221912`，1490 测试通过。台账与
 - X6 第一次尝试因同一会话完成、非盲标而作废，未进入仓库。重做版的限制已在 `eval/reports/2026-10-30/A2-review.md` 披露：读取 10-20 口径时看到了其历史结果段，对 10-30 规则输出仍为盲标。
 - `A2-review-sheet.csv:516` 的行号列表（`L45/L63/…`）被通用 hex/base64 规则误报，按行号写入 `.secretsignore`，不改冻结文件。
 - **已知问题（T0 第 1 轮 LOW-2～LOW-5，未修，留待后续）**：登出按钮忽略 403 后仍跳转（`app/(console)/providers.tsx`）；mapped IPv4 正则在 `lib/net.ts` 与 `lib/stats/limiter.ts` 重复；415 错误字面量在 `app/api/track/route.ts` 与 `lib/corrections/submit.ts` 重复；埋点 403 无信号、`deploy/README.md` 缺备用域名 / 301 说明。INFO：`tests/corrections/filter.test.ts` 的 30ms 计时断言有偶发失败风险。
+
+## 2026-11-06 合并：0.2.1 已知问题收口（v0.2.2）
+
+| 分支 | 写码方 | 审查方 / 轮次 | 结论 |
+|---|---|---|---|
+| `fix/v0.2.2-known-issues` | Codex（cdx-exec） | Codex `cdx-review --base main` 共 4 轮：第 1 轮 APPROVE 附 1 MEDIUM + 2 LOW（计次断言耦合实现、`window.alert`、部署文档 403 说明不准）；第 2、3 轮各剩 1 MEDIUM（对抗输入仍在测试进程内同步执行；子进程退出码 1 有歧义）；第 4 轮 APPROVE 无发现。每轮门禁由总控在本机实跑 | 合并 |
+
+- 修复 2026-11-06 一节登记的已知问题：登出仅在服务端确认清除会话后跳转，失败在按钮旁显示 `role="alert"`；IPv4-mapped 识别抽成 `mappedIpv4Address`，分桶测试未改动、原样通过；415 错误收敛为 `unsupportedMediaType()`，响应逐字不变；`deploy/README.md` 按 `isSameOriginRequest` 的实际规则说明来源校验 403。
+- `tests/corrections/filter.test.ts` 的 30ms 墙钟断言改为：对抗输入只在可终止子进程中运行（5 秒宽松超时 + SIGKILL，只检测卡死 / 灾难性回溯），命中用专用退出码 42，其他失败附退出码与 stderr。
+- 发版前门禁：1576 测试通过，密钥扫描 0。

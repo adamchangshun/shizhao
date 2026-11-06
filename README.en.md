@@ -58,6 +58,7 @@ flowchart LR
 | Customer corrections, CI, public deployment guide | Done (0.1.0); the on-device acceptance record is not filled in yet |
 | 0.2.0: Anthropic adapter, merchant style brief, cross-item borrowing check, fixes for 0.1.0 known issues | Done, see the [CHANGELOG](CHANGELOG.md) |
 | 0.2.1: web hardening (origin checks, IPv6 rate-limit buckets), real-model eval re-run on 0.2.0 with a third A2 review | Done, see the [CHANGELOG](CHANGELOG.md) |
+| 0.2.2: failed logout no longer looks signed out, origin-check 403 troubleshooting in the deploy guide, 0.2.1 known issues closed | Done, see the [CHANGELOG](CHANGELOG.md) |
 
 ## Quick start
 
