@@ -20,8 +20,8 @@ Among the open-source projects we searched on GitHub and Gitee, we found none th
 
 | Metric | Result | Source |
 |---|---|---|
-| Model time to generate one page | 19.12 s per run on average, end to end (qwen-plus + qwen3-vl-plus, 3 samples × 3 runs, 2026-10-20) | [Evaluation and validation](#evaluation-and-validation) |
-| Comparison: fact errors per page | AI writes the whole page: 0.14; Shizhao end to end: 0.33 (both from raw photos and text, merchant changes nothing; small sample, see below) | [Evaluation and validation](#evaluation-and-validation) |
+| Model time to generate one page | 19.78 s per run on average, end to end (qwen-plus + qwen3-vl-plus, 3 samples × 3 runs, 2026-10-30) | [Evaluation and validation](#evaluation-and-validation) |
+| Comparison: fact errors per page | AI writes the whole page: 0.25 (4 successful pages); Shizhao end to end: 0.00 (9 successful pages) (both from raw photos and text, merchant changes nothing; 2026-10-30, only 3 synthetic samples, does not generalize, see below) | [Evaluation and validation](#evaluation-and-validation) |
 | Rule-layer holdout block rate / false-positive rate | 63.5% / 21.4% (80 cases, rule layer only) | [Evaluation and validation](#evaluation-and-validation) |
 | Automated tests | 1490 tests passing plus 1 todo (2026-10-28, 65 test files) | `pnpm test` |
 
@@ -57,6 +57,7 @@ flowchart LR
 | Evaluation suite, copy-check page and API, Docker one-click run and `pnpm demo` | Done |
 | Customer corrections, CI, public deployment guide | Done (0.1.0); the on-device acceptance record is not filled in yet |
 | 0.2.0: Anthropic adapter, merchant style brief, cross-item borrowing check, fixes for 0.1.0 known issues | Done, see the [CHANGELOG](CHANGELOG.md) |
+| 0.2.1: web hardening (origin checks, IPv6 rate-limit buckets), real-model eval re-run on 0.2.0 with a third A2 review | Done, see the [CHANGELOG](CHANGELOG.md) |
 
 ## Quick start
 
@@ -200,28 +201,40 @@ The rule layer only recognizes listed words and patterns, so paraphrases can sli
 
 ### Real-model experiments
 
-Numbers below come from [eval/reports/2026-10-20/report.md](eval/reports/2026-10-20/report.md): text model `qwen-plus`, vision model `qwen3-vl-plus` (Alibaba Cloud Model Studio, openai-compatible), runId `openai-compatible-qwen-plus-1020`, commit `dafb379`. **Limits of the evidence**: only 3 samples (7 products), all with script-generated synthetic images, 3 runs per sample, so each row covers only 7–9 pages; the numbers describe these runs and do not generalize. The `eval/reports/2026-10-13/` report in the repository was produced with the mock model to check the pipeline; its numbers are meaningless and must not be quoted.
+Numbers below come from [eval/reports/2026-10-30/report.md](eval/reports/2026-10-30/report.md): text model `qwen-plus`, vision model `qwen3-vl-plus` (Alibaba Cloud Model Studio, openai-compatible), runId `openai-compatible-qwen-plus-1030`, commit `38dd2acd9cc6` (0.2.0). **Limits of the evidence**: only 3 samples (7 products), all with script-generated synthetic images, 3 runs per sample; each row has only 4–9 successful pages, and group A had 8 format failures (`provider bad_response`), so per-page means over successful pages do not describe reliability across all attempts. The model alias is not pinned to a snapshot, runs are random, and code, rules and output budgets also changed, so no result can be credited to a single code fix. The numbers describe these runs only and **do not generalize**. The `eval/reports/2026-10-13/` report in the repository was produced with the mock model to check the pipeline; its numbers are meaningless and must not be quoted.
 
 **Experiment 1: fact extraction accuracy**
 
 | Field | Labeled | Extracted | Correct | Precision | Recall |
 |---|---:|---:|---:|---:|---:|
 | Product name | 7 | 7 | 5 | 71.4% | 71.4% |
-| Price | 7 | 5 | 4 | 80.0% | 57.1% |
+| Price | 7 | 7 | 5 | 71.4% | 71.4% |
 | Spec | 3 | 2 | 1 | 50.0% | 33.3% |
 | Shop phone | 2 | 2 | 2 | 100.0% | 100.0% |
 | Shop address | 2 | 2 | 2 | 100.0% | 100.0% |
+
+Names are paired only on exact match after removing whitespace: "招牌黄油可颂" and "拿铁（中杯）" were not paired because of wording differences, yet their prices still count in the price precision denominator.
 
 **Experiment 2: AI writes the whole page (group A) vs Shizhao (group B)**
 
 | Group | Input | Pages | Fact errors per page | Of which price and name | Unsupported claims per page (rule-layer count) | Avg cost (CNY/run) | Avg model time (s/run) |
 |---|---|---:|---:|---:|---:|---:|---:|
-| A: AI writes the whole page | Natural-language description of the gold fact sheet | 9/9 | 0.11 | 0.11 | 4.22 | 0.0051 | 54.27 |
-| A: AI writes the whole page | Raw photos and text | 7/9 | 0.14 | 0.14 | 3.14 | 0.0037 | 46.34 |
-| B: Shizhao (field consistency guaranteed by design) | Gold fact sheet (confirmed) | 8/9 | 0.00 | 0.00 | 0.00 | 0.0024 | 11.09 |
-| B: Shizhao (end to end) | Raw photos and text → extract → merchant changes nothing → generate | 9/9 | 0.33 | 0.33 | 0.44 | 0.0038 | 19.12 |
+| A: AI writes the whole page | Natural-language description of the gold fact sheet | 6/9 | 0.00 | 0.00 | 3.67 | 0.0046 | 42.74 |
+| A: AI writes the whole page | Raw photos and text | 4/9 | 0.25 | 0.25 | 3.50 | 0.0017 | 16.00 |
+| B: Shizhao (field consistency guaranteed by design) | Gold fact sheet (confirmed) | 9/9 | 0.00 | 0.00 | 0.00 | 0.0032 | 13.07 |
+| B: Shizhao (end to end) | Raw photos and text → extract → merchant changes nothing → generate | 9/9 | 0.00 | 0.00 | 1.00 | 0.0046 | 19.78 |
 
-The zeros in the B gold row come from code filling in and checking every field; they are guaranteed by design, not a model result. Only the end-to-end row compares with group A's "raw photos and text" row: all 3 of its errors are the same missed price ("巴斯克芝士蛋糕 6 寸 128 元"), which reaches the page when the merchant changes nothing. This miss (F1) is fixed in 0.2.0, see the [CHANGELOG](CHANGELOG.md); the experiment has not been re-run since the fix.
+Per-page metrics cover successful pages only; cost and time are averaged over all 9 attempts, but usage for group A's 8 failed attempts was not recorded, so group A's cost and time are understated and are not a full bill. The zeros in the B gold row come from code filling in and checking every field; they are guaranteed by design, not a model result. Only the end-to-end row compares with group A's "raw photos and text" row: A has 1 error over 4 successful pages, B has 0 over 9. All 9 flagged sentences behind B end-to-end's 1.00 unsupported claims involve "招牌" on the 3 croissant pages (3 sentences per page); the word comes from the merchant's raw text, and one sentence per page is an option label in the collapsed-by-default correction form, so they cannot be read as 9 model fabrications.
+
+**Three runs side by side** (10-14 / 10-20 / 10-30, same 3 samples, N = 3 each; descriptive only)
+
+| Metric | 10-14 | 10-20 | 10-30 |
+|---|---:|---:|---:|
+| A-raw fact errors per page | 0.86 (6/7 pages) | 0.14 (1/7 pages) | 0.25 (1/4 pages) |
+| B-e2e fact errors per page | 0.78 (7/9 pages) | 0.33 (3/9 pages) | 0.00 (0/9 pages) |
+| A2 independent review: sentence-level recall | 23.6% | 45.0% | 28.7% |
+
+The A2 independent review is a sentence-by-sentence human annotation of unsupported claims, compared with the rule layer's count (sentence-level recall = annotated unsupported sentences that the rules also flagged / all annotated unsupported sentences); see [A2-review.md](eval/reports/2026-10-30/A2-review.md). On 10-30 the rule layer's recall is only 28.7% (precision 68.9%): it misses many specific recipe, preparation and texture claims, and none of the 17 annotated claims on B-gold pages was flagged, so the rule-based "unsupported claims per page" is clearly an undercount. Page counts and generated text differ across the three runs, so date-to-date differences must not be read as the effect of revising the same pages. B end-to-end's 3 errors on 10-20 were the missed "巴斯克芝士蛋糕 6 寸 128 元"; this time that price was kept in the extraction and on all 9 dessert pages, consistent with the 0.2.0 fix target, but with no pinned model snapshot or counterfactual run it cannot be credited to the F1 fix.
 
 **Experiment 3: guard block rate and false-positive rate** (`packages/fact-guard/test/cases.zh.json`, 120 cases)
 
@@ -231,6 +244,8 @@ The zeros in the B gold row come from code filling in and checking every field; 
 | Rules + model judge | openai-compatible/qwen-plus | 78 | 78 | 100.0% | 42 | 0 | 0.0% |
 
 This case set was built by the same module as the rule layer, and the rules were written against it, so these scores are optimistic; for unseen claims, see the A1b holdout numbers above.
+
+**Independence limit of A2**: A2 annotated the 10-30 rule output blind (rule details were read only after the labels were frozen), but while reading the 10-20 methodology the command output unexpectedly included its historical results section, so this is not a replication that is fully blind to the historical results. The Anthropic adapter has still not been verified against the real API (not measured: no key).
 
 With a real model configured, rerun all experiments (reports go to `eval/reports/<date>/`):
 
