@@ -6,6 +6,8 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-11-06
+
 ### 中文
 
 #### 安全
@@ -18,7 +20,7 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
 
 - `pnpm typecheck`、`pnpm lint`、`pnpm test`、`pnpm check:secrets` 全部通过：66 个测试文件，1566 个测试通过，1 个既有 todo；新增 76 条回归，覆盖来源拒绝无副作用、浏览器 JSON 埋点、IPv6 /64 及 IPv4/mapped/Bearer 兼容性。秘密扫描 0 发现。
 - `pnpm test:e2e`：14/14 通过（mock provider）；运行前用 `ports` 确认 6688、6689 及 E2E 默认端口 6699 空闲。
-- 真实模型评测在 0.2.0 代码上重跑，并做了第三次 A2 独立复核，报告见 `eval/reports/2026-10-30/`（`report.md`、`A2-review.md`）。10-14 / 10-20 / 10-30 三次并排只作描述性对照，A2 句级召回率为 23.6% / 45.0% / 28.7%；只有 3 组合成样本，不能推广，也不能单独归因于某项代码修复。X6 独立复核与 Anthropic 真实接口验证（无 Key）均未完成。
+- 真实模型评测在 0.2.0 代码上重跑，并做了第三次 A2 独立复核，报告见 `eval/reports/2026-10-30/`（`report.md`、`A2-review.md`）。10-14 / 10-20 / 10-30 三次并排只作描述性对照，A2 句级召回率为 23.6% / 45.0% / 28.7%；只有 3 组合成样本，不能推广，也不能单独归因于某项代码修复。Anthropic 适配器的真实接口验证（无 Key）仍未完成。
 
 ### English
 
@@ -32,7 +34,7 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
 
 - `pnpm typecheck`, `pnpm lint`, `pnpm test`, and `pnpm check:secrets` passed: 66 test files, 1566 passing tests and one existing todo; 76 new regressions cover side-effect-free origin rejection, browser JSON tracking, IPv6 /64 limits, and IPv4/mapped/Bearer compatibility. The secret scan found no issues.
 - `pnpm test:e2e`: 14/14 passed using the mock provider. `ports` confirmed 6688, 6689, and the default E2E port 6699 were free before the run.
-- The real-model evaluation was re-run on the 0.2.0 code, with a third independent A2 review; see `eval/reports/2026-10-30/` (`report.md`, `A2-review.md`). The 10-14 / 10-20 / 10-30 side-by-side is descriptive only, with A2 sentence-level recall of 23.6% / 45.0% / 28.7%; there are only 3 synthetic samples, so it does not generalize and cannot be credited to any single code fix. The X6 independent review and the real-API check of the Anthropic adapter (no key) are not done.
+- The real-model evaluation was re-run on the 0.2.0 code, with a third independent A2 review; see `eval/reports/2026-10-30/` (`report.md`, `A2-review.md`). The 10-14 / 10-20 / 10-30 side-by-side is descriptive only, with A2 sentence-level recall of 23.6% / 45.0% / 28.7%; there are only 3 synthetic samples, so it does not generalize and cannot be credited to any single code fix. The real-API check of the Anthropic adapter (no key) is still not done.
 
 ## [0.2.0] - 2026-10-28
 

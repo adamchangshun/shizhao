@@ -57,6 +57,7 @@ flowchart LR
 | Evaluation suite, copy-check page and API, Docker one-click run and `pnpm demo` | Done |
 | Customer corrections, CI, public deployment guide | Done (0.1.0); the on-device acceptance record is not filled in yet |
 | 0.2.0: Anthropic adapter, merchant style brief, cross-item borrowing check, fixes for 0.1.0 known issues | Done, see the [CHANGELOG](CHANGELOG.md) |
+| 0.2.1: web hardening (origin checks, IPv6 rate-limit buckets), real-model eval re-run on 0.2.0 with a third A2 review | Done, see the [CHANGELOG](CHANGELOG.md) |
 
 ## Quick start
 
@@ -244,7 +245,7 @@ The A2 independent review is a sentence-by-sentence human annotation of unsuppor
 
 This case set was built by the same module as the rule layer, and the rules were written against it, so these scores are optimistic; for unseen claims, see the A1b holdout numbers above.
 
-**Independence limit of A2**: A2 annotated the 10-30 rule output blind (rule details were read only after the labels were frozen), but while reading the 10-20 methodology the command output unexpectedly included its historical results section, so this is not a replication that is fully blind to the historical results. The X6 independent review of all 28 pages has not been done yet, and the Anthropic adapter has still not been verified against the real API (not measured: no key).
+**Independence limit of A2**: A2 annotated the 10-30 rule output blind (rule details were read only after the labels were frozen), but while reading the 10-20 methodology the command output unexpectedly included its historical results section, so this is not a replication that is fully blind to the historical results. The Anthropic adapter has still not been verified against the real API (not measured: no key).
 
 With a real model configured, rerun all experiments (reports go to `eval/reports/<date>/`):
 
