@@ -11,6 +11,9 @@ import {
 
 const execFileAsync = promisify(execFile)
 
+// Exit code reserved for a completed child check that found personal information.
+const PERSONAL_INFO_FOUND_EXIT_CODE = 42
+
 const adversarialAccountInputs = [
   ['200 characters', 'QQ'.repeat(100)],
   ['400 characters', 'QQ'.repeat(200)],
@@ -22,7 +25,10 @@ const adversarialAccountInputs = [
 async function checkPersonalInfoInChild(label: string, text: string): Promise<void> {
   const filter = path.resolve('lib/corrections/filter.ts')
   const code = `import(${JSON.stringify(filter)}).then(({ containsPersonalInfo }) => {
-    if (containsPersonalInfo(process.argv[1])) process.exitCode = 1
+    if (containsPersonalInfo(process.argv[1])) process.exitCode = ${PERSONAL_INFO_FOUND_EXIT_CODE}
+  }).catch((error) => {
+    console.error(error)
+    process.exit(1)
   })`
   // This guards only against a hang or catastrophic backtracking, not machine speed.
   try {
@@ -31,10 +37,14 @@ async function checkPersonalInfoInChild(label: string, text: string): Promise<vo
       killSignal: 'SIGKILL',
     })
   } catch (error: unknown) {
-    const childError = error as { killed?: boolean; code?: string | number }
+    const childError = error as { killed?: boolean; code?: string | number; stderr?: string | Buffer }
     if (childError.killed) throw new Error(`${label}: child process timed out`)
-    if (childError.code === 1) throw new Error(`${label}: containsPersonalInfo returned true`)
-    throw error
+    if (childError.code === PERSONAL_INFO_FOUND_EXIT_CODE) {
+      throw new Error(`${label}: containsPersonalInfo returned true`)
+    }
+    throw new Error(
+      `${label}: child process exited with code ${String(childError.code)}; stderr: ${String(childError.stderr)}`,
+    )
   }
 }
 
@@ -160,6 +170,12 @@ describe('personal information', () => {
     },
     30_000,
   )
+
+  it('reports a matching child result as returned true', async () => {
+    await expect(checkPersonalInfoInChild('phone number', '我的电话13800138000')).rejects.toThrow(
+      'phone number: containsPersonalInfo returned true',
+    )
+  })
 })
 
 describe('line breaks end a sentence', () => {
