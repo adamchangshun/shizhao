@@ -64,6 +64,31 @@ it('shares the correction source budget across one trusted IPv6 /64', async () =
   }
 })
 
+it('accepts a trusted IPv6 zone id without logging the address', async () => {
+  const address = 'fe80::1%eth0'
+  vi.stubEnv('TRACK_TRUST_PROXY', 'true')
+  resetEnvCache()
+  const error = vi.spyOn(console, 'error').mockImplementation(() => undefined)
+  try {
+    const p = await published()
+    const response = await submit(
+      {
+        slug: p.slug,
+        versionId: p.versionId,
+        field: 'items.tart02.price',
+        suggestedValue: '9元',
+      },
+      { 'content-type': 'application/json', 'x-real-ip': address },
+    )
+    expect(response.status).toBe(201)
+    expect(JSON.stringify(error.mock.calls)).not.toContain(address)
+  } finally {
+    error.mockRestore()
+    vi.unstubAllEnvs()
+    resetEnvCache()
+  }
+})
+
 // Hand-written v1 copy: the subhead and the cake's blurb cite the cake's description.
 const COPY: CopyDraft = {
   headline: '甜心烘焙',

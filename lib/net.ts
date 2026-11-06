@@ -1,9 +1,10 @@
 export const HTTPS_REQUIRED_MESSAGE =
   '公网地址必须使用 https；http 只允许 localhost、局域网 IP 或 .local 域名'
 
-/** Rate-limit identity for validated IPv6; mapped and known translated IPv4 keep full identity. */
+/** Rate-limit identity for IPv6 after removing an optional zone id; mapped and known translated IPv4 keep full identity. */
 export function ipv6RateLimitKey(address: string): string {
-  const canonical = new URL(`http://[${address}]/`).hostname
+  const addressWithoutZone = address.split('%', 1)[0] ?? ''
+  const canonical = new URL(`http://[${addressWithoutZone}]/`).hostname
   // Classify mapped IPv4 before masking: /64 would put all mapped addresses in one bucket.
   if (/^\[::ffff:[a-f0-9]+:[a-f0-9]+\]$/.test(canonical)) return canonical
 
