@@ -617,3 +617,14 @@ MEDIUM 不阻塞，留待后续：①氛围白名单只覆盖原句，「低温�
 main 在本轮开始与结束时均为 `e221912`，1490 测试通过。台账与快照在 `~/Desktop/shizhao-总控/`。
 
 **2026-10-30 补充**：Gitee `sheng-changshun/shizhao` 的 Release v0.1.0（id 1254481，绑定 c7396c0）与 v0.2.0（id 1254482，绑定 e221912）已建，正文与 CHANGELOG 对应节逐字一致，tag 未动；由总控经 Gitee API 创建，用 MCP `list_releases` 与正文 diff 核验。
+
+## 2026-11-06 合并：Web 加固（X1）与 0.2.0 真实模型重跑（X5/X6）
+
+| 分支 | 写码方 | 审查方 / 轮次 | 结论 |
+|---|---|---|---|
+| `fix/v0.2.1-web-hardening` | Codex | Claude（opus）两轮 APPROVE：第 1 轮 0/0/0/5 LOW，第 2 轮 0/0/0/3 LOW + 1 INFO；第 2 轮 3 条 LOW 由 Codex 追加 `feab570` 修复，总控审 diff 并实跑门禁（1573 测试、密钥扫描 0） | 合并（快进） |
+| `docs/eval-1030` | Codex | X5 报告约 190 个数字由 Claude 子 agent（sonnet）对 raw.json 独立重算，0 不一致；X6 由新开 Codex 会话盲标重做，总控核对冻结散列与独立性声明 | 合并 |
+
+- X6 第一次尝试因同一会话完成、非盲标而作废，未进入仓库。重做版的限制已在 `eval/reports/2026-10-30/A2-review.md` 披露：读取 10-20 口径时看到了其历史结果段，对 10-30 规则输出仍为盲标。
+- `A2-review-sheet.csv:516` 的行号列表（`L45/L63/…`）被通用 hex/base64 规则误报，按行号写入 `.secretsignore`，不改冻结文件。
+- **已知问题（T0 第 1 轮 LOW-2～LOW-5，未修，留待后续）**：登出按钮忽略 403 后仍跳转（`app/(console)/providers.tsx`）；mapped IPv4 正则在 `lib/net.ts` 与 `lib/stats/limiter.ts` 重复；415 错误字面量在 `app/api/track/route.ts` 与 `lib/corrections/submit.ts` 重复；埋点 403 无信号、`deploy/README.md` 缺备用域名 / 301 说明。INFO：`tests/corrections/filter.test.ts` 的 30ms 计时断言有偶发失败风险。
