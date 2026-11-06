@@ -186,6 +186,25 @@ nc -zv -w 3 <服务器IP> 6688                           # 在你自己的电脑
 4. 生成页面，预览满意后发布。
 5. 下载二维码（PNG 或 SVG），用微信「扫一扫」扫码，打开的是 `https://shop.example.com/p/<短码>/`。
 
+### 埋点来源校验与备用域名
+
+`POST /api/track` 只接受当前站点发出的 JSON 请求；外站 `Origin` 或跨站 `Sec-Fetch-Site` 会返回 403。页面优先用 `sendBeacon` 上报，而浏览器不会把这个响应展示给访客：如果访问量突然不再增长，应优先检查域名和反代，而不是把 403 当作页面故障。
+
+- 把 `.env` 的 `PUBLIC_BASE_URL` 设为唯一的公开 HTTPS 地址，例如 `https://shop.example.com`；二维码和公开页都以它为准。
+- 备用域名（包括 `www` 与裸域）必须在到达 `reverse_proxy` **之前**永久 301/308 到该地址，并保留路径和查询参数。不要把多个域名都反代到应用；否则页面的 `Origin`、请求 `Host` 和 `PUBLIC_BASE_URL` 不一致时，埋点会被 403 拒绝。
+- 若另有 CDN 或负载均衡器，确认它把访客请求的原始 `Host` 传给 Caddy；不要改写为内部服务名。用浏览器开发者工具的 Network 面板检查 `/api/track`，它应为 204，而不是 403。
+
+示例：`www` 只作跳转，主域名才反代应用（将域名替换为自己的）：
+
+```caddyfile
+www.shop.example.com {
+	redir https://shop.example.com{uri} permanent
+}
+shop.example.com {
+	reverse_proxy shizhao:6688
+}
+```
+
 ## 10. 日常维护
 
 ```bash

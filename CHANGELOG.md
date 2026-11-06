@@ -6,6 +6,18 @@ All notable changes are recorded here. The format follows [Keep a Changelog](htt
 
 ## [Unreleased]
 
+### 中文
+
+#### 修复
+
+- 管理端仅在服务器确认清除会话后跳转登录页；登出失败会保留当前会话并提示重试。IPv4-mapped 地址识别和 JSON-only 接口的 415 响应已集中复用，部署文档补充了埋点 403、备用域名与反代 Host 的排查说明。
+
+### English
+
+#### Fixed
+
+- The console redirects to login only after the server confirms logout; failed logout keeps the session open and prompts for a retry. IPv4-mapped detection and JSON-only 415 responses are now shared, and deployment guidance covers tracking 403s, alternate domains, and proxy Host forwarding.
+
 ## [0.2.1] - 2026-11-06
 
 ### 中文

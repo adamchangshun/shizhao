@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import {
   containsPersonalInfo,
   looksLikeSpam,
@@ -121,12 +121,14 @@ describe('personal information', () => {
     expect(containsPersonalInfo(text)).toBe(false)
   })
 
-  it('checks an 800-character note of repeated cues quickly', () => {
-    containsPersonalInfo('QQ')
+  it('checks repeated account cues with a bounded number of full-text scans', () => {
     for (const text of ['QQ'.repeat(400), 'QQ a'.repeat(200), 'QQ，账号 '.repeat(130)]) {
-      const start = performance.now()
-      containsPersonalInfo(text)
-      expect(performance.now() - start).toBeLessThan(30)
+      const matchAll = vi.spyOn(String.prototype, 'matchAll')
+      expect(containsPersonalInfo(text)).toBe(false)
+      // The account path extracts cues once and words from the one scanned sentence once. This
+      // guards against reintroducing a full-text rescan per repeated cue without timing the host.
+      expect(matchAll).toHaveBeenCalledTimes(2)
+      matchAll.mockRestore()
     }
   })
 })

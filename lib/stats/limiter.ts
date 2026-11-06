@@ -1,7 +1,7 @@
 import { createHmac, randomBytes } from 'node:crypto'
 import { isIP } from 'node:net'
 import { getEnv } from '../env'
-import { ipv6RateLimitKey } from '../net'
+import { ipv6RateLimitKey, mappedIpv4Address } from '../net'
 import { FixedWindowLimiter } from '../rate-limit'
 
 const salt = randomBytes(32)
@@ -16,12 +16,7 @@ export function clientHash(request: Request): string {
     if (family === 6) {
       address = ipv6RateLimitKey(candidate)
       // Native IPv6 shares a /64; mapped IPv4 still folds into the individual IPv4 bucket.
-      const mapped = /^\[::ffff:([a-f0-9]+):([a-f0-9]+)\]$/.exec(address)
-      if (mapped) {
-        const hi = parseInt(mapped[1]!, 16),
-          lo = parseInt(mapped[2]!, 16)
-        address = [hi >> 8, hi & 255, lo >> 8, lo & 255].join('.')
-      }
+      address = mappedIpv4Address(address) ?? address
     }
   }
   return createHmac('sha256', salt).update(address).digest('hex')

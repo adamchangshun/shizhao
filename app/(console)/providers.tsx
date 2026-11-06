@@ -22,13 +22,25 @@ export function ConsoleProviders({ children }: { children: ReactNode }) {
 }
 
 export function LogoutButton({ className }: { className?: string }) {
-  async function logout() {
-    await fetch('/api/auth/logout', { method: 'POST' }).catch(() => undefined)
-    window.location.assign('/login')
-  }
   return (
-    <button type="button" className={className} onClick={logout}>
+    <button type="button" className={className} onClick={performLogout}>
       退出登录
     </button>
   )
+}
+
+/** Leaves the current console session open unless the server confirms its cookie was cleared. */
+export async function performLogout(): Promise<boolean> {
+  try {
+    const response = await fetch('/api/auth/logout', { method: 'POST' })
+    if (!response.ok) {
+      window.alert('退出失败，请刷新后重试')
+      return false
+    }
+    window.location.assign('/login')
+    return true
+  } catch {
+    window.alert('退出失败，请刷新后重试')
+    return false
+  }
 }
